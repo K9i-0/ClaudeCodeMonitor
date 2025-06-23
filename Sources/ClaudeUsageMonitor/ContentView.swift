@@ -312,6 +312,7 @@ struct CurrentSessionView: View {
         }
     }
     
+    @MainActor
     private var progressGradient: LinearGradient {
         return Color.usageGradient(for: monitor.usageData.sessionUsagePercentage)
     }

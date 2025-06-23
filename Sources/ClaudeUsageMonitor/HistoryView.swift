@@ -102,14 +102,17 @@ struct HistoryView: View {
     }
     
     // 計算プロパティ
+    @MainActor
     private var progressGradient: LinearGradient {
         return Color.usageGradient(for: monitor.usageData.sessionUsagePercentage)
     }
     
+    @MainActor
     private var progressBackgroundColor: Color {
         return Color.usageColor(for: monitor.usageData.sessionUsagePercentage).opacity(0.15)
     }
     
+    @MainActor
     private var progressForegroundColor: Color {
         return Color.usageColor(for: monitor.usageData.sessionUsagePercentage)
     }
