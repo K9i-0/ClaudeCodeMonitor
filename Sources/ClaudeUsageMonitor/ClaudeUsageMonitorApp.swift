@@ -8,5 +8,8 @@ struct ClaudeUsageMonitorApp: App {
         Settings {
             EmptyView()
         }
+        .commands {
+            // Remove default menu items if needed
+        }
     }
 }

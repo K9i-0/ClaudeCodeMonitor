@@ -81,12 +81,37 @@ class UsageMonitor: ObservableObject {
             print("Local server not available, falling back to npx command")
         }
         
-        // Fallback to npx command
+        // Fallback to npx command with better path handling
+        print("[DEBUG] Daily data: falling back to npx command")
         do {
             let process = Process()
-            // Use shell to ensure proper PATH resolution
-            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-            process.arguments = ["-l", "-c", "npx ccusage@latest --json"]
+            
+            // Try to use the same npx detection as in fetchSessionData
+            let npxSearchPaths = [
+                "/Users/\(NSUserName())/.local/share/mise/shims/npx",
+                "/opt/homebrew/bin/npx",
+                "/usr/local/bin/npx"
+            ]
+            
+            var foundNpx = false
+            for path in npxSearchPaths {
+                let expandedPath = (path as NSString).expandingTildeInPath
+                if FileManager.default.fileExists(atPath: expandedPath) {
+                    process.executableURL = URL(fileURLWithPath: expandedPath)
+                    process.arguments = ["ccusage@latest", "--json"]
+                    foundNpx = true
+                    print("[DEBUG] Using npx at: \(expandedPath)")
+                    break
+                }
+            }
+            
+            if !foundNpx {
+                // Use shell with extended PATH
+                process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+                process.arguments = ["-l", "-c", 
+                    "export PATH=\"$HOME/.local/share/mise/shims:/opt/homebrew/bin:/usr/local/bin:$PATH\" && npx ccusage@latest --json"]
+                print("[DEBUG] Using shell with extended PATH for daily data")
+            }
             
             let pipe = Pipe()
             let errorPipe = Pipe()
@@ -137,53 +162,139 @@ class UsageMonitor: ObservableObject {
     }
     
     private func fetchSessionData() async {
+        // Print environment info for debugging
+        print("[DEBUG] Running from Xcode: \(ProcessInfo.processInfo.environment["__XCODE_BUILT_PRODUCTS_DIR_PATHS"] != nil)")
+        print("[DEBUG] PATH: \(ProcessInfo.processInfo.environment["PATH"] ?? "not set")")
+        
         do {
             // Try local server first for session data
             if let url = URL(string: "http://127.0.0.1:3456/blocks/active") {
-                let (data, response) = try await URLSession.shared.data(from: url)
+                print("[DEBUG] Attempting server connection to \(url)")
                 
-                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
-                    let blocksResponse = try JSONDecoder().decode(BlocksResponse.self, from: data)
+                var request = URLRequest(url: url)
+                request.timeoutInterval = 2.0 // Quick timeout
+                
+                let (data, response) = try await URLSession.shared.data(for: request)
+                
+                if let httpResponse = response as? HTTPURLResponse {
+                    print("[DEBUG] Server response: \(httpResponse.statusCode)")
                     
-                    // Get the active block
-                    print("Blocks response: \(blocksResponse.blocks.count) blocks")
-                    if let activeBlock = blocksResponse.blocks.first(where: { $0.isActive }) {
-                        usageData.activeSession = activeBlock
-                        print("Active session: \(activeBlock.totalTokens) tokens, \(activeBlock.isActive ? "active" : "inactive")")
-                        print("Session percentage: \(usageData.sessionTokenPercentage)%")
-                    } else {
-                        print("No active session found")
-                        usageData.activeSession = nil
+                    if httpResponse.statusCode == 200 {
+                        let blocksResponse = try JSONDecoder().decode(BlocksResponse.self, from: data)
+                        
+                        // Get the active block
+                        print("Blocks response: \(blocksResponse.blocks.count) blocks")
+                        if let activeBlock = blocksResponse.blocks.first(where: { $0.isActive }) {
+                            usageData.activeSession = activeBlock
+                            print("Active session: \(activeBlock.totalTokens) tokens, \(activeBlock.isActive ? "active" : "inactive")")
+                            print("Session percentage: \(usageData.sessionTokenPercentage)%")
+                        } else {
+                            print("No active session found")
+                            usageData.activeSession = nil
+                        }
+                        return
                     }
-                    return
                 }
             }
         } catch {
-            print("Failed to fetch session data: \(error)")
+            print("[DEBUG] Server connection failed: \(error.localizedDescription)")
         }
         
-        // Fallback: Try npx command directly
+        // Fallback: Try multiple methods to run ccusage
+        print("[DEBUG] Falling back to direct ccusage execution")
+        
+        // Method 1: Try to find npx in common locations
+        let npxSearchPaths = [
+            "/Users/\(NSUserName())/.local/share/mise/shims/npx",
+            "/opt/homebrew/bin/npx",
+            "/usr/local/bin/npx",
+            "/Users/\(NSUserName())/.nvm/default/bin/npx",
+            "/Users/\(NSUserName())/.volta/bin/npx"
+        ]
+        
+        var npxPath: String? = nil
+        for path in npxSearchPaths {
+            let expandedPath = (path as NSString).expandingTildeInPath
+            if FileManager.default.fileExists(atPath: expandedPath) {
+                npxPath = expandedPath
+                print("[DEBUG] Found npx at: \(expandedPath)")
+                break
+            }
+        }
+        
+        // Method 2: Use which command to find npx
+        if npxPath == nil {
+            let whichProcess = Process()
+            whichProcess.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+            whichProcess.arguments = ["npx"]
+            let whichPipe = Pipe()
+            whichProcess.standardOutput = whichPipe
+            whichProcess.standardError = Pipe()
+            
+            do {
+                try whichProcess.run()
+                whichProcess.waitUntilExit()
+                
+                let data = whichPipe.fileHandleForReading.readDataToEndOfFile()
+                if let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !output.isEmpty {
+                    npxPath = output
+                    print("[DEBUG] Found npx via which: \(output)")
+                }
+            } catch {
+                print("[DEBUG] which command failed: \(error)")
+            }
+        }
+        
+        // Method 3: Try with full shell initialization
         do {
             let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-            process.arguments = ["-l", "-c", "npx ccusage blocks --active --json"]
+            
+            if let npxPath = npxPath {
+                // Use found npx directly
+                process.executableURL = URL(fileURLWithPath: npxPath)
+                process.arguments = ["ccusage", "blocks", "--active", "--json"]
+                print("[DEBUG] Using direct npx: \(npxPath)")
+            } else {
+                // Last resort: use shell with full environment
+                process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+                process.arguments = ["-l", "-c", 
+                    "export PATH=\"$HOME/.local/share/mise/shims:$HOME/.volta/bin:/opt/homebrew/bin:/usr/local/bin:$PATH\" && npx ccusage blocks --active --json"]
+                print("[DEBUG] Using shell with extended PATH")
+            }
             
             let pipe = Pipe()
+            let errorPipe = Pipe()
             process.standardOutput = pipe
-            process.standardError = Pipe()
+            process.standardError = errorPipe
             
             try process.run()
             process.waitUntilExit()
             
+            // Check for errors
+            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            if !errorData.isEmpty {
+                let errorString = String(data: errorData, encoding: .utf8) ?? "Unknown error"
+                print("[DEBUG] ccusage stderr: \(errorString)")
+            }
+            
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             if !data.isEmpty {
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("[DEBUG] ccusage output length: \(jsonString.count) characters")
+                }
+                
                 let blocksResponse = try JSONDecoder().decode(BlocksResponse.self, from: data)
                 if let activeBlock = blocksResponse.blocks.first(where: { $0.isActive }) {
                     usageData.activeSession = activeBlock
+                    print("[DEBUG] Session data loaded via fallback")
                 }
+            } else {
+                print("[DEBUG] No data from ccusage command")
             }
         } catch {
-            print("Fallback session fetch failed: \(error)")
+            print("[DEBUG] All fallback methods failed: \(error)")
+            print("[DEBUG] Error details: \(error.localizedDescription)")
         }
     }
     
