@@ -63,12 +63,15 @@ struct UsageData {
     // Cost-based usage percentages
     var dailyCostPercentage: Double {
         guard let today = todayUsage else { return 0 }
-        return min(100, (today.totalCost / Self.dailyCostLimit) * 100)
+        let percentage = (today.totalCost / Self.dailyCostLimit) * 100
+        print("Daily usage: $\(today.totalCost) / $\(Self.dailyCostLimit) = \(percentage)%")
+        return percentage  // Don't cap at 100% to show actual usage
     }
     
     var monthlyCostPercentage: Double {
         guard let monthly = monthlyTotal else { return 0 }
-        return min(100, (monthly.totalCost / Self.monthlyCostLimit) * 100)
+        let percentage = (monthly.totalCost / Self.monthlyCostLimit) * 100
+        return percentage  // Don't cap at 100% to show actual usage
     }
     
     var formattedDailyPercentage: String {

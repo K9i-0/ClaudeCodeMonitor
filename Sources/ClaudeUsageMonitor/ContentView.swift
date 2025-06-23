@@ -131,7 +131,7 @@ struct UsageDetailView: View {
                         
                         RoundedRectangle(cornerRadius: 4)
                             .fill(usagePercentage > 80 ? Color.red : (usagePercentage > 60 ? Color.orange : Color.green))
-                            .frame(width: geometry.size.width * min(usagePercentage / 100, 1.0), height: 8)
+                            .frame(width: min(geometry.size.width, geometry.size.width * (usagePercentage / 100)), height: 8)
                             .animation(.easeInOut(duration: 0.3), value: usagePercentage)
                     }
                 }

@@ -48,6 +48,13 @@ class UsageMonitor: ObservableObject {
                 if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
                     let ccusageResponse = try JSONDecoder().decode(CcusageResponse.self, from: data)
                     
+                    // Debug print
+                    print("API Response - Daily count: \(ccusageResponse.daily.count)")
+                    if let first = ccusageResponse.daily.first {
+                        print("First daily entry: date=\(first.date), cost=$\(first.totalCost)")
+                    }
+                    print("Monthly total: $\(ccusageResponse.totals.totalCost)")
+                    
                     // Get today's date in YYYY-MM-DD format
                     let formatter = DateFormatter()
                     formatter.dateFormat = "yyyy-MM-dd"
