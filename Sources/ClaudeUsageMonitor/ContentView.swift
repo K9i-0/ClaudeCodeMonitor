@@ -85,21 +85,23 @@ struct ContentView: View {
                 .padding(.horizontal)
                 .padding(.vertical, 8)
                 
-                // Content with transition
+                // Content with transition - both tabs are scrollable
                 Group {
                     if selectedTab == 0 {
                         // Current session
-                        if let session = monitor.usageData.activeSession {
-                            CurrentSessionView(session: session, monitor: monitor)
-                                .padding()
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: .leading).combined(with: .opacity),
-                                    removal: .move(edge: .trailing).combined(with: .opacity)
-                                ))
-                        } else {
-                            EmptyStateView(message: "セッションがアクティブではありません")
-                                .padding()
+                        ScrollView {
+                            if let session = monitor.usageData.activeSession {
+                                CurrentSessionView(session: session, monitor: monitor)
+                                    .padding()
+                            } else {
+                                EmptyStateView(message: "セッションがアクティブではありません")
+                                    .padding()
+                            }
                         }
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .leading).combined(with: .opacity),
+                            removal: .move(edge: .trailing).combined(with: .opacity)
+                        ))
                     } else {
                         // History
                         ScrollView {
@@ -147,7 +149,7 @@ struct ContentView: View {
                 }
             }
         }
-        .frame(width: 380, height: 460)
+        .frame(width: 380, height: 480)
         .sheet(isPresented: $showingSettings) {
             SettingsView()
                 .environmentObject(monitor)
