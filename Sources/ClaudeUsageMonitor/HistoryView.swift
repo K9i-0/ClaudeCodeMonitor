@@ -94,7 +94,7 @@ struct HistoryView: View {
                 }
             }
             
-            Text("※日次・月次のコスト情報は参考値です。\nClaude Codeは5時間セッション制で課金されます。")
+            Text("※日次・月次のコスト情報は参考値です。\nClaude Codeは5時間セッションごとにトークン制限がリセットされます。")
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .padding(.top, 4)
