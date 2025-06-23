@@ -52,7 +52,9 @@ struct ContentView: View {
                                 totalCost: daily.totalCost,
                                 totalTokens: daily.totalTokens,
                                 modelBreakdowns: daily.modelBreakdowns,
-                                monitor: monitor
+                                monitor: monitor,
+                                usagePercentage: monitor.usageData.dailyCostPercentage,
+                                formattedPercentage: monitor.usageData.formattedDailyPercentage
                             )
                         } else {
                             EmptyStateView(message: "No usage data for today")
@@ -65,7 +67,9 @@ struct ContentView: View {
                                 totalCost: monthly.totalCost,
                                 totalTokens: monthly.totalTokens,
                                 modelBreakdowns: [],
-                                monitor: monitor
+                                monitor: monitor,
+                                usagePercentage: monitor.usageData.monthlyCostPercentage,
+                                formattedPercentage: monitor.usageData.formattedMonthlyPercentage
                             )
                         } else {
                             EmptyStateView(message: "No monthly usage data available")
@@ -102,9 +106,40 @@ struct UsageDetailView: View {
     let totalTokens: Int
     let modelBreakdowns: [ModelBreakdown]
     let monitor: UsageMonitor
+    let usagePercentage: Double
+    let formattedPercentage: String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // Usage percentage with progress bar
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Label("Usage Limit", systemImage: "chart.bar.fill")
+                        .font(.system(size: 14, weight: .medium))
+                    Spacer()
+                    Text(formattedPercentage)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(usagePercentage > 80 ? .red : (usagePercentage > 60 ? .orange : .green))
+                }
+                
+                // Progress bar
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(height: 8)
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(usagePercentage > 80 ? Color.red : (usagePercentage > 60 ? Color.orange : Color.green))
+                            .frame(width: geometry.size.width * min(usagePercentage / 100, 1.0), height: 8)
+                            .animation(.easeInOut(duration: 0.3), value: usagePercentage)
+                    }
+                }
+                .frame(height: 8)
+            }
+            
+            Divider()
+            
             // Total cost
             HStack {
                 Label("Total Cost", systemImage: "dollarsign.circle.fill")

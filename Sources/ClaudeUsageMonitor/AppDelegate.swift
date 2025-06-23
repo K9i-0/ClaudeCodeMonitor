@@ -54,7 +54,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if usageMonitor.isLoading && usageMonitor.usageData.todayUsage == nil {
                 button.title = "Loading..."
             } else {
-                button.title = usageMonitor.usageData.formattedDailyCost
+                let cost = usageMonitor.usageData.formattedDailyCost
+                let percentage = usageMonitor.usageData.dailyCostPercentage
+                
+                // Show cost and percentage with color indicator
+                if percentage > 80 {
+                    button.title = "\(cost) ⚠️ \(usageMonitor.usageData.formattedDailyPercentage)"
+                } else if percentage > 60 {
+                    button.title = "\(cost) • \(usageMonitor.usageData.formattedDailyPercentage)"
+                } else {
+                    button.title = cost
+                }
             }
         }
     }
