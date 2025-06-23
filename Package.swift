@@ -15,7 +15,9 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "ClaudeUsageMonitor",
-            // Remove linker settings for now - will handle Info.plist separately
+            resources: [
+                .process("Resources")
+            ]
         ),
         .testTarget(
             name: "ClaudeUsageMonitorTests",

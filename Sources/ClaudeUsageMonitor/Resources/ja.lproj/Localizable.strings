@@ -1,0 +1,54 @@
+/* 
+  Localizable.strings
+  ClaudeUsageMonitor
+  
+  Japanese Localization
+*/
+
+// Tab titles
+"tab.current" = "現在";
+"tab.history" = "履歴";
+
+// Session information
+"session.remaining" = "残り";
+"session.tokens" = "トークン";
+"session.burnRate" = "バーンレート";
+"session.tokensPerMin" = "トークン/分";
+"session.timeRemaining" = "残り時間";
+"session.cost" = "セッションコスト";
+"session.referenceValue" = "参考値";
+"session.noActiveSession" = "アクティブなセッションがありません";
+"session.waitingForData" = "データを取得中...";
+
+// History
+"history.currentSession" = "現在のセッション";
+"history.pastSessions" = "過去のセッション";
+"history.sessionDetails" = "セッション: %@トークン、%@ 〜 %@";
+"history.noHistory" = "履歴がありません";
+
+// Plan settings
+"plan.title" = "プラン";
+"plan.pro" = "Pro (7K)";
+"plan.max5" = "Max5 (35K)";
+"plan.max20" = "Max20 (140K)";
+
+// Daily/Monthly
+"usage.today" = "今日";
+"usage.thisMonth" = "今月";
+
+// Actions
+"action.refresh" = "更新";
+"action.settings" = "設定";
+"action.quit" = "終了";
+
+// Errors
+"error.loadingData" = "データを読み込み中...";
+"error.dataFetchFailed" = "データの取得に失敗しました";
+"error.networkError" = "ネットワークエラー";
+"error.unknown" = "不明なエラー";
+
+// Notifications
+"notification.highUsage.title" = "使用量警告";
+"notification.highUsage.body" = "Claude Codeの使用率が%d%%に達しました。バーンレート: %.1fトークン/分";
+"notification.sessionReset.title" = "セッションリセット";
+"notification.sessionReset.body" = "Claude Codeのセッションがリセットされました";

@@ -39,10 +39,10 @@ struct ContentView: View {
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .help("設定")
+                            .help(L10n.Action.settings)
                             .keyboardShortcut(",", modifiers: .command)
-                            .accessibilityLabel("設定を開く")
-                            .accessibilityHint("アプリケーションの設定画面を開きます")
+                            .accessibilityLabel(L10n.Action.settings)
+                            .accessibilityHint(L10n.Action.settings)
                             
                             Button(action: {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -62,10 +62,10 @@ struct ContentView: View {
                                     .animation(isRefreshing ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isRefreshing)
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .help("使用状況を更新")
+                            .help(L10n.Action.refresh)
                             .keyboardShortcut("r", modifiers: .command)
-                            .accessibilityLabel("更新")
-                            .accessibilityHint("使用状況データを最新に更新します")
+                            .accessibilityLabel(L10n.Action.refresh)
+                            .accessibilityHint(L10n.Action.refresh)
                             .accessibilityAddTraits(.isButton)
                         }
                     }
@@ -76,9 +76,9 @@ struct ContentView: View {
             
                 // Tab selector with modern style
                 Picker("", selection: $selectedTab) {
-                    Label("現在", systemImage: "chart.line.uptrend.xyaxis")
+                    Label(L10n.Tab.current, systemImage: "chart.line.uptrend.xyaxis")
                         .tag(0)
-                    Label("履歴", systemImage: "clock.arrow.circlepath")
+                    Label(L10n.Tab.history, systemImage: "clock.arrow.circlepath")
                         .tag(1)
                 }
                 .pickerStyle(SegmentedPickerStyle())
@@ -94,7 +94,7 @@ struct ContentView: View {
                                 CurrentSessionView(session: session, monitor: monitor)
                                     .padding()
                             } else {
-                                EmptyStateView(message: "セッションがアクティブではありません")
+                                EmptyStateView(message: L10n.Session.noActiveSession)
                                     .padding()
                             }
                         }

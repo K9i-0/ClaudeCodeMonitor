@@ -1,0 +1,54 @@
+/* 
+  Localizable.strings
+  ClaudeUsageMonitor
+  
+  English Localization
+*/
+
+// Tab titles
+"tab.current" = "Current";
+"tab.history" = "History";
+
+// Session information
+"session.remaining" = "Remaining";
+"session.tokens" = "tokens";
+"session.burnRate" = "Burn Rate";
+"session.tokensPerMin" = "tokens/min";
+"session.timeRemaining" = "Time Remaining";
+"session.cost" = "Session Cost";
+"session.referenceValue" = "Reference";
+"session.noActiveSession" = "No Active Session";
+"session.waitingForData" = "Waiting for data...";
+
+// History
+"history.currentSession" = "Current Session";
+"history.pastSessions" = "Past Sessions";
+"history.sessionDetails" = "Session: %@ tokens, from %@ to %@";
+"history.noHistory" = "No history available";
+
+// Plan settings
+"plan.title" = "Plan";
+"plan.pro" = "Pro (7K)";
+"plan.max5" = "Max5 (35K)";
+"plan.max20" = "Max20 (140K)";
+
+// Daily/Monthly
+"usage.today" = "Today";
+"usage.thisMonth" = "This Month";
+
+// Actions
+"action.refresh" = "Refresh";
+"action.settings" = "Settings";
+"action.quit" = "Quit";
+
+// Errors
+"error.loadingData" = "Loading data...";
+"error.dataFetchFailed" = "Failed to fetch data";
+"error.networkError" = "Network error";
+"error.unknown" = "Unknown error";
+
+// Notifications
+"notification.highUsage.title" = "High Usage Warning";
+"notification.highUsage.body" = "Claude Code usage has reached %d%%. Burn rate: %.1f tokens/min";
+"notification.sessionReset.title" = "Session Reset";
+"notification.sessionReset.body" = "Your Claude Code session has been reset";
