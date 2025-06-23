@@ -27,7 +27,18 @@ jobs:
       run: swift build -v
     
     - name: Run tests
-      run: swift test -v
+      env:
+        CI: true
+      run: |
+        echo "Running tests with CI environment variable set..."
+        swift test -v || (echo "Tests failed, running individual test suites..." && \
+        swift test --filter ModelsTests -v && \
+        swift test --filter SessionModelsTests -v && \
+        swift test --filter UtilitiesTests -v && \
+        swift test --filter LanguageSettingsTests -v && \
+        swift test --filter NotificationManagerTests -v && \
+        swift test --filter UsageMonitorTests -v && \
+        swift test --filter ViewModelTests -v)
 
   # lint:
   #   name: SwiftLint

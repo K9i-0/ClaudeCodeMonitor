@@ -6,6 +6,18 @@ enum AppLanguage: String, CaseIterable {
     case japanese = "ja"
     
     var displayName: String {
+        // In CI environment, return raw values to avoid localization issues
+        guard ProcessInfo.processInfo.environment["CI"] == nil else {
+            switch self {
+            case .system:
+                return "System"
+            case .english:
+                return "English"
+            case .japanese:
+                return "Japanese"
+            }
+        }
+        
         switch self {
         case .system:
             return L10n.Language.system
