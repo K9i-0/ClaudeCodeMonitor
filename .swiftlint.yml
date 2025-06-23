@@ -1,0 +1,57 @@
+included:
+  - Sources
+  - Tests
+
+excluded:
+  - .build
+  - .swiftpm
+  - Package.swift
+
+opt_in_rules:
+  - empty_count
+  - closure_end_indentation
+  - closure_spacing
+  - operator_usage_whitespace
+  - redundant_nil_coalescing
+  - redundant_type_annotation
+  - sorted_imports
+  - trailing_closure
+  - unneeded_parentheses_in_closure_argument
+
+disabled_rules:
+  - trailing_whitespace
+  - todo
+  - line_length
+
+type_body_length:
+  warning: 300
+  error: 500
+
+file_length:
+  warning: 500
+  error: 1000
+
+function_body_length:
+  warning: 50
+  error: 100
+
+cyclomatic_complexity:
+  warning: 10
+  error: 20
+
+nesting:
+  type_level:
+    warning: 2
+  function_level:
+    warning: 2
+
+identifier_name:
+  min_length:
+    warning: 2
+  max_length:
+    warning: 40
+    error: 50
+  excluded:
+    - id
+    - URL
+    - GlobalAPIKey

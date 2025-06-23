@@ -1,0 +1,106 @@
+/* 
+  Localizable.strings
+  ClaudeUsageMonitor
+  
+  Japanese Localization
+*/
+
+// Tab titles
+"tab.current" = "現在";
+"tab.history" = "履歴";
+
+// Session information
+"session.remaining" = "残り";
+"session.remainingTokens" = "残りトークン";
+"session.tokens" = "トークン";
+"session.burnRate" = "バーンレート";
+"session.tokensPerMin" = "トークン/分";
+"session.timeRemaining" = "残り時間";
+"session.timeUntilReset" = "リセットまで";
+"session.cost" = "セッションコスト";
+"session.referenceValue" = "参考値";
+"session.noActiveSession" = "アクティブなセッションがありません";
+"session.waitingForData" = "データを取得中...";
+"session.highUsageWarning" = "使用率が高い";
+"session.used" = "%@ 使用済み";
+"session.resetTime" = "リセット: %@";
+"session.sessionDetails" = "Session Details (5時間セッション)";
+"session.plan" = "プラン:";
+"session.startTime" = "開始:";
+"session.endTime" = "終了:";
+"session.elapsedTime" = "経過時間:";
+"session.startWorkingMessage" = "Claude Codeで作業を開始すると\nここに使用状況が表示されます";
+
+// History
+"history.usageSummary" = "使用状況サマリー";
+"history.currentSession" = "現在のセッション";
+"history.pastSessions" = "過去のセッション";
+"history.sessionDetails" = "セッション: %@トークン、%@ 〜 %@";
+"history.noHistory" = "履歴がありません";
+"history.tokensFormat" = "%@ トークン";
+"history.referenceNote" = "※日次・月次のコスト情報は参考値です。\nClaude Codeは5時間セッションごとにトークン制限がリセットされます。";
+"history.time" = "時間";
+"history.tokens" = "トークン";
+"history.noData" = "データがありません";
+
+// Plan settings
+"plan.title" = "プラン";
+"plan.pro" = "Pro (7K)";
+"plan.max5" = "Max5 (35K)";
+"plan.max20" = "Max20 (140K)";
+
+// Daily/Monthly
+"usage.today" = "今日";
+"usage.thisMonth" = "今月";
+"usage.usage" = "使用状況";
+"usage.percentage" = "%d%% 使用済み";
+
+// Actions
+"action.refresh" = "更新";
+"action.settings" = "設定";
+"action.quit" = "終了";
+"action.close" = "閉じる";
+"action.quitApp" = "アプリケーションを終了";
+
+// Errors
+"error.loadingData" = "データを読み込み中...";
+"error.dataFetchFailed" = "データの取得に失敗しました";
+"error.networkError" = "ネットワークエラー";
+"error.unknown" = "不明なエラー";
+
+// Time format
+"time.hoursMinutes" = "%d時間%d分";
+"time.minutes" = "%d分";
+
+// Settings
+"settings.planSelection" = "プラン選択";
+"settings.notificationSettings" = "通知設定";
+"settings.enableUsageNotifications" = "使用率通知を有効にする";
+"settings.notificationDescription" = "使用率が90%に達した時に通知します";
+"settings.languageSettings" = "言語";
+"settings.useSystemLanguage" = "システムの言語を使用";
+"settings.selectLanguage" = "言語を選択";
+
+// Language options
+"language.system" = "システム";
+"language.english" = "English";
+"language.japanese" = "日本語";
+
+// Status
+"status.lastUpdated" = "更新: %@";
+"status.loading" = "使用状況を読み込み中...";
+"status.noActiveSession" = "アクティブなセッションがありません";
+"status.usageFormat" = "使用率: %.1f%%\nコスト: $%.2f\n燃焼率: %.0f tokens/分\n残り時間: %@";
+
+// Notifications
+"notification.highUsage.title" = "🔥 使用率が90%を超えました";
+"notification.highUsage.body" = "Claude Codeの使用率が%d%%に達しました。バーンレート: %.1fトークン/分";
+"notification.highUsage.bodyDetailed" = "現在の使用率: %d%%\n残り時間: %@\n燃焼率: %d tokens/分";
+"notification.sessionReset.title" = "✨ セッションがリセットされました";
+"notification.sessionReset.body" = "Claude Codeのセッションがリセットされました";
+"notification.sessionReset.bodyDetailed" = "新しい5時間セッションが開始されました";
+"notification.permissionGranted" = "通知許可が得られました";
+"notification.permissionError" = "通知許可エラー: %@";
+"notification.sent90Percent" = "90%%通知を送信しました";
+"notification.sendError" = "通知送信エラー: %@";
+"notification.sessionResetError" = "セッションリセット通知エラー: %@";

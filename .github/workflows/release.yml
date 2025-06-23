@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build Release
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Select Xcode
+      run: sudo xcode-select -s /Applications/Xcode_15.0.app
+    
+    - name: Build for release
+      run: |
+        swift build -c release
+        mkdir -p ClaudeUsageMonitor.app/Contents/MacOS
+        mkdir -p ClaudeUsageMonitor.app/Contents/Resources
+        cp .build/arm64-apple-macosx/release/ClaudeUsageMonitor ClaudeUsageMonitor.app/Contents/MacOS/
+        cp Info.plist ClaudeUsageMonitor.app/Contents/
+    
+    - name: Create DMG
+      run: |
+        mkdir -p dmg
+        cp -r ClaudeUsageMonitor.app dmg/
+        ln -s /Applications dmg/Applications
+        hdiutil create -volname "Claude Usage Monitor" -srcfolder dmg -ov -format UDZO ClaudeUsageMonitor.dmg
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ClaudeUsageMonitor-macOS
+        path: |
+          ClaudeUsageMonitor.dmg
+          ClaudeUsageMonitor.app
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+    
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./ClaudeUsageMonitor.dmg
+        asset_name: ClaudeUsageMonitor.dmg
+        asset_content_type: application/x-apple-diskimage

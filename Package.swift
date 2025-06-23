@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "ClaudeUsageMonitor",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v13)
     ],
@@ -15,7 +16,9 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "ClaudeUsageMonitor",
-            // Remove linker settings for now - will handle Info.plist separately
+            resources: [
+                .process("Resources")
+            ]
         ),
         .testTarget(
             name: "ClaudeUsageMonitorTests",

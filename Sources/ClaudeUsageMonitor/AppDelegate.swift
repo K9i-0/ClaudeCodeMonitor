@@ -71,7 +71,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
                 button.image = image.withSymbolConfiguration(config)
                 button.title = ""
-                button.toolTip = "使用状況を読み込み中..."
+                button.toolTip = L10n.Status.loading
             }
         } else if let session = usageMonitor.usageData.activeSession {
             // アクティブセッション
@@ -99,22 +99,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             )
             
             // 詳細情報はツールチップで表示
-            let burnRate = usageMonitor.usageData.sessionBurnRate
+            let burnRateString = usageMonitor.usageData.sessionBurnRate
+            let burnRate = Double(burnRateString) ?? 0.0
             let remaining = usageMonitor.usageData.sessionRemainingTime
-            button.toolTip = String(format: 
-                """
-                使用率: %.1f%%
-                コスト: $%.2f
-                燃焼率: %.0f tokens/min
-                残り時間: %@
-                """, percentage, cost, burnRate, remaining)
+            button.toolTip = L10n.Status.usageFormat(usage: percentage, cost: cost, burnRate: burnRate, timeRemaining: remaining)
         } else {
             // 非アクティブ
             if let image = NSImage(systemSymbolName: "moon.zzz", accessibilityDescription: "Inactive") {
                 let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
                 button.image = image.withSymbolConfiguration(config)
                 button.title = ""
-                button.toolTip = "アクティブなセッションがありません"
+                button.toolTip = L10n.Status.noActiveSession
             }
         }
     }

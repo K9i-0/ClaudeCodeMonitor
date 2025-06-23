@@ -4,7 +4,6 @@ struct ContentView: View {
     @EnvironmentObject var monitor: UsageMonitor
     @State private var selectedTab = 0
     @State private var isRefreshing = false
-    @State private var showingSettings = false
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
@@ -32,19 +31,6 @@ struct ContentView: View {
                         
                         HStack(spacing: 8) {
                             Button(action: {
-                                showingSettings = true
-                            }) {
-                                Image(systemName: "gearshape")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .help("設定")
-                            .keyboardShortcut(",", modifiers: .command)
-                            .accessibilityLabel("設定を開く")
-                            .accessibilityHint("アプリケーションの設定画面を開きます")
-                            
-                            Button(action: {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                     isRefreshing = true
                                 }
@@ -62,10 +48,10 @@ struct ContentView: View {
                                     .animation(isRefreshing ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isRefreshing)
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .help("使用状況を更新")
+                            .help(L10n.Action.refresh)
                             .keyboardShortcut("r", modifiers: .command)
-                            .accessibilityLabel("更新")
-                            .accessibilityHint("使用状況データを最新に更新します")
+                            .accessibilityLabel(L10n.Action.refresh)
+                            .accessibilityHint(L10n.Action.refresh)
                             .accessibilityAddTraits(.isButton)
                         }
                     }
@@ -76,25 +62,28 @@ struct ContentView: View {
             
                 // Tab selector with modern style
                 Picker("", selection: $selectedTab) {
-                    Label("現在", systemImage: "chart.line.uptrend.xyaxis")
+                    Label(L10n.Tab.current, systemImage: "chart.line.uptrend.xyaxis")
                         .tag(0)
-                    Label("履歴", systemImage: "clock.arrow.circlepath")
+                    Label(L10n.Tab.history, systemImage: "clock.arrow.circlepath")
                         .tag(1)
+                    Label(L10n.Action.settings, systemImage: "gearshape")
+                        .tag(2)
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .padding(.horizontal)
                 .padding(.vertical, 8)
                 
-                // Content with transition - both tabs are scrollable
+                // Content with transition - all tabs are scrollable
                 Group {
-                    if selectedTab == 0 {
+                    switch selectedTab {
+                    case 0:
                         // Current session
                         ScrollView {
                             if let session = monitor.usageData.activeSession {
                                 CurrentSessionView(session: session, monitor: monitor)
                                     .padding()
                             } else {
-                                EmptyStateView(message: "セッションがアクティブではありません")
+                                EmptyStateView(message: L10n.Session.noActiveSession)
                                     .padding()
                             }
                         }
@@ -102,7 +91,7 @@ struct ContentView: View {
                             insertion: .move(edge: .leading).combined(with: .opacity),
                             removal: .move(edge: .trailing).combined(with: .opacity)
                         ))
-                    } else {
+                    case 1:
                         // History
                         ScrollView {
                             HistoryView(monitor: monitor)
@@ -112,6 +101,19 @@ struct ContentView: View {
                             insertion: .move(edge: .trailing).combined(with: .opacity),
                             removal: .move(edge: .leading).combined(with: .opacity)
                         ))
+                    case 2:
+                        // Settings
+                        ScrollView {
+                            SettingsTabView()
+                                .environmentObject(monitor)
+                                .padding()
+                        }
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .trailing).combined(with: .opacity),
+                            removal: .move(edge: .leading).combined(with: .opacity)
+                        ))
+                    default:
+                        EmptyView()
                     }
                 }
                 .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selectedTab)
@@ -128,7 +130,7 @@ struct ContentView: View {
                             Circle()
                                 .fill(monitor.isLoading ? Color.orange : Color.green)
                                 .frame(width: 6, height: 6)
-                            Text("更新: \(monitor.usageData.lastUpdated.formattedTime())")
+                            Text(L10n.Status.lastUpdated(time: monitor.usageData.lastUpdated.formattedTime()))
                                 .font(.system(size: 11))
                                 .foregroundStyle(.secondary)
                         }
@@ -138,22 +140,18 @@ struct ContentView: View {
                         Button(action: {
                             NSApplication.shared.terminate(nil)
                         }) {
-                            Text("終了")
+                            Text(L10n.Action.quit)
                                 .font(.system(size: 11))
                         }
                         .buttonStyle(LinkButtonStyle())
                         .keyboardShortcut("q", modifiers: .command)
-                        .accessibilityLabel("アプリケーションを終了")
+                        .accessibilityLabel(L10n.Action.quitApp)
                     }
                     .padding(.horizontal)
                 }
             }
         }
         .frame(width: 380, height: 480)
-        .sheet(isPresented: $showingSettings) {
-            SettingsView()
-                .environmentObject(monitor)
-        }
     }
 }
 
@@ -166,7 +164,7 @@ struct CurrentSessionView: View {
         VStack(spacing: 16) {
             // 残りトークン数を大きく表示（カード風デザイン）
             VStack(spacing: 8) {
-                Text("残りトークン")
+                Text(L10n.Session.remainingTokens)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.secondary)
                 
@@ -174,8 +172,8 @@ struct CurrentSessionView: View {
                     Text("\(monitor.formatTokens(monitor.usageData.sessionTokenLimit - session.totalTokens))")
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundStyle(progressGradient)
-                        .accessibilityLabel("残り\(monitor.formatTokens(monitor.usageData.sessionTokenLimit - session.totalTokens))トークン")
-                    Text("トークン")
+                        .accessibilityLabel("\(L10n.Session.remaining) \(monitor.formatTokens(monitor.usageData.sessionTokenLimit - session.totalTokens)) \(L10n.Session.tokens)")
+                    Text(L10n.Session.tokens)
                         .font(.system(size: 14))
                         .foregroundStyle(.secondary)
                         .accessibilityHidden(true)
@@ -206,17 +204,17 @@ struct CurrentSessionView: View {
                 }
                 .frame(height: 10)
                 .accessibilityElement()
-                .accessibilityLabel("使用状況")
-                .accessibilityValue("\(Int(monitor.usageData.sessionUsagePercentage))パーセント使用済み")
+                .accessibilityLabel(L10n.Usage.usage)
+                .accessibilityValue(L10n.Usage.percentage(percent: Int(monitor.usageData.sessionUsagePercentage)))
                 .accessibilityAddTraits(.updatesFrequently)
                 
                 HStack {
-                    Text(monitor.usageData.formattedSessionPercentage + " 使用済み")
+                    Text(L10n.Session.used(percentage: monitor.usageData.formattedSessionPercentage))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                     Spacer()
                     if monitor.usageData.sessionUsagePercentage > 90 {
-                        Label("使用率が高い", systemImage: "exclamationmark.triangle.fill")
+                        Label(L10n.Session.highUsageWarning, systemImage: "exclamationmark.triangle.fill")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(.red)
                     }
@@ -236,7 +234,7 @@ struct CurrentSessionView: View {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 16))
                         .foregroundStyle(.blue)
-                    Text("リセットまで")
+                    Text(L10n.Session.timeUntilReset)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
                     Text(monitor.usageData.sessionRemainingTime)
@@ -255,7 +253,7 @@ struct CurrentSessionView: View {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 16))
                         .foregroundStyle(.orange)
-                    Text("燃焼率")
+                    Text(L10n.Session.burnRate)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
                     Text("\(monitor.usageData.sessionBurnRate)/分")
@@ -273,7 +271,7 @@ struct CurrentSessionView: View {
             // セッションコスト（改善版）
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("セッションコスト")
+                    Text(L10n.Session.cost)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                     HStack(alignment: .lastTextBaseline, spacing: 2) {
@@ -299,7 +297,7 @@ struct CurrentSessionView: View {
                             Capsule()
                                 .fill(Color.blue.opacity(0.15))
                         )
-                    Text("リセット: \(formatTime(session.endTime))")
+                    Text(L10n.Session.resetTime(time: formatTime(session.endTime)))
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                 }
@@ -312,6 +310,7 @@ struct CurrentSessionView: View {
         }
     }
     
+    @MainActor
     private var progressGradient: LinearGradient {
         return Color.usageGradient(for: monitor.usageData.sessionUsagePercentage)
     }
@@ -406,12 +405,12 @@ struct SessionDetailView: View {
             
             // Session details
             VStack(alignment: .leading, spacing: 4) {
-                Text("Session Details (5時間セッション)")
+                Text(L10n.Session.sessionDetails)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.secondary)
                 
                 HStack {
-                    Text("プラン:")
+                    Text(L10n.Session.plan)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                     Text(monitor.usageData.planDescription)
@@ -420,7 +419,7 @@ struct SessionDetailView: View {
                 }
                 
                 HStack {
-                    Text("開始:")
+                    Text(L10n.Session.startTime)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                     Text(formatTimeWithDate(session.startTime))
@@ -428,7 +427,7 @@ struct SessionDetailView: View {
                 }
                 
                 HStack {
-                    Text("終了:")
+                    Text(L10n.Session.endTime)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                     Text(formatTimeWithDate(session.endTime))
@@ -436,7 +435,7 @@ struct SessionDetailView: View {
                 }
                 
                 HStack {
-                    Text("経過時間:")
+                    Text(L10n.Session.elapsedTime)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                     Text(getElapsedTime(from: session.startTime))
@@ -577,7 +576,7 @@ struct EmptyStateView: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.primary)
                 
-                Text("Claude Codeで作業を開始すると\nここに使用状況が表示されます")
+                Text(L10n.Session.startWorkingMessage)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

@@ -6,62 +6,66 @@
   <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
 </p>
 
-macOSのメニューバーに常駐し、Claude Codeの使用状況をリアルタイムでモニタリングするアプリケーション。
+<p align="center">
+  <strong>English</strong> | <a href="README.ja.md">日本語</a>
+</p>
 
-このアプリは [ccusage](https://github.com/ryoppippi/ccusage) CLIツールをラップし、Claude Codeの使用状況を視覚的に分かりやすく表示します。
+A macOS menubar application that monitors Claude Code API usage and costs in real-time.
 
-## ✨ 主な機能
+This app wraps the [ccusage](https://github.com/ryoppippi/ccusage) CLI tool to provide visual, easy-to-understand usage tracking for Claude Code.
 
-### セッションベースモニタリング
-- **リアルタイム表示**: メニューバーに現在のセッション使用率を表示
-- **セッション管理**: Claude Codeの5時間セッションに基づいた正確な追跡
-- **プラン対応**: Pro/Max5/Max20プランの自動検出と手動設定
-- **使用率通知**: 90%到達時に通知
+## ✨ Key Features
 
-### 詳細な使用状況分析
-- 📊 **現在のセッション情報**
-  - 残りトークン数とパーセンテージ
-  - セッションコスト（参考値）
-  - バーンレート（トークン/分）
-  - 残り時間予測
-- 📈 **履歴データ**
-  - 日別の使用量とコスト
-  - モデル別の内訳
-  - 過去のセッション一覧
+### Session-Based Monitoring
+- **Real-time Display**: Shows current session usage percentage in the menubar
+- **Session Management**: Accurate tracking based on Claude Code's 5-hour sessions
+- **Plan Support**: Auto-detection and manual setting for Pro/Max5/Max20 plans
+- **Usage Notifications**: Alerts when reaching 90% usage
 
-### その他の機能
-- 🔄 5分ごとの自動更新
-- 🔄 手動更新ボタン
-- ⚙️ プラン設定（Pro/Max5/Max20）
-- 🌐 ローカルサーバーモードでの安定動作
+### Detailed Usage Analytics
+- 📊 **Current Session Information**
+  - Remaining tokens and percentage
+  - Session cost (reference value)
+  - Burn rate (tokens/minute)
+  - Time remaining prediction
+- 📈 **Historical Data**
+  - Daily usage and costs
+  - Model-specific breakdown
+  - Past session history
 
-## 🚀 インストール
+### Additional Features
+- 🔄 Auto-refresh every 5 minutes
+- 🔄 Manual refresh button
+- ⚙️ Plan settings (Pro/Max5/Max20)
+- 🌐 Stable operation with local server mode
 
-### 今後の予定
-- **Homebrew Cask**: `brew install --cask claude-usage-monitor` (準備中)
-- **App Store**: Mac App Storeから直接インストール (準備中)
+## 🚀 Installation
 
-### 現在の方法（ソースからビルド）
+### Coming Soon
+- **Homebrew Cask**: `brew install --cask claude-usage-monitor` (in preparation)
+- **App Store**: Direct installation from Mac App Store (in preparation)
 
-## 📋 必要な環境
+### Current Method (Build from Source)
 
-- macOS 13.0以上
-- Swift 5.9以上
-- Node.js 18以上（ccusage CLIツールの実行に必要）
-- Xcode 15以上（開発時）
+## 📋 Requirements
 
-## 🛠️ セットアップ
+- macOS 13.0 or later
+- Swift 5.9 or later
+- Node.js 18 or later (required for ccusage CLI tool)
+- Xcode 15 or later (for development)
 
-### 1. リポジトリのクローン
+## 🛠️ Setup
+
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/yourusername/ClaudeUsageMonitor.git
 cd ClaudeUsageMonitor
 ```
 
-### 2. Node.jsサーバーのセットアップ（推奨）
+### 2. Node.js Server Setup (Recommended)
 
-ローカルサーバーを使用することで、より安定した動作を実現できます：
+Using a local server provides more stable operation:
 
 ```bash
 cd server
@@ -69,69 +73,69 @@ npm install
 npm start
 ```
 
-サーバーは`http://127.0.0.1:3456`で起動します。
+The server will start at `http://127.0.0.1:3456`.
 
-### 3. ビルド方法
+### 3. Build Instructions
 
-#### 方法1: Xcodeを使用（推奨）
+#### Method 1: Using Xcode (Recommended)
 
 ```bash
 open Package.swift
 ```
 
-Xcodeで:
-- **ビルド**: Product > Build（⌘B）
-- **実行**: Product > Run（⌘R）
+In Xcode:
+- **Build**: Product > Build (⌘B)
+- **Run**: Product > Run (⌘R)
 
-#### 方法2: コマンドラインでビルド
+#### Method 2: Command Line Build
 
 ```bash
-# リリースビルド
+# Release build
 swift build -c release
 
-# アプリバンドルの作成
+# Create app bundle
 mkdir -p ClaudeUsageMonitor.app/Contents/MacOS
 mkdir -p ClaudeUsageMonitor.app/Contents/Resources
 cp .build/arm64-apple-macosx/release/ClaudeUsageMonitor ClaudeUsageMonitor.app/Contents/MacOS/
 cp Info.plist ClaudeUsageMonitor.app/Contents/
 
-# アプリを起動
+# Launch the app
 open ClaudeUsageMonitor.app
 ```
 
-## 🖼️ スクリーンショット
+## 🖼️ Screenshots
 
 <p align="center">
-  <i>スクリーンショットは準備中です</i>
+  <i>Screenshots coming soon</i>
 </p>
 
-## 🤝 コントリビューション
+## 🤝 Contributing
 
-コントリビューションを歓迎します！詳細は[CONTRIBUTING.md](CONTRIBUTING.md)をご覧ください。
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
-### 開発に参加する
+### How to Contribute
 
-1. このリポジトリをフォーク
-2. フィーチャーブランチを作成 (`git checkout -b feature/amazing-feature`)
-3. 変更をコミット (`git commit -m 'Add some amazing feature'`)
-4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
-5. プルリクエストを作成
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Create a Pull Request
 
-## 📝 ライセンス
+## 📝 License
 
-このプロジェクトはMITライセンスの下で公開されています。詳細は[LICENSE](LICENSE)ファイルをご覧ください。
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-## 🙏 謝辞
+## 🙏 Acknowledgments
 
-- [ccusage](https://github.com/ryoppippi/ccusage) - Claude使用状況を取得するCLIツール
-- [Anthropic](https://www.anthropic.com/) - Claude AIの開発元
+- [ccusage](https://github.com/ryoppippi/ccusage) - CLI tool for fetching Claude usage
+- [Anthropic](https://www.anthropic.com/) - The creators of Claude AI
 
-## 💬 サポート
+## 💬 Support
 
 - **Issues**: [GitHub Issues](https://github.com/yourusername/ClaudeUsageMonitor/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/yourusername/ClaudeUsageMonitor/discussions)
 
-## 🔗 関連リンク
+## 🔗 Related Links
 
-- [Claude Code](https://claude.ai/code) - Anthropic公式のClaude Code
-- [ccusage CLI](https://github.com/ryoppippi/ccusage) - ベースとなっているCLIツール
+- [Claude Code](https://claude.ai/code) - Official Claude Code by Anthropic
+- [ccusage CLI](https://github.com/ryoppippi/ccusage) - The underlying CLI tool
