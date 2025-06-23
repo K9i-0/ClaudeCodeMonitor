@@ -67,6 +67,7 @@
 "error.dataFetchFailed" = "Failed to fetch data";
 "error.networkError" = "Network error";
 "error.unknown" = "Unknown error";
+"error.serverNotRunning" = "Local server is not running. Please start the server with 'npm start' in the server directory.";
 
 // Time format
 "time.hoursMinutes" = "%d hours %d minutes";
