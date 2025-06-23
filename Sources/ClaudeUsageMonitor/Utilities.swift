@@ -50,14 +50,12 @@ extension Color {
         switch percentage {
         case 90...:
             return .red
-        case 70..<90:
+        case 75..<90:
             return .orange
-        case 50..<70:
-            return .yellow
-        case 30..<50:
+        case 50..<75:
             return .blue
         default:
-            return .green
+            return .blue
         }
     }
     
@@ -73,10 +71,71 @@ extension Color {
             return LinearGradient(colors: [.green, .mint], startPoint: .leading, endPoint: .trailing)
         }
     }
+    
+    /// プログレスバー用のグラデーション
+    static func progressGradient(for percentage: Double) -> LinearGradient {
+        return usageGradient(for: percentage)
+    }
+}
+
+// MARK: - SF Symbols
+struct SFSymbols {
+    static func getSFSymbol(for percentage: Double) -> String {
+        switch percentage {
+        case 90...:
+            return "exclamationmark.triangle.fill"
+        case 75..<90:
+            return "bolt.fill"
+        case 50..<75:
+            return "flame.fill"
+        default:
+            return "circle.fill"
+        }
+    }
 }
 
 // MARK: - Number Formatting
 struct NumberFormatters {
+    /// 標準的なトークンフォーマッター
+    static let tokenFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = ","
+        formatter.groupingSize = 3
+        return formatter
+    }()
+    
+    /// 通貨フォーマッター
+    static let currencyFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "USD"
+        formatter.currencySymbol = "$"
+        formatter.maximumFractionDigits = 2
+        formatter.minimumFractionDigits = 2
+        return formatter
+    }()
+    
+    /// パーセントフォーマッター
+    static let percentFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .percent
+        formatter.maximumFractionDigits = 1
+        formatter.minimumFractionDigits = 0
+        return formatter
+    }()
+    
+    /// コンパクト数値フォーマッター
+    static let compactNumberFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 1
+        formatter.minimumFractionDigits = 0
+        formatter.usesGroupingSeparator = false
+        // Manual K/M formatting since compactDecimal is not available in all locales
+        return formatter
+    }()
+    
     /// トークン数をフォーマット（K/M表記）
     static func formatTokens(_ tokens: Int) -> String {
         if tokens >= 1_000_000 {

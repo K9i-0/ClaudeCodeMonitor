@@ -27,7 +27,7 @@ class SessionViewModel: ObservableObject {
         
         session = data
         remainingTokens = monitor.usageData.sessionTokenLimit - data.totalTokens
-        percentage = monitor.usageData.sessionTokenPercentage
+        percentage = monitor.usageData.sessionUsagePercentage
         burnRate = Double(monitor.usageData.sessionBurnRate) ?? 0
         remainingTime = monitor.usageData.sessionRemainingTime
         cost = data.costUSD

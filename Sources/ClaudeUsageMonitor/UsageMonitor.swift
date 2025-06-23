@@ -245,7 +245,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
                             usageData.activeSession = activeBlock
                             print("Active session: \(activeBlock.totalTokens) tokens, \(activeBlock.isActive ? "active" : "inactive")")
                             print("Historical max tokens: \(maxTokens)")
-                            print("Session percentage: \(usageData.sessionTokenPercentage)%")
+                            print("Session percentage: \(usageData.sessionUsagePercentage)%")
                             print("Detected plan: \(usageData.detectedPlan)")
                             
                             // セッションが変わったかチェック
@@ -254,7 +254,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
                             // 通知チェック
                             let burnRateValue = Double(usageData.sessionBurnRate) ?? 0
                             notificationManager?.checkAndSendNotification(
-                                for: usageData.sessionTokenPercentage,
+                                for: usageData.sessionUsagePercentage,
                                 burnRate: burnRateValue,
                                 remainingTime: usageData.sessionRemainingTime
                             )

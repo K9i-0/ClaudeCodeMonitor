@@ -192,14 +192,14 @@ struct CurrentSessionView: View {
                         // Progress
                         Capsule()
                             .fill(progressGradient)
-                            .frame(width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionTokenPercentage / 100)), height: 10)
-                            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: monitor.usageData.sessionTokenPercentage)
+                            .frame(width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)), height: 10)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: monitor.usageData.sessionUsagePercentage)
                         
                         // Glow effect for high usage
-                        if monitor.usageData.sessionTokenPercentage > 80 {
+                        if monitor.usageData.sessionUsagePercentage > 80 {
                             Capsule()
                                 .fill(Color.red.opacity(0.3))
-                                .frame(width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionTokenPercentage / 100)), height: 10)
+                                .frame(width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)), height: 10)
                                 .blur(radius: 8)
                         }
                     }
@@ -207,7 +207,7 @@ struct CurrentSessionView: View {
                 .frame(height: 10)
                 .accessibilityElement()
                 .accessibilityLabel("使用状況")
-                .accessibilityValue("\(Int(monitor.usageData.sessionTokenPercentage))パーセント使用済み")
+                .accessibilityValue("\(Int(monitor.usageData.sessionUsagePercentage))パーセント使用済み")
                 .accessibilityAddTraits(.updatesFrequently)
                 
                 HStack {
@@ -215,7 +215,7 @@ struct CurrentSessionView: View {
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                     Spacer()
-                    if monitor.usageData.sessionTokenPercentage > 90 {
+                    if monitor.usageData.sessionUsagePercentage > 90 {
                         Label("使用率が高い", systemImage: "exclamationmark.triangle.fill")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(.red)
@@ -313,7 +313,7 @@ struct CurrentSessionView: View {
     }
     
     private var progressGradient: LinearGradient {
-        return Color.usageGradient(for: monitor.usageData.sessionTokenPercentage)
+        return Color.usageGradient(for: monitor.usageData.sessionUsagePercentage)
     }
     
     private func formatTime(_ timeString: String) -> String {
@@ -339,7 +339,7 @@ struct SessionDetailView: View {
                     Spacer()
                     Text(monitor.usageData.formattedSessionPercentage)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(monitor.usageData.sessionTokenPercentage > 90 ? .red : (monitor.usageData.sessionTokenPercentage > 70 ? .orange : .green))
+                        .foregroundColor(monitor.usageData.sessionUsagePercentage > 90 ? .red : (monitor.usageData.sessionUsagePercentage > 70 ? .orange : .green))
                 }
                 
                 // Progress bar
@@ -350,9 +350,9 @@ struct SessionDetailView: View {
                             .frame(height: 8)
                         
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(monitor.usageData.sessionTokenPercentage > 90 ? Color.red : (monitor.usageData.sessionTokenPercentage > 70 ? Color.orange : Color.green))
-                            .frame(width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionTokenPercentage / 100)), height: 8)
-                            .animation(.easeInOut(duration: 0.3), value: monitor.usageData.sessionTokenPercentage)
+                            .fill(monitor.usageData.sessionUsagePercentage > 90 ? Color.red : (monitor.usageData.sessionUsagePercentage > 70 ? Color.orange : Color.green))
+                            .frame(width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)), height: 8)
+                            .animation(.easeInOut(duration: 0.3), value: monitor.usageData.sessionUsagePercentage)
                     }
                 }
                 .frame(height: 8)

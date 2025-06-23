@@ -54,7 +54,7 @@ struct HistoryView: View {
                             Capsule()
                                 .fill(progressGradient)
                                 .frame(
-                                    width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionTokenPercentage / 100)),
+                                    width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)),
                                     height: 4
                                 )
                         }
@@ -103,15 +103,15 @@ struct HistoryView: View {
     
     // 計算プロパティ
     private var progressGradient: LinearGradient {
-        return Color.usageGradient(for: monitor.usageData.sessionTokenPercentage)
+        return Color.usageGradient(for: monitor.usageData.sessionUsagePercentage)
     }
     
     private var progressBackgroundColor: Color {
-        return Color.usageColor(for: monitor.usageData.sessionTokenPercentage).opacity(0.15)
+        return Color.usageColor(for: monitor.usageData.sessionUsagePercentage).opacity(0.15)
     }
     
     private var progressForegroundColor: Color {
-        return Color.usageColor(for: monitor.usageData.sessionTokenPercentage)
+        return Color.usageColor(for: monitor.usageData.sessionUsagePercentage)
     }
     
     // チャートデータ生成（仮実装）

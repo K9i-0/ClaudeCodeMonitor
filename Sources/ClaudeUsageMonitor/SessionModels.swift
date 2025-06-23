@@ -26,6 +26,11 @@ struct TokenCounts: Codable {
     let outputTokens: Int
     let cacheCreationInputTokens: Int
     let cacheReadInputTokens: Int
+    
+    /// Billable tokens (input + output only)
+    var billableTokens: Int {
+        return inputTokens + outputTokens
+    }
 }
 
 struct BurnRate: Codable {
@@ -115,13 +120,8 @@ extension UsageData {
         }
     }
     
-    var sessionTokenPercentage: Double {
-        guard let session = activeSession else { return 0 }
-        return (Double(session.totalTokens) / Double(sessionTokenLimit)) * 100
-    }
-    
     var formattedSessionPercentage: String {
-        return String(format: "%.1f%%", sessionTokenPercentage)
+        return String(format: "%.1f%%", sessionUsagePercentage)
     }
     
     var sessionRemainingTime: String {
@@ -155,5 +155,28 @@ extension UsageData {
     var isOverLimit: Bool {
         guard let session = activeSession else { return false }
         return session.totalTokens > sessionTokenLimit
+    }
+    
+    /// Session usage percentage
+    var sessionUsagePercentage: Double {
+        guard let session = activeSession else { return 0 }
+        return (Double(session.totalTokens) / Double(sessionTokenLimit)) * 100
+    }
+    
+    /// Remaining session tokens
+    var remainingSessionTokens: Int {
+        guard let session = activeSession else { return sessionTokenLimit }
+        return max(0, sessionTokenLimit - session.totalTokens)
+    }
+}
+
+// MARK: - Session Block Convertible Protocol
+protocol SessionBlockConvertible {
+    func toSessionBlock() -> SessionBlock
+}
+
+extension SessionBlock: SessionBlockConvertible {
+    func toSessionBlock() -> SessionBlock {
+        return self
     }
 }

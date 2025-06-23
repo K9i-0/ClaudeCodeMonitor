@@ -16,6 +16,10 @@ let package = Package(
         .executableTarget(
             name: "ClaudeUsageMonitor",
             // Remove linker settings for now - will handle Info.plist separately
+        ),
+        .testTarget(
+            name: "ClaudeUsageMonitorTests",
+            dependencies: ["ClaudeUsageMonitor"]
         )
     ]
 )

@@ -75,7 +75,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         } else if let session = usageMonitor.usageData.activeSession {
             // アクティブセッション
-            let percentage = usageMonitor.usageData.sessionTokenPercentage
+            let percentage = usageMonitor.usageData.sessionUsagePercentage
             let cost = session.costUSD
             
             // SF Symbolを使用したアイコン表示
