@@ -6,10 +6,10 @@ import AppKit
 class NotificationManager: NSObject {
     static let shared = NotificationManager()
     
-    private var lastNotificationPercentage: Double = 0
-    private let notificationThresholds: [Double] = [70, 80, 90, 95]
+    private var hasNotified90Percent: Bool = false
     private let userDefaults = UserDefaults.standard
     private let notificationEnabledKey = "ClaudeUsageMonitor.notificationsEnabled"
+    private var currentSessionId: String? = nil
     
     var isNotificationEnabled: Bool {
         get { userDefaults.bool(forKey: notificationEnabledKey) }
@@ -34,53 +34,33 @@ class NotificationManager: NSObject {
         }
     }
     
-    func checkAndSendNotification(for percentage: Double, burnRate: Double, remainingTime: String) {
+    func checkAndSendNotification(for percentage: Double, burnRate: Double, remainingTime: String, sessionId: String? = nil) {
         guard isNotificationEnabled else { return }
         guard Bundle.main.bundleIdentifier != nil else { return }
         
-        // 使用率が前回の通知時より下がった場合はリセット
-        if percentage < lastNotificationPercentage - 5 {
-            lastNotificationPercentage = 0
+        // セッションが変わったらリセット
+        if sessionId != currentSessionId {
+            hasNotified90Percent = false
+            currentSessionId = sessionId
         }
         
-        // 閾値を超えているかチェック
-        for threshold in notificationThresholds {
-            if percentage >= threshold && lastNotificationPercentage < threshold {
-                sendUsageNotification(
-                    percentage: percentage,
-                    threshold: threshold,
-                    burnRate: burnRate,
-                    remainingTime: remainingTime
-                )
-                lastNotificationPercentage = percentage
-                break
-            }
+        // 90%を超えており、まだ通知していない場合のみ通知
+        if percentage >= 90 && !hasNotified90Percent {
+            sendUsageNotification(
+                percentage: percentage,
+                burnRate: burnRate,
+                remainingTime: remainingTime
+            )
+            hasNotified90Percent = true
         }
     }
     
-    private func sendUsageNotification(percentage: Double, threshold: Double, burnRate: Double, remainingTime: String) {
+    private func sendUsageNotification(percentage: Double, burnRate: Double, remainingTime: String) {
         let content = UNMutableNotificationContent()
         
-        // タイトルとボディを使用率に応じて設定
-        switch threshold {
-        case 95:
-            content.title = "⚠️ 使用率が限界に近づいています"
-            content.body = "現在の使用率: \(Int(percentage))%\n残り時間: \(remainingTime)"
-            content.sound = .defaultCritical
-        case 90:
-            content.title = "🔥 使用率が非常に高い状態です"
-            content.body = "現在の使用率: \(Int(percentage))%\n燃焼率: \(Int(burnRate)) tokens/分"
-            content.sound = .default
-        case 80:
-            content.title = "⚡ 使用率が高くなっています"
-            content.body = "現在の使用率: \(Int(percentage))%\nペースを調整することをお勧めします"
-            content.sound = .default
-        default:
-            content.title = "📊 使用率が\(Int(threshold))%を超えました"
-            content.body = "現在の使用率: \(Int(percentage))%"
-            content.sound = nil
-        }
-        
+        content.title = "🔥 使用率が90%を超えました"
+        content.body = "現在の使用率: \(Int(percentage))%\n残り時間: \(remainingTime)\n燃焼率: \(Int(burnRate)) tokens/分"
+        content.sound = .default
         content.categoryIdentifier = "USAGE_ALERT"
         content.threadIdentifier = "claude-usage"
         
@@ -89,7 +69,7 @@ class NotificationManager: NSObject {
         
         // 即座に通知を送信
         let request = UNNotificationRequest(
-            identifier: "usage-\(Int(threshold))",
+            identifier: "usage-90",
             content: content,
             trigger: nil
         )
@@ -98,7 +78,7 @@ class NotificationManager: NSObject {
             if let error = error {
                 print("通知送信エラー: \(error)")
             } else {
-                print("通知を送信しました: \(Int(percentage))%")
+                print("90%通知を送信しました")
             }
         }
     }
@@ -127,7 +107,8 @@ class NotificationManager: NSObject {
         }
         
         // 通知履歴をリセット
-        lastNotificationPercentage = 0
+        hasNotified90Percent = false
+        currentSessionId = nil
     }
 }
 

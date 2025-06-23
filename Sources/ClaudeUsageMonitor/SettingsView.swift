@@ -12,10 +12,11 @@ struct SettingsView: View {
     ]
     
     var body: some View {
-        VStack(spacing: 16) {
-            Text("プラン選択")
-                .font(.headline)
-                .padding(.top)
+        ScrollView {
+            VStack(spacing: 16) {
+                Text("プラン選択")
+                    .font(.headline)
+                    .padding(.top)
             
             VStack(spacing: 8) {
                 ForEach(plans, id: \.0) { plan in
@@ -76,7 +77,7 @@ struct SettingsView: View {
                 }
                 
                 if notificationEnabled {
-                    Text("70%, 80%, 90%, 95%で通知します")
+                    Text("使用率が90%に達した時に通知します")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                         .padding(.leading, 26)
@@ -86,11 +87,12 @@ struct SettingsView: View {
             
             Spacer()
             
-            Button("閉じる") {
-                presentationMode.wrappedValue.dismiss()
+                Button("閉じる") {
+                    presentationMode.wrappedValue.dismiss()
+                }
+                .keyboardShortcut(.escape)
+                .padding(.bottom)
             }
-            .keyboardShortcut(.escape)
-            .padding(.bottom)
         }
         .frame(width: 300, height: 340)
     }

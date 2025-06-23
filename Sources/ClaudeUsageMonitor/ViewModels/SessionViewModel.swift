@@ -33,6 +33,14 @@ class SessionViewModel: ObservableObject {
         cost = data.costUSD
         planDescription = monitor.usageData.planDescription
         resetTime = Date.formatTime(from: data.endTime)
+        
+        // 通知チェック
+        NotificationManager.shared.checkAndSendNotification(
+            for: percentage,
+            burnRate: burnRate,
+            remainingTime: remainingTime,
+            sessionId: data.id
+        )
     }
     
     var formattedRemainingTokens: String {
