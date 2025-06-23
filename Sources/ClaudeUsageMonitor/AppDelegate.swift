@@ -13,7 +13,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         usageMonitor = UsageMonitor()
         
         // Setup notification center delegate
-        UNUserNotificationCenter.current().delegate = NotificationManager.shared
+        if Bundle.main.bundleIdentifier != nil {
+            UNUserNotificationCenter.current().delegate = NotificationManager.shared
+        }
         
         // Create status bar item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)

@@ -3,7 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var monitor: UsageMonitor
     @Environment(\.presentationMode) var presentationMode
-    @State private var notificationEnabled = NotificationManager.shared.isNotificationEnabled
+    @State private var notificationEnabled = Bundle.main.bundleIdentifier != nil ? NotificationManager.shared.isNotificationEnabled : false
     
     let plans = [
         ("Pro", "7,000 tokens/session"),
@@ -67,9 +67,11 @@ struct SettingsView: View {
                 }
                 .toggleStyle(SwitchToggleStyle(tint: .blue))
                 .onChange(of: notificationEnabled) { newValue in
-                    NotificationManager.shared.isNotificationEnabled = newValue
-                    if newValue {
-                        NotificationManager.shared.requestNotificationPermission()
+                    if Bundle.main.bundleIdentifier != nil {
+                        NotificationManager.shared.isNotificationEnabled = newValue
+                        if newValue {
+                            NotificationManager.shared.requestNotificationPermission()
+                        }
                     }
                 }
                 

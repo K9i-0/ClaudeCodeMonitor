@@ -12,7 +12,14 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
     private let userDefaults = UserDefaults.standard
     private let detectedPlanKey = "ClaudeUsageMonitor.detectedPlan"
     private let userPlanKey = "ClaudeUsageMonitor.userSelectedPlan"
-    private lazy var notificationManager = NotificationManager.shared
+    private lazy var notificationManager: NotificationManager? = {
+        // バンドル環境でのみ通知マネージャーを初期化
+        guard Bundle.main.bundleIdentifier != nil else {
+            print("[DEBUG] Running outside of app bundle - notifications disabled")
+            return nil
+        }
+        return NotificationManager.shared
+    }()
     private var lastSessionId: String?
     
     // エラーメッセージ（後方互換性のため）
@@ -246,7 +253,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
                             
                             // 通知チェック
                             let burnRateValue = Double(usageData.sessionBurnRate) ?? 0
-                            notificationManager.checkAndSendNotification(
+                            notificationManager?.checkAndSendNotification(
                                 for: usageData.sessionTokenPercentage,
                                 burnRate: burnRateValue,
                                 remainingTime: usageData.sessionRemainingTime
@@ -425,7 +432,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         
         if lastSessionId != nil && lastSessionId != sessionId {
             // セッションが変わった（リセットされた）
-            notificationManager.sendSessionResetNotification()
+            notificationManager?.sendSessionResetNotification()
         }
         
         lastSessionId = sessionId
