@@ -59,7 +59,7 @@ macOSのメニューバーに常駐し、Claude Codeの使用状況をリアル�
 ### 1. リポジトリのクローン
 
 ```bash
-git clone https://github.com/yourusername/ClaudeUsageMonitor.git
+git clone https://github.com/K9i-0/ClaudeUsageMonitor.git
 cd ClaudeUsageMonitor
 ```
 
@@ -132,8 +132,8 @@ open ClaudeUsageMonitor.app
 
 ## 💬 サポート
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/ClaudeUsageMonitor/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/ClaudeUsageMonitor/discussions)
+- **Issues**: [GitHub Issues](https://github.com/K9i-0/ClaudeUsageMonitor/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/K9i-0/ClaudeUsageMonitor/discussions)
 
 ## 🔗 関連リンク
 

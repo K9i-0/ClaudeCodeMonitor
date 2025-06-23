@@ -59,7 +59,7 @@ This app wraps the [ccusage](https://github.com/ryoppippi/ccusage) CLI tool to p
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/ClaudeUsageMonitor.git
+git clone https://github.com/K9i-0/ClaudeUsageMonitor.git
 cd ClaudeUsageMonitor
 ```
 
@@ -132,8 +132,8 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## 💬 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/ClaudeUsageMonitor/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/ClaudeUsageMonitor/discussions)
+- **Issues**: [GitHub Issues](https://github.com/K9i-0/ClaudeUsageMonitor/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/K9i-0/ClaudeUsageMonitor/discussions)
 
 ## 🔗 Related Links
 
