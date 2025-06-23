@@ -80,10 +80,6 @@
 "settings.languageSettings" = "言語";
 "settings.useSystemLanguage" = "システムの言語を使用";
 "settings.selectLanguage" = "言語を選択";
-"settings.languageChangeTitle" = "言語が変更されました";
-"settings.languageChangeMessage" = "言語の変更を適用するにはアプリを再起動してください。";
-"settings.restartButton" = "再起動";
-"settings.cancelButton" = "キャンセル";
 
 // Language options
 "language.system" = "システム";

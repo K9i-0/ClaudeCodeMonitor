@@ -121,10 +121,6 @@ struct L10n {
         static var languageSettings: String { "settings.languageSettings".localized }
         static var useSystemLanguage: String { "settings.useSystemLanguage".localized }
         static var selectLanguage: String { "settings.selectLanguage".localized }
-        static var languageChangeTitle: String { "settings.languageChangeTitle".localized }
-        static var languageChangeMessage: String { "settings.languageChangeMessage".localized }
-        static var restartButton: String { "settings.restartButton".localized }
-        static var cancelButton: String { "settings.cancelButton".localized }
     }
     
     struct Language {

@@ -4,7 +4,6 @@ struct SettingsTabView: View {
     @EnvironmentObject var monitor: UsageMonitor
     @StateObject private var languageSettings = LanguageSettings.shared
     @State private var notificationEnabled = Bundle.main.bundleIdentifier != nil ? NotificationManager.shared.isNotificationEnabled : false
-    @State private var showLanguageRestartAlert = false
     
     let plans = [
         ("Pro", "7,000 tokens/session", L10n.Plan.pro),
@@ -59,10 +58,7 @@ struct SettingsTabView: View {
                 VStack(spacing: 8) {
                     ForEach(AppLanguage.allCases, id: \.self) { language in
                         Button(action: {
-                            if languageSettings.currentLanguage != language {
-                                languageSettings.currentLanguage = language
-                                showLanguageRestartAlert = true
-                            }
+                            languageSettings.currentLanguage = language
                         }) {
                             HStack {
                                 Image(systemName: languageSettings.currentLanguage == language ? "checkmark.circle.fill" : "circle")
@@ -119,22 +115,6 @@ struct SettingsTabView: View {
             }
             
             Spacer()
-        }
-        .alert(isPresented: $showLanguageRestartAlert) {
-            Alert(
-                title: Text(L10n.Settings.languageChangeTitle),
-                message: Text(L10n.Settings.languageChangeMessage),
-                primaryButton: .default(Text(L10n.Settings.restartButton)) {
-                    // Restart the app
-                    let url = URL(fileURLWithPath: Bundle.main.bundlePath)
-                    let configuration = NSWorkspace.OpenConfiguration()
-                    configuration.activates = true
-                    NSWorkspace.shared.openApplication(at: url, configuration: configuration) { _, _ in
-                        NSApplication.shared.terminate(nil)
-                    }
-                },
-                secondaryButton: .cancel(Text(L10n.Settings.cancelButton))
-            )
         }
     }
 }
