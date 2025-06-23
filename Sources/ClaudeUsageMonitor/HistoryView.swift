@@ -3,37 +3,13 @@ import Charts
 
 struct HistoryView: View {
     let monitor: UsageMonitor
-    @State private var selectedTimeRange = 0
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // ヘッダーとタイムレンジセレクタ
-            HStack {
-                Text("使用状況サマリー")
-                    .font(.system(size: 16, weight: .semibold))
-                
-                Spacer()
-                
-                Picker("", selection: $selectedTimeRange) {
-                    Text("今日").tag(0)
-                    Text("週間").tag(1)
-                    Text("月間").tag(2)
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .frame(width: 150)
-            }
-            
-            // 使用量チャート（モックデータ - 実際のデータ構造に合わせて調整が必要）
-            if selectedTimeRange == 0 {
-                // 今日のチャート
-                UsageChartView(
-                    title: "今日の使用量推移",
-                    data: generateTodayChartData(session: monitor.usageData.activeSession)
-                )
-                .frame(height: 180)
-                .padding(.vertical, 8)
-            }
+            // ヘッダー
+            Text("使用状況サマリー")
+                .font(.system(size: 16, weight: .semibold))
             
             // 現在のセッション情報（カード風デザイン）
             if let session = monitor.usageData.activeSession {
