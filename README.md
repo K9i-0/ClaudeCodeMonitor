@@ -43,23 +43,39 @@ open Package.swift
 
 #### 方法2: コマンドラインでビルド
 
+デバッグビルド:
 ```bash
 swift build
 ```
 
+リリースビルド:
+```bash
+swift build -c release
+```
+
 アプリケーションバンドルの作成:
 ```bash
-# ビルド
+# デバッグビルドの場合
 swift build
-
-# アプリケーションバンドルの作成
 mkdir -p ClaudeUsageMonitor.app/Contents/MacOS
 mkdir -p ClaudeUsageMonitor.app/Contents/Resources
 cp .build/arm64-apple-macosx/debug/ClaudeUsageMonitor ClaudeUsageMonitor.app/Contents/MacOS/
 cp Info.plist ClaudeUsageMonitor.app/Contents/
 
+# リリースビルドの場合
+swift build -c release
+mkdir -p ClaudeUsageMonitor.app/Contents/MacOS
+mkdir -p ClaudeUsageMonitor.app/Contents/Resources
+cp .build/arm64-apple-macosx/release/ClaudeUsageMonitor ClaudeUsageMonitor.app/Contents/MacOS/
+cp Info.plist ClaudeUsageMonitor.app/Contents/
+
 # 実行
 open ClaudeUsageMonitor.app
+```
+
+ワンライナービルド（リリース版）:
+```bash
+swift build -c release && mkdir -p ClaudeUsageMonitor.app/Contents/MacOS && mkdir -p ClaudeUsageMonitor.app/Contents/Resources && cp .build/arm64-apple-macosx/release/ClaudeUsageMonitor ClaudeUsageMonitor.app/Contents/MacOS/ && cp Info.plist ClaudeUsageMonitor.app/Contents/ && open ClaudeUsageMonitor.app
 ```
 
 ## 必要な環境
