@@ -4,6 +4,11 @@ import SwiftUI
 // MARK: - Localization Helper
 extension String {
     var localized: String {
+        // In CI environment, return the key itself to avoid Bundle.module issues
+        guard ProcessInfo.processInfo.environment["CI"] == nil else {
+            return self
+        }
+        
         let languageCode = LanguageSettings.shared.effectiveLanguageCode()
         
         // Try to get the bundle for the specific language
@@ -17,6 +22,11 @@ extension String {
     }
     
     func localized(with arguments: CVarArg...) -> String {
+        // In CI environment, return formatted string with key to avoid Bundle.module issues
+        guard ProcessInfo.processInfo.environment["CI"] == nil else {
+            return String(format: self, arguments: arguments)
+        }
+        
         let languageCode = LanguageSettings.shared.effectiveLanguageCode()
         
         // Try to get the bundle for the specific language
