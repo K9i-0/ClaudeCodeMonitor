@@ -16,12 +16,24 @@ macOSのメニューバーに常駐し、Claude Codeの利用額をリアルタ�
 
 ## ビルド方法
 
+### 方法1: Xcodeを使用（推奨）
+
+1. Xcodeでプロジェクトを開く
+```bash
+open Package.swift
+```
+
+2. Xcodeでビルド
+- Product > Build（⌘B）でビルド
+- Product > Run（⌘R）で実行
+
+### 方法2: コマンドラインでビルド
+
 ```bash
 swift build
 ```
 
-## アプリケーションバンドルの作成
-
+アプリケーションバンドルの作成:
 ```bash
 # ビルド
 swift build
@@ -31,11 +43,8 @@ mkdir -p ClaudeUsageMonitor.app/Contents/MacOS
 mkdir -p ClaudeUsageMonitor.app/Contents/Resources
 cp .build/arm64-apple-macosx/debug/ClaudeUsageMonitor ClaudeUsageMonitor.app/Contents/MacOS/
 cp Info.plist ClaudeUsageMonitor.app/Contents/
-```
 
-## 実行
-
-```bash
+# 実行
 open ClaudeUsageMonitor.app
 ```
 
