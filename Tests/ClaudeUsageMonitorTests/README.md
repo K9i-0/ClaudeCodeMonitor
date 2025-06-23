@@ -49,3 +49,5 @@ Current test coverage includes:
 - NotificationManager tests are limited due to bundle environment requirements
 - Network operations in UsageMonitor can cause issues in test environment
 - Some tests require running the local server
+- Locale-dependent tests are skipped in CI environment (detected via CI environment variable)
+- UsageMonitor tests are skipped in CI to avoid timer/network related crashes
