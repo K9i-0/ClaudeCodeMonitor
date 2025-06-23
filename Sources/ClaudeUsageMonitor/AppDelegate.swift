@@ -56,14 +56,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 let cost = usageMonitor.usageData.formattedDailyCost
                 let percentage = usageMonitor.usageData.dailyCostPercentage
+                let percentageStr = usageMonitor.usageData.formattedDailyPercentage
                 
-                // Show cost and percentage with color indicator
+                // Always show cost and percentage with appropriate indicator
                 if percentage > 80 {
-                    button.title = "\(cost) ⚠️ \(usageMonitor.usageData.formattedDailyPercentage)"
+                    button.title = "\(cost) ⚠️ \(percentageStr)"
                 } else if percentage > 60 {
-                    button.title = "\(cost) • \(usageMonitor.usageData.formattedDailyPercentage)"
+                    button.title = "\(cost) ⚡ \(percentageStr)"
                 } else {
-                    button.title = cost
+                    button.title = "\(cost) • \(percentageStr)"
                 }
             }
         }
