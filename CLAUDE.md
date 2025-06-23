@@ -42,30 +42,41 @@ npm start  # Runs on http://127.0.0.1:3456
 
 **AppDelegate.swift**
 - Manages NSStatusItem (menubar icon) and NSPopover
-- Updates menubar display: emoji + percentage (e.g., "✨ 24%")
+- Updates menubar display: SF Symbol + percentage (e.g., "bolt.fill 24%")
 - Handles popover show/hide with outside click detection
+- Sets up notification delegate with bundle safety checks
 
 **UsageMonitor.swift**
 - Central data management with @Published properties
 - Multi-strategy ccusage execution (server → npx paths → shell)
 - Handles Pro/Max5/Max20 plan detection and persistence
+- Implements UsageMonitoring protocol for dependency injection
 
 **ContentView.swift**
 - Two-tab interface: "現在" (current session) / "履歴" (history)
 - CurrentSessionView: Large remaining tokens display, progress bar, burn rate
-- Compact 380x300 popover that fits without scrolling
+- Compact 480x300 popover with scrollable content
+- Visual effects blur background for modern appearance
 
 **SessionModels.swift**
 - Token limits: Pro (7K), Max5 (35K), Max20 (140K) per 5-hour session
 - Auto-detects plan from historical usage or manual selection
 - Calculates burn rate, remaining time, and usage percentage
+- Extends UsageData with session-specific properties
+
+**NotificationManager.swift**
+- Sends notification when usage reaches 90%
+- One notification per session (tracked by session ID)
+- Handles Xcode debug build limitations with bundle checks
+- Implements UNUserNotificationCenterDelegate
 
 ### UI Design Decisions
 
 **Menubar Display**
-- Shows only emoji + percentage for clarity
-- Emoji states: ✨ (0-20%), 💎 (20-50%), 🚀 (50-70%), ⚡ (70-90%), 🔥 (90%+)
-- No dollar sign icon, no cost in menubar (ambiguous without context)
+- Shows SF Symbol + percentage for clarity
+- Dynamic icon based on usage: circle.fill → flame.fill → bolt.fill → exclamationmark.triangle.fill
+- Color gradient from blue → orange → red based on usage
+- No cost display in menubar (context-dependent)
 
 **Session Cost Display**
 - Current session cost shown prominently in popover
@@ -90,6 +101,12 @@ Xcode has limited PATH environment. Debug with:
 - Stores selected plan in UserDefaults
 - Manual selection overrides auto-detection
 - Detects Max5/Max20 from historical token usage
+
+### Architecture Patterns
+- MVVM with SessionViewModel and HistoryViewModel
+- Protocol-oriented design (UsageMonitoring, SessionBlockConvertible)
+- Centralized formatting utilities (NumberFormatters, Date extensions)
+- Error handling with ClaudeUsageError enum
 
 ## Environment Requirements
 
