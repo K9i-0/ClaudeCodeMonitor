@@ -30,6 +30,7 @@ class UsageMonitor: ObservableObject {
     }
     
     func fetchUsageData() {
+        print("Fetching usage data at \(Date())")
         Task {
             await fetchSessionData()
             await fetchDailyUsage()
@@ -145,9 +146,14 @@ class UsageMonitor: ObservableObject {
                     let blocksResponse = try JSONDecoder().decode(BlocksResponse.self, from: data)
                     
                     // Get the active block
+                    print("Blocks response: \(blocksResponse.blocks.count) blocks")
                     if let activeBlock = blocksResponse.blocks.first(where: { $0.isActive }) {
                         usageData.activeSession = activeBlock
                         print("Active session: \(activeBlock.totalTokens) tokens, \(activeBlock.isActive ? "active" : "inactive")")
+                        print("Session percentage: \(usageData.sessionTokenPercentage)%")
+                    } else {
+                        print("No active session found")
+                        usageData.activeSession = nil
                     }
                     return
                 }

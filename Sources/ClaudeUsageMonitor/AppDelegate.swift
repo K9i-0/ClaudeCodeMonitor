@@ -23,7 +23,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Create popover
         popover = NSPopover()
-        popover.contentSize = NSSize(width: 300, height: 320)
+        popover.contentSize = NSSize(width: 300, height: 380)
         popover.behavior = .transient
         popover.contentViewController = NSHostingController(rootView: ContentView().environmentObject(usageMonitor))
         
@@ -80,12 +80,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if popover.isShown {
             closePopover()
         } else {
-            showPopover()
+            Task { @MainActor in
+                showPopover()
+            }
         }
     }
     
+    @MainActor
     private func showPopover() {
         if let button = statusItem.button {
+            // Refresh data when opening popover
+            usageMonitor.fetchUsageData()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             eventMonitor?.start()
         }
