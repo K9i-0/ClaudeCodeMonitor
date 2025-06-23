@@ -1,0 +1,199 @@
+import Foundation
+import SwiftUI
+
+// MARK: - Date Extensions
+extension Date {
+    /// ISO8601フォーマットの時刻を表示用の時刻文字列に変換
+    static func formatTime(from isoString: String, format: String = "HH:mm") -> String {
+        let formatter = ISO8601DateFormatter()
+        guard let date = formatter.date(from: isoString) else {
+            return isoString
+        }
+        
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateFormat = format
+        displayFormatter.timeZone = TimeZone.current
+        return displayFormatter.string(from: date)
+    }
+    
+    /// 経過時間を取得
+    static func getElapsedTime(from startTimeString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        guard let startDate = formatter.date(from: startTimeString) else {
+            return "N/A"
+        }
+        
+        let elapsed = Date().timeIntervalSince(startDate)
+        let hours = Int(elapsed) / 3600
+        let minutes = (Int(elapsed) % 3600) / 60
+        
+        if hours > 0 {
+            return "\(hours)時間\(minutes)分"
+        } else {
+            return "\(minutes)分"
+        }
+    }
+    
+    /// フォーマット済み時刻文字列を返す
+    func formattedTime() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        formatter.timeZone = TimeZone.current
+        return formatter.string(from: self)
+    }
+}
+
+// MARK: - Color Extensions
+extension Color {
+    /// 使用率に基づいた色を返す
+    static func usageColor(for percentage: Double) -> Color {
+        switch percentage {
+        case 90...:
+            return .red
+        case 70..<90:
+            return .orange
+        case 50..<70:
+            return .yellow
+        case 30..<50:
+            return .blue
+        default:
+            return .green
+        }
+    }
+    
+    /// 使用率に基づいたグラデーションを返す
+    static func usageGradient(for percentage: Double) -> LinearGradient {
+        if percentage > 90 {
+            return LinearGradient(colors: [.red, .pink], startPoint: .leading, endPoint: .trailing)
+        } else if percentage > 70 {
+            return LinearGradient(colors: [.orange, .yellow], startPoint: .leading, endPoint: .trailing)
+        } else if percentage > 50 {
+            return LinearGradient(colors: [.yellow, .green], startPoint: .leading, endPoint: .trailing)
+        } else {
+            return LinearGradient(colors: [.green, .mint], startPoint: .leading, endPoint: .trailing)
+        }
+    }
+}
+
+// MARK: - Number Formatting
+struct NumberFormatters {
+    /// トークン数をフォーマット（K/M表記）
+    static func formatTokens(_ tokens: Int) -> String {
+        if tokens >= 1_000_000 {
+            return String(format: "%.1fM", Double(tokens) / 1_000_000)
+        } else if tokens >= 1_000 {
+            return String(format: "%.1fK", Double(tokens) / 1_000)
+        } else {
+            return "\(tokens)"
+        }
+    }
+    
+    /// コストをフォーマット（ドル記号付き）
+    static func formatCost(_ cost: Double) -> String {
+        return String(format: "$%.2f", cost)
+    }
+    
+    /// 軸ラベル用の値フォーマット
+    static func formatAxisValue(_ value: Double) -> String {
+        if value >= 1000 {
+            return String(format: "%.0fK", value / 1000)
+        }
+        return String(format: "%.0f", value)
+    }
+}
+
+// MARK: - Error Types
+enum ClaudeMonitorError: LocalizedError {
+    case networkError(String)
+    case parsingError(String)
+    case commandExecutionError(String)
+    case fileNotFound(String)
+    case unknownError(String)
+    
+    var errorDescription: String? {
+        switch self {
+        case .networkError(let message):
+            return "ネットワークエラー: \(message)"
+        case .parsingError(let message):
+            return "データ解析エラー: \(message)"
+        case .commandExecutionError(let message):
+            return "コマンド実行エラー: \(message)"
+        case .fileNotFound(let path):
+            return "ファイルが見つかりません: \(path)"
+        case .unknownError(let message):
+            return "不明なエラー: \(message)"
+        }
+    }
+    
+    var recoverySuggestion: String? {
+        switch self {
+        case .networkError:
+            return "インターネット接続を確認してください"
+        case .parsingError:
+            return "ccusageが最新バージョンであることを確認してください"
+        case .commandExecutionError:
+            return "Node.jsとnpxが正しくインストールされているか確認してください"
+        case .fileNotFound:
+            return "必要なファイルが存在することを確認してください"
+        case .unknownError:
+            return "アプリを再起動してもう一度お試しください"
+        }
+    }
+}
+
+// MARK: - Constants
+struct Constants {
+    struct Timing {
+        static let refreshInterval: TimeInterval = 300 // 5分
+        static let animationDuration: Double = 0.3
+        static let longAnimationDuration: Double = 0.5
+    }
+    
+    struct UI {
+        static let cornerRadius: CGFloat = 12
+        static let smallCornerRadius: CGFloat = 10
+        static let padding: CGFloat = 16
+        static let smallPadding: CGFloat = 12
+        static let shadowRadius: CGFloat = 3
+        static let shadowOpacity: Double = 0.1
+    }
+    
+    struct TokenLimits {
+        static let pro = 7_000
+        static let max5 = 35_000
+        static let max20 = 140_000
+    }
+}
+
+// MARK: - ViewModifiers
+struct CardStyle: ViewModifier {
+    let cornerRadius: CGFloat
+    let padding: CGFloat
+    @Environment(\.colorScheme) var colorScheme
+    
+    init(cornerRadius: CGFloat = Constants.UI.cornerRadius, padding: CGFloat = Constants.UI.padding) {
+        self.cornerRadius = cornerRadius
+        self.padding = padding
+    }
+    
+    func body(content: Content) -> some View {
+        content
+            .padding(padding)
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(Color(NSColor.controlBackgroundColor))
+                    .shadow(
+                        color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.1),
+                        radius: Constants.UI.shadowRadius,
+                        x: 0,
+                        y: 2
+                    )
+            )
+    }
+}
+
+extension View {
+    func cardStyle(cornerRadius: CGFloat = Constants.UI.cornerRadius, padding: CGFloat = Constants.UI.padding) -> some View {
+        self.modifier(CardStyle(cornerRadius: cornerRadius, padding: padding))
+    }
+}

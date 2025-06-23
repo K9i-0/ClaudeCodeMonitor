@@ -2,15 +2,34 @@ import Foundation
 import Combine
 
 @MainActor
-class UsageMonitor: ObservableObject {
+class UsageMonitor: ObservableObject, UsageMonitoring {
     @Published var usageData = UsageData()
     @Published var isLoading = false
-    @Published var errorMessage: String?
+    @Published var error: ClaudeMonitorError?
     
     private var timer: Timer?
-    private let updateInterval: TimeInterval = 300 // 5 minutes
+    private let updateInterval = Constants.Timing.refreshInterval
+    private let userDefaults = UserDefaults.standard
+    private let detectedPlanKey = "ClaudeUsageMonitor.detectedPlan"
+    private let userPlanKey = "ClaudeUsageMonitor.userSelectedPlan"
+    private let notificationManager = NotificationManager.shared
+    private var lastSessionId: String?
+    
+    // エラーメッセージ（後方互換性のため）
+    var errorMessage: String? {
+        error?.errorDescription
+    }
     
     init() {
+        // ユーザーが手動選択したプランを優先的に読み込む
+        if let userPlan = userDefaults.string(forKey: userPlanKey) {
+            usageData.detectedPlanType = userPlan
+            print("Loaded user selected plan: \(userPlan)")
+        } else if let savedPlan = userDefaults.string(forKey: detectedPlanKey) {
+            // 自動検出されたプランを読み込む（後方互換性）
+            usageData.detectedPlanType = savedPlan
+            print("Loaded auto-detected plan: \(savedPlan)")
+        }
         startMonitoring()
     }
     
@@ -40,14 +59,18 @@ class UsageMonitor: ObservableObject {
     
     private func fetchDailyUsage() async {
         isLoading = true
-        errorMessage = nil
+        error = nil
         
         do {
             // Try local server first
             if let url = URL(string: "http://127.0.0.1:3456/usage") {
                 let (data, response) = try await URLSession.shared.data(from: url)
                 
-                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                if let httpResponse = response as? HTTPURLResponse {
+                    guard httpResponse.statusCode == 200 else {
+                        throw ClaudeMonitorError.networkError("サーバーエラー: ステータスコード \(httpResponse.statusCode)")
+                    }
+                    
                     let ccusageResponse = try JSONDecoder().decode(CcusageResponse.self, from: data)
                     
                     // Debug print
@@ -76,6 +99,9 @@ class UsageMonitor: ObservableObject {
                     return
                 }
             }
+        } catch let decodingError as DecodingError {
+            error = ClaudeMonitorError.parsingError(decodingError.localizedDescription)
+            print("Decoding error: \(decodingError)")
         } catch {
             // Server not running or request failed, fall back to npx
             print("Local server not available, falling back to npx command")
@@ -149,7 +175,7 @@ class UsageMonitor: ObservableObject {
                 usageData.lastUpdated = Date()
             }
         } catch {
-            errorMessage = "Failed to fetch usage data: \(error.localizedDescription)"
+            self.error = ClaudeMonitorError.unknownError("Failed to fetch usage data: \(error.localizedDescription)")
             print("Error details: \(error)")
         }
         
@@ -184,10 +210,45 @@ class UsageMonitor: ObservableObject {
                         
                         // Get the active block
                         print("Blocks response: \(blocksResponse.blocks.count) blocks")
+                        
+                        // 過去のセッションから最大トークン使用量を検出
+                        var maxTokens = 0
+                        for block in blocksResponse.blocks {
+                            if !block.isGap && block.totalTokens > maxTokens {
+                                maxTokens = block.totalTokens
+                            }
+                        }
+                        usageData.historicalMaxTokens = maxTokens
+                        
+                        // プランタイプを自動判定して保存
+                        if maxTokens > UsageData.max5SessionTokenLimit {
+                            updateDetectedPlan("Max20")
+                        } else if maxTokens > UsageData.proSessionTokenLimit {
+                            updateDetectedPlan("Max5")
+                        } else {
+                            // 保存されたプランタイプがない場合のみProに設定
+                            if usageData.detectedPlanType == nil {
+                                updateDetectedPlan("Pro")
+                            }
+                        }
+                        
                         if let activeBlock = blocksResponse.blocks.first(where: { $0.isActive }) {
                             usageData.activeSession = activeBlock
                             print("Active session: \(activeBlock.totalTokens) tokens, \(activeBlock.isActive ? "active" : "inactive")")
+                            print("Historical max tokens: \(maxTokens)")
                             print("Session percentage: \(usageData.sessionTokenPercentage)%")
+                            print("Detected plan: \(usageData.detectedPlan)")
+                            
+                            // セッションが変わったかチェック
+                            checkSessionChange(activeBlock)
+                            
+                            // 通知チェック
+                            let burnRateValue = Double(usageData.sessionBurnRate) ?? 0
+                            notificationManager.checkAndSendNotification(
+                                for: usageData.sessionTokenPercentage,
+                                burnRate: burnRateValue,
+                                remainingTime: usageData.sessionRemainingTime
+                            )
                         } else {
                             print("No active session found")
                             usageData.activeSession = nil
@@ -285,9 +346,32 @@ class UsageMonitor: ObservableObject {
                 }
                 
                 let blocksResponse = try JSONDecoder().decode(BlocksResponse.self, from: data)
+                
+                // 過去のセッションから最大トークン使用量を検出
+                var maxTokens = 0
+                for block in blocksResponse.blocks {
+                    if !block.isGap && block.totalTokens > maxTokens {
+                        maxTokens = block.totalTokens
+                    }
+                }
+                usageData.historicalMaxTokens = maxTokens
+                
+                // プランタイプを自動判定して保存
+                if maxTokens > UsageData.max5SessionTokenLimit {
+                    updateDetectedPlan("Max20")
+                } else if maxTokens > UsageData.proSessionTokenLimit {
+                    updateDetectedPlan("Max5")
+                } else {
+                    if usageData.detectedPlanType == nil {
+                        updateDetectedPlan("Pro")
+                    }
+                }
+                
                 if let activeBlock = blocksResponse.blocks.first(where: { $0.isActive }) {
                     usageData.activeSession = activeBlock
                     print("[DEBUG] Session data loaded via fallback")
+                    print("[DEBUG] Historical max tokens: \(maxTokens)")
+                    print("[DEBUG] Detected plan: \(usageData.detectedPlan)")
                 }
             } else {
                 print("[DEBUG] No data from ccusage command")
@@ -299,21 +383,49 @@ class UsageMonitor: ObservableObject {
     }
     
     func formatTokens(_ tokens: Int) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.groupingSeparator = ","
-        return formatter.string(from: NSNumber(value: tokens)) ?? "0"
+        return NumberFormatters.formatTokens(tokens)
     }
     
     func formatCost(_ cost: Double) -> String {
-        return String(format: "$%.2f", cost)
+        return NumberFormatters.formatCost(cost)
     }
-}
-
-extension Date {
-    func formattedTime() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss"
-        return formatter.string(from: self)
+    
+    private func updateDetectedPlan(_ plan: String) {
+        // ユーザーが手動でプランを選択している場合は自動更新しない
+        if userDefaults.string(forKey: userPlanKey) != nil {
+            return
+        }
+        
+        if usageData.detectedPlanType != plan {
+            usageData.detectedPlanType = plan
+            userDefaults.set(plan, forKey: detectedPlanKey)
+            print("Updated detected plan to: \(plan)")
+        }
+    }
+    
+    func setUserPlan(_ plan: String) {
+        usageData.detectedPlanType = plan
+        userDefaults.set(plan, forKey: userPlanKey)
+        // 自動検出のキーを削除
+        userDefaults.removeObject(forKey: detectedPlanKey)
+        print("User selected plan: \(plan)")
+        
+        // UIを即座に更新するために、変更を通知
+        objectWillChange.send()
+    }
+    
+    func getUserPlan() -> String {
+        return usageData.detectedPlanType ?? "Pro"
+    }
+    
+    private func checkSessionChange(_ newSession: SessionBlock) {
+        let sessionId = "\(newSession.startTime)-\(newSession.endTime)"
+        
+        if lastSessionId != nil && lastSessionId != sessionId {
+            // セッションが変わった（リセットされた）
+            notificationManager.sendSessionResetNotification()
+        }
+        
+        lastSessionId = sessionId
     }
 }

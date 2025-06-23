@@ -47,7 +47,26 @@ extension UsageData {
     static let max20SessionTokenLimit: Int = 140_000
     
     var sessionTokenLimit: Int {
-        // Auto-detect limit based on current usage
+        // 保存されたプランタイプがあればそれを使用
+        if let planType = detectedPlanType {
+            switch planType {
+            case "Max20":
+                return Self.max20SessionTokenLimit
+            case "Max5":
+                return Self.max5SessionTokenLimit
+            default:
+                return Self.proSessionTokenLimit
+            }
+        }
+        
+        // 過去の最大使用量から判定
+        if historicalMaxTokens > Self.max5SessionTokenLimit {
+            return Self.max20SessionTokenLimit
+        } else if historicalMaxTokens > Self.proSessionTokenLimit {
+            return Self.max5SessionTokenLimit
+        }
+        
+        // 現在のセッション使用量からも判定（フォールバック）
         if let session = activeSession {
             if session.totalTokens > Self.max5SessionTokenLimit {
                 return Self.max20SessionTokenLimit
@@ -55,7 +74,45 @@ extension UsageData {
                 return Self.max5SessionTokenLimit
             }
         }
+        
         return Self.proSessionTokenLimit
+    }
+    
+    var detectedPlan: String {
+        // 保存されたプランタイプがあればそれを使用
+        if let planType = detectedPlanType {
+            return planType
+        }
+        
+        // 過去の最大使用量から判定
+        if historicalMaxTokens > Self.max5SessionTokenLimit {
+            return "Max20"
+        } else if historicalMaxTokens > Self.proSessionTokenLimit {
+            return "Max5"
+        }
+        
+        // 現在のセッション使用量からも判定（フォールバック）
+        if let session = activeSession {
+            if session.totalTokens > Self.max5SessionTokenLimit {
+                return "Max20"
+            } else if session.totalTokens > Self.proSessionTokenLimit {
+                return "Max5"
+            }
+        }
+        
+        // デフォルトはPro
+        return "Pro"
+    }
+    
+    var planDescription: String {
+        switch detectedPlan {
+        case "Max20":
+            return "Max20 (140K tokens/session)"
+        case "Max5":
+            return "Max5 (35K tokens/session)"
+        default:
+            return "Pro (7K tokens/session)"
+        }
     }
     
     var sessionTokenPercentage: Double {

@@ -35,10 +35,15 @@ struct Totals: Codable {
     let totalTokens: Int
 }
 
+// Alias for backward compatibility
+typealias TotalUsage = Totals
+
 struct UsageData {
     var todayUsage: DailyUsage?
     var monthlyTotal: Totals?
     var activeSession: SessionBlock?
+    var historicalMaxTokens: Int = 0  // 過去のセッションでの最大トークン使用量
+    var detectedPlanType: String? = nil  // ユーザーのプラン（Pro/Max5/Max20）を保存
     var lastUpdated: Date = Date()
     
     // Claude Code typical cost limits based on documentation

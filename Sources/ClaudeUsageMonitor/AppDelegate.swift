@@ -1,6 +1,7 @@
 import Cocoa
 import SwiftUI
 import Combine
+import UserNotifications
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
@@ -11,20 +12,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         usageMonitor = UsageMonitor()
         
+        // Setup notification center delegate
+        UNUserNotificationCenter.current().delegate = NotificationManager.shared
+        
         // Create status bar item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "dollarsign.circle.fill", accessibilityDescription: "Claude Usage Monitor")
-            button.title = "Loading..."
+            // SF Symbolsを使用した初期アイコン
+            if let image = NSImage(systemSymbolName: "hourglass", accessibilityDescription: "Claude Usage Monitor") {
+                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+                button.image = image.withSymbolConfiguration(config)
+                button.imagePosition = .imageLeading
+            } else {
+                button.title = "⏳"
+            }
             button.action = #selector(togglePopover)
             button.target = self
         }
         
         // Create popover
         popover = NSPopover()
-        popover.contentSize = NSSize(width: 300, height: 380)
+        popover.contentSize = NSSize(width: 380, height: 460)
         popover.behavior = .transient
+        popover.animates = true
         popover.contentViewController = NSHostingController(rootView: ContentView().environmentObject(usageMonitor))
         
         // Monitor for clicks outside the popover
@@ -50,31 +61,96 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @MainActor
     private func updateStatusBarTitle() {
-        if let button = statusItem.button {
-            if usageMonitor.isLoading && usageMonitor.usageData.activeSession == nil {
-                button.title = "Loading..."
-            } else if let session = usageMonitor.usageData.activeSession {
-                // Show session-based info
-                let percentage = usageMonitor.usageData.sessionTokenPercentage
-                let percentageStr = usageMonitor.usageData.formattedSessionPercentage
-                let tokensK = session.totalTokens / 1000  // Show in K
-                
-                // Show tokens and percentage with appropriate indicator
-                if percentage > 100 {
-                    button.title = "\(tokensK)K 🚨 \(percentageStr)"
-                } else if percentage > 90 {
-                    button.title = "\(tokensK)K ⚠️ \(percentageStr)"
-                } else if percentage > 70 {
-                    button.title = "\(tokensK)K ⚡ \(percentageStr)"
-                } else {
-                    button.title = "\(tokensK)K • \(percentageStr)"
-                }
-            } else {
-                // Fallback to daily cost if no session data
-                button.title = usageMonitor.usageData.formattedDailyCost
+        guard let button = statusItem.button else { return }
+        
+        if usageMonitor.isLoading && usageMonitor.usageData.activeSession == nil {
+            // ローディング中
+            if let image = NSImage(systemSymbolName: "hourglass", accessibilityDescription: "Loading") {
+                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+                button.image = image.withSymbolConfiguration(config)
+                button.title = ""
+                button.toolTip = "使用状況を読み込み中..."
+            }
+        } else if let session = usageMonitor.usageData.activeSession {
+            // アクティブセッション
+            let percentage = usageMonitor.usageData.sessionTokenPercentage
+            let cost = session.costUSD
+            
+            // SF Symbolを使用したアイコン表示
+            let symbolName = getStatusSymbol(percentage: percentage)
+            let tintColor = getStatusColor(percentage: percentage)
+            
+            if let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Usage Status") {
+                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+                    .applying(.init(paletteColors: [tintColor]))
+                button.image = image.withSymbolConfiguration(config)
+            }
+            
+            // パーセンテージのみ表示（HIGに準拠した簡潔な表示）
+            button.title = String(format: "%.0f%%", percentage)
+            button.attributedTitle = NSAttributedString(
+                string: button.title,
+                attributes: [
+                    .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium),
+                    .foregroundColor: tintColor
+                ]
+            )
+            
+            // 詳細情報はツールチップで表示
+            let burnRate = usageMonitor.usageData.sessionBurnRate
+            let remaining = usageMonitor.usageData.sessionRemainingTime
+            button.toolTip = String(format: 
+                """
+                使用率: %.1f%%
+                コスト: $%.2f
+                燃焼率: %.0f tokens/min
+                残り時間: %@
+                """, percentage, cost, burnRate, remaining)
+        } else {
+            // 非アクティブ
+            if let image = NSImage(systemSymbolName: "moon.zzz", accessibilityDescription: "Inactive") {
+                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+                button.image = image.withSymbolConfiguration(config)
+                button.title = ""
+                button.toolTip = "アクティブなセッションがありません"
             }
         }
     }
+    
+    @MainActor
+    private func getStatusSymbol(percentage: Double) -> String {
+        switch percentage {
+        case 90...:
+            return "exclamationmark.triangle.fill"  // 危険
+        case 70..<90:
+            return "bolt.fill"  // 注意
+        case 50..<70:
+            return "flame.fill"  // 高使用率
+        case 30..<50:
+            return "speedometer"  // 中使用率
+        case 10..<30:
+            return "circle.lefthalf.filled"  // 低使用率
+        default:
+            return "circle.fill"  // 最小使用率
+        }
+    }
+    
+    @MainActor
+    private func getStatusColor(percentage: Double) -> NSColor {
+        switch percentage {
+        case 90...:
+            return NSColor.systemRed  // 危険
+        case 70..<90:
+            return NSColor.systemOrange  // 警告
+        case 50..<70:
+            return NSColor.systemYellow  // 注意
+        case 30..<50:
+            return NSColor.systemBlue  // 標準
+        default:
+            return NSColor.systemGreen  // 良好
+        }
+    }
+    
     
     @objc private func togglePopover() {
         if popover.isShown {

@@ -4,77 +4,96 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ClaudeUsageMonitor is a macOS menubar application built with SwiftUI that monitors Claude API usage and costs in real-time. The app runs as a menu bar utility (LSUIElement) and displays usage data fetched from the `ccusage` CLI tool.
+ClaudeUsageMonitor is a macOS menubar application that monitors Claude Code API usage and costs. It wraps the [ccusage](https://github.com/ryoppippi/ccusage) CLI tool to provide real-time usage tracking with a native macOS interface.
 
-## Build Commands
+## Build and Run Commands
 
 ```bash
-# Build the executable
-swift build
+# Option 1: Using Xcode (Recommended)
+open Package.swift
+# Then Build (⌘B) and Run (⌘R) in Xcode
 
-# Create app bundle after building
+# Option 2: Swift CLI
+swift build
+swift build -c release  # For release build
+
+# Create app bundle (required after CLI build)
 mkdir -p ClaudeUsageMonitor.app/Contents/MacOS
 mkdir -p ClaudeUsageMonitor.app/Contents/Resources
 cp .build/arm64-apple-macosx/debug/ClaudeUsageMonitor ClaudeUsageMonitor.app/Contents/MacOS/
 cp Info.plist ClaudeUsageMonitor.app/Contents/
-
-# Run the app
 open ClaudeUsageMonitor.app
 
-# Build for release
-swift build -c release
+# Run local server (recommended to avoid npx path issues)
+cd server
+npm install
+npm start  # Runs on http://127.0.0.1:3456
 ```
 
 ## Architecture
 
-### Core Components
-
-1. **ClaudeUsageMonitorApp.swift**: Entry point using @main attribute, sets up AppDelegate
-2. **AppDelegate.swift**: Manages NSStatusItem, popover lifecycle, and automatic updates (5-minute intervals)
-3. **UsageMonitor.swift**: @MainActor ObservableObject that executes `ccusage` CLI and parses JSON responses
-4. **ContentView.swift**: SwiftUI view with tabs for today/this month usage display
-5. **Models.swift**: Codable structs matching ccusage JSON output structure
-
-### Key Design Patterns
-
-- **SwiftUI + AppKit Integration**: Uses NSHostingController to embed SwiftUI views in NSPopover
-- **Observable Pattern**: UsageMonitor publishes changes to UI via @Published properties
-- **Process Execution**: Spawns child process to run `npx ccusage@latest --json`
-- **Event Monitoring**: Global event monitor to close popover on outside clicks
-
 ### Data Flow
+1. **ccusage Integration**: Fetches usage data via local server (preferred) or direct npx execution
+2. **Session-Based Monitoring**: Claude Code uses 5-hour session blocks with token limits
+3. **Real-Time Updates**: 5-minute auto-refresh with manual refresh option
+4. **MainActor Isolation**: SwiftUI views and UsageMonitor are @MainActor isolated
 
-1. AppDelegate creates UsageMonitor instance and sets up 5-minute timer
-2. UsageMonitor executes ccusage CLI and parses JSON response
-3. Parsed data updates @Published properties triggering UI refresh
-4. Menu bar shows today's cost, popover shows detailed breakdown
+### Key Components
 
-## Development Guidelines
+**AppDelegate.swift**
+- Manages NSStatusItem (menubar icon) and NSPopover
+- Updates menubar display: emoji + percentage (e.g., "✨ 24%")
+- Handles popover show/hide with outside click detection
 
-### Adding Features
+**UsageMonitor.swift**
+- Central data management with @Published properties
+- Multi-strategy ccusage execution (server → npx paths → shell)
+- Handles Pro/Max5/Max20 plan detection and persistence
 
-- UI changes: Modify ContentView.swift
-- Data model changes: Update Models.swift to match ccusage output
-- Monitoring logic: Extend UsageMonitor.swift
-- Menu bar behavior: Modify AppDelegate.swift
+**ContentView.swift**
+- Two-tab interface: "現在" (current session) / "履歴" (history)
+- CurrentSessionView: Large remaining tokens display, progress bar, burn rate
+- Compact 380x300 popover that fits without scrolling
 
-### Error Handling
+**SessionModels.swift**
+- Token limits: Pro (7K), Max5 (35K), Max20 (140K) per 5-hour session
+- Auto-detects plan from historical usage or manual selection
+- Calculates burn rate, remaining time, and usage percentage
 
-- UsageMonitor catches Process execution errors and updates errorMessage
-- Empty or malformed responses handled gracefully with default values
-- UI shows appropriate messages for loading/error states
+### UI Design Decisions
 
-### Testing External Dependencies
+**Menubar Display**
+- Shows only emoji + percentage for clarity
+- Emoji states: ✨ (0-20%), 💎 (20-50%), 🚀 (50-70%), ⚡ (70-90%), 🔥 (90%+)
+- No dollar sign icon, no cost in menubar (ambiguous without context)
 
-The app requires `ccusage` CLI tool. Test with:
-```bash
-npx ccusage@latest --json
-```
+**Session Cost Display**
+- Current session cost shown prominently in popover
+- Historical costs marked as "参考値" (reference) since billing is session-based
+- Plan selection via settings (gear icon)
 
-## Important Notes
+## Technical Decisions
 
-- Bundle Identifier: `com.example.claudeusagemonitor`
-- Minimum macOS version: 13.0
-- Swift version: 5.9+
-- App runs as menu bar only (no Dock icon)
-- Automatic termination disabled via Info.plist
+### ccusage Execution Strategy
+1. Try local Express server first (avoids PATH issues)
+2. Search common npx locations (mise, homebrew, volta, nvm)
+3. Use `which npx` command
+4. Fall back to shell with extended PATH
+
+### Xcode Execution Issues
+Xcode has limited PATH environment. Debug with:
+- Check console for `[DEBUG]` messages
+- Ensure server is running: `cd server && npm start`
+- Add new npx paths to `npxSearchPaths` array in UsageMonitor.swift
+
+### Plan Detection
+- Stores selected plan in UserDefaults
+- Manual selection overrides auto-detection
+- Detects Max5/Max20 from historical token usage
+
+## Environment Requirements
+
+- macOS 13.0+
+- Swift 5.9+
+- Node.js (for ccusage CLI)
+- App runs as LSUIElement (menubar only, no Dock icon)
