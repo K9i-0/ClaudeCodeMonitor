@@ -15,14 +15,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "ClaudeUsageMonitor",
-            linkerSettings: [
-                .unsafeFlags([
-                    "-Xlinker", "-sectcreate",
-                    "-Xlinker", "__TEXT",
-                    "-Xlinker", "__info_plist",
-                    "-Xlinker", "Info.plist"
-                ])
-            ]
+            // Remove linker settings for now - will handle Info.plist separately
         )
     ]
 )

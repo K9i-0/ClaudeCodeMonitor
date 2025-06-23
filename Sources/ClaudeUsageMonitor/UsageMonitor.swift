@@ -41,52 +41,43 @@ class UsageMonitor: ObservableObject {
         errorMessage = nil
         
         do {
-            // Find npx command in common locations
-            let npxPaths = [
-                "/Users/\(NSUserName())/.local/share/mise/shims/npx",
-                "/opt/homebrew/bin/npx",
-                "/usr/local/bin/npx",
-                "/Users/\(NSUserName())/.nvm/versions/node/*/bin/npx",
-                "/Users/\(NSUserName())/.npm-global/bin/npx"
-            ]
-            
-            var npxPath: String?
-            for path in npxPaths {
-                // Expand wildcards if needed
-                let expandedPath = (path as NSString).expandingTildeInPath
-                if FileManager.default.fileExists(atPath: expandedPath) {
-                    npxPath = expandedPath
-                    break
-                }
+            // Try local server first
+            if let url = URL(string: "http://127.0.0.1:3456/usage") {
+                let (data, response) = try await URLSession.shared.data(from: url)
                 
-                // Check for wildcard patterns
-                if path.contains("*") {
-                    let directory = (path as NSString).deletingLastPathComponent
-                    let expandedDir = (directory as NSString).expandingTildeInPath
-                    if let contents = try? FileManager.default.contentsOfDirectory(atPath: expandedDir) {
-                        for item in contents {
-                            let fullPath = (expandedDir as NSString).appendingPathComponent(item + "/bin/npx")
-                            if FileManager.default.fileExists(atPath: fullPath) {
-                                npxPath = fullPath
-                                break
-                            }
-                        }
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                    let ccusageResponse = try JSONDecoder().decode(CcusageResponse.self, from: data)
+                    
+                    // Get today's date in YYYY-MM-DD format
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "yyyy-MM-dd"
+                    let today = formatter.string(from: Date())
+                    
+                    // Find today's usage from the array
+                    if let todayData = ccusageResponse.daily.first(where: { $0.date == today }) {
+                        usageData.todayUsage = todayData
+                    } else {
+                        usageData.todayUsage = nil
                     }
+                    
+                    // Store monthly total
+                    usageData.monthlyTotal = ccusageResponse.totals
+                    usageData.lastUpdated = Date()
+                    isLoading = false
+                    return
                 }
             }
-            
-            // If not found in common locations, try using shell
+        } catch {
+            // Server not running or request failed, fall back to npx
+            print("Local server not available, falling back to npx command")
+        }
+        
+        // Fallback to npx command
+        do {
             let process = Process()
-            if let foundNpxPath = npxPath {
-                print("Using npx at: \(foundNpxPath)")
-                process.executableURL = URL(fileURLWithPath: foundNpxPath)
-                process.arguments = ["ccusage@latest", "--json"]
-            } else {
-                print("npx not found in common locations, using shell fallback")
-                // Fallback to shell with proper PATH setup
-                process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-                process.arguments = ["-l", "-c", "export PATH=\"$HOME/.local/share/mise/shims:$PATH\" && npx ccusage@latest --json"]
-            }
+            // Use shell to ensure proper PATH resolution
+            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+            process.arguments = ["-l", "-c", "npx ccusage@latest --json"]
             
             let pipe = Pipe()
             let errorPipe = Pipe()
