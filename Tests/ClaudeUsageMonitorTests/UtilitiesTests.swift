@@ -28,7 +28,13 @@ final class UtilitiesTests: XCTestCase {
         let oneHourAgo = now.addingTimeInterval(-3600).ISO8601Format()
         let elapsed = Date.getElapsedTime(from: oneHourAgo)
         
-        XCTAssertTrue(elapsed.contains("1時間") || elapsed.contains("60分"))
+        // Check for both English and Japanese formats
+        XCTAssertTrue(
+            elapsed.contains("1時間") || 
+            elapsed.contains("60分") || 
+            elapsed.contains("1 hour") || 
+            elapsed.contains("60 minutes")
+        )
     }
     
     func testGetElapsedTimeMinutesOnly() {
@@ -36,8 +42,15 @@ final class UtilitiesTests: XCTestCase {
         let thirtyMinutesAgo = now.addingTimeInterval(-1800).ISO8601Format()
         let elapsed = Date.getElapsedTime(from: thirtyMinutesAgo)
         
-        XCTAssertTrue(elapsed.contains("30分"))
-        XCTAssertFalse(elapsed.contains("時間"))
+        // Check for both English and Japanese formats
+        XCTAssertTrue(
+            elapsed.contains("30分") || 
+            elapsed.contains("30 minutes")
+        )
+        XCTAssertFalse(
+            elapsed.contains("時間") || 
+            elapsed.contains("hour")
+        )
     }
     
     // MARK: - Color Extension Tests
