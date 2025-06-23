@@ -110,12 +110,21 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
             error = ClaudeMonitorError.parsingError(decodingError.localizedDescription)
             print("Decoding error: \(decodingError)")
         } catch {
-            // Server not running or request failed, fall back to npx
-            print("Local server not available, falling back to npx command")
+            // Server not running or request failed
+            print("Local server not available: \(error.localizedDescription)")
+            self.error = ClaudeMonitorError.networkError(L10n.Error.serverNotRunning)
+            return
         }
         
-        // Fallback to npx command with better path handling
-        print("[DEBUG] Daily data: falling back to npx command")
+        // App Sandbox prevents direct command execution
+        // The following code only works when App Sandbox is disabled
+        guard ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] == nil else {
+            print("[DEBUG] App Sandbox is enabled - cannot execute external commands")
+            return
+        }
+        
+        // Fallback to npx command (only when App Sandbox is disabled)
+        print("[DEBUG] App Sandbox is disabled - falling back to npx command")
         do {
             let process = Process()
             
@@ -268,10 +277,17 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
             }
         } catch {
             print("[DEBUG] Server connection failed: \(error.localizedDescription)")
+            self.error = ClaudeMonitorError.networkError(L10n.Error.serverNotRunning)
         }
         
-        // Fallback: Try multiple methods to run ccusage
-        print("[DEBUG] Falling back to direct ccusage execution")
+        // App Sandbox prevents direct command execution
+        guard ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] == nil else {
+            print("[DEBUG] App Sandbox is enabled - cannot execute external commands")
+            return
+        }
+        
+        // Fallback: Try multiple methods to run ccusage (only when App Sandbox is disabled)
+        print("[DEBUG] App Sandbox is disabled - falling back to direct ccusage execution")
         
         // Method 1: Try to find npx in common locations
         let npxSearchPaths = [

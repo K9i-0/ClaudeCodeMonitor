@@ -33,10 +33,16 @@ npm start  # Runs on http://127.0.0.1:3456
 ## Architecture
 
 ### Data Flow
-1. **ccusage Integration**: Fetches usage data via local server (preferred) or direct npx execution
+1. **ccusage Integration**: Fetches usage data via local server (required when App Sandbox is enabled)
 2. **Session-Based Monitoring**: Claude Code uses 5-hour session blocks with token limits
 3. **Real-Time Updates**: 5-minute auto-refresh with manual refresh option
 4. **MainActor Isolation**: SwiftUI views and UsageMonitor are @MainActor isolated
+
+### App Sandbox Support
+- **App Sandbox is enabled** for App Store distribution
+- When App Sandbox is enabled, the local server (http://127.0.0.1:3456) is **required**
+- Direct command execution (npx) is not possible with App Sandbox
+- Network entitlements allow localhost connections
 
 ### Key Components
 
