@@ -42,15 +42,24 @@ class UsageMonitor: ObservableObject {
         
         do {
             let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-            process.arguments = ["npx", "ccusage@latest", "--json"]
+            // Use shell to ensure proper PATH resolution
+            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+            process.arguments = ["-l", "-c", "npx ccusage@latest --json"]
             
             let pipe = Pipe()
+            let errorPipe = Pipe()
             process.standardOutput = pipe
-            process.standardError = Pipe()
+            process.standardError = errorPipe
             
             try process.run()
             process.waitUntilExit()
+            
+            // Check for errors
+            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            if !errorData.isEmpty {
+                let errorString = String(data: errorData, encoding: .utf8) ?? "Unknown error"
+                print("ccusage error: \(errorString)")
+            }
             
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             if !data.isEmpty {
@@ -74,6 +83,7 @@ class UsageMonitor: ObservableObject {
             }
         } catch {
             errorMessage = "Failed to fetch usage data: \(error.localizedDescription)"
+            print("Error details: \(error)")
         }
         
         isLoading = false
