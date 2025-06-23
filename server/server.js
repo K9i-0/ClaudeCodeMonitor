@@ -1,6 +1,7 @@
 import express from 'express';
 import { calculateTotals, createTotalsObject } from 'ccusage/calculate-cost';
 import { loadDailyUsageData } from 'ccusage/data-loader';
+import { spawn } from 'child_process';
 
 const app = express();
 const PORT = 3456;
@@ -59,6 +60,39 @@ app.get('/usage', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching usage data:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get active session block data
+app.get('/blocks/active', async (req, res) => {
+  try {
+    const npx = spawn('npx', ['ccusage', 'blocks', '--active', '--json']);
+    let output = '';
+    let error = '';
+
+    npx.stdout.on('data', (data) => {
+      output += data.toString();
+    });
+
+    npx.stderr.on('data', (data) => {
+      error += data.toString();
+    });
+
+    npx.on('close', (code) => {
+      if (code !== 0) {
+        res.status(500).json({ error: error || 'Failed to get blocks data' });
+        return;
+      }
+
+      try {
+        const data = JSON.parse(output);
+        res.json(data);
+      } catch (parseError) {
+        res.status(500).json({ error: 'Failed to parse blocks data' });
+      }
+    });
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });

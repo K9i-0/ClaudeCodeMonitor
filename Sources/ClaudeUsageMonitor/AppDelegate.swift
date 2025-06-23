@@ -51,21 +51,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     private func updateStatusBarTitle() {
         if let button = statusItem.button {
-            if usageMonitor.isLoading && usageMonitor.usageData.todayUsage == nil {
+            if usageMonitor.isLoading && usageMonitor.usageData.activeSession == nil {
                 button.title = "Loading..."
-            } else {
-                let cost = usageMonitor.usageData.formattedDailyCost
-                let percentage = usageMonitor.usageData.dailyCostPercentage
-                let percentageStr = usageMonitor.usageData.formattedDailyPercentage
+            } else if let session = usageMonitor.usageData.activeSession {
+                // Show session-based info
+                let percentage = usageMonitor.usageData.sessionTokenPercentage
+                let percentageStr = usageMonitor.usageData.formattedSessionPercentage
+                let tokensK = session.totalTokens / 1000  // Show in K
                 
-                // Always show cost and percentage with appropriate indicator
-                if percentage > 80 {
-                    button.title = "\(cost) ⚠️ \(percentageStr)"
-                } else if percentage > 60 {
-                    button.title = "\(cost) ⚡ \(percentageStr)"
+                // Show tokens and percentage with appropriate indicator
+                if percentage > 100 {
+                    button.title = "\(tokensK)K 🚨 \(percentageStr)"
+                } else if percentage > 90 {
+                    button.title = "\(tokensK)K ⚠️ \(percentageStr)"
+                } else if percentage > 70 {
+                    button.title = "\(tokensK)K ⚡ \(percentageStr)"
                 } else {
-                    button.title = "\(cost) • \(percentageStr)"
+                    button.title = "\(tokensK)K • \(percentageStr)"
                 }
+            } else {
+                // Fallback to daily cost if no session data
+                button.title = usageMonitor.usageData.formattedDailyCost
             }
         }
     }

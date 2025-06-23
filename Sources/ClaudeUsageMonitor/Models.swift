@@ -38,6 +38,7 @@ struct Totals: Codable {
 struct UsageData {
     var todayUsage: DailyUsage?
     var monthlyTotal: Totals?
+    var activeSession: SessionBlock?
     var lastUpdated: Date = Date()
     
     // Claude Code typical cost limits based on documentation

@@ -34,8 +34,9 @@ struct ContentView: View {
             
             // Tab selector
             Picker("", selection: $selectedTab) {
-                Text("Today").tag(0)
-                Text("This Month").tag(1)
+                Text("Session").tag(0)
+                Text("Today").tag(1)
+                Text("Month").tag(2)
             }
             .pickerStyle(SegmentedPickerStyle())
             .padding(.horizontal)
@@ -45,6 +46,13 @@ struct ContentView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if selectedTab == 0 {
+                        // Session usage
+                        if let session = monitor.usageData.activeSession {
+                            SessionDetailView(session: session, monitor: monitor)
+                        } else {
+                            EmptyStateView(message: "No active session")
+                        }
+                    } else if selectedTab == 1 {
                         // Daily usage
                         if let daily = monitor.usageData.todayUsage {
                             UsageDetailView(
@@ -96,7 +104,114 @@ struct ContentView: View {
             }
             .padding()
         }
-        .frame(width: 300, height: 320)
+        .frame(width: 300, height: 380)
+    }
+}
+
+struct SessionDetailView: View {
+    let session: SessionBlock
+    let monitor: UsageMonitor
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Token usage with progress bar
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Label("Token Limit", systemImage: "chart.bar.fill")
+                        .font(.system(size: 14, weight: .medium))
+                    Spacer()
+                    Text(monitor.usageData.formattedSessionPercentage)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(monitor.usageData.sessionTokenPercentage > 90 ? .red : (monitor.usageData.sessionTokenPercentage > 70 ? .orange : .green))
+                }
+                
+                // Progress bar
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(height: 8)
+                        
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(monitor.usageData.sessionTokenPercentage > 90 ? Color.red : (monitor.usageData.sessionTokenPercentage > 70 ? Color.orange : Color.green))
+                            .frame(width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionTokenPercentage / 100)), height: 8)
+                            .animation(.easeInOut(duration: 0.3), value: monitor.usageData.sessionTokenPercentage)
+                    }
+                }
+                .frame(height: 8)
+                
+                if monitor.usageData.isOverLimit {
+                    Text("⚠️ Token limit exceeded!")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.red)
+                }
+            }
+            
+            Divider()
+            
+            // Session info
+            HStack {
+                Label("Tokens Used", systemImage: "number.circle.fill")
+                    .font(.system(size: 14, weight: .medium))
+                Spacer()
+                Text("\(monitor.formatTokens(session.totalTokens)) / \(monitor.formatTokens(monitor.usageData.sessionTokenLimit))")
+                    .font(.system(size: 14))
+            }
+            
+            HStack {
+                Label("Burn Rate", systemImage: "flame.fill")
+                    .font(.system(size: 14, weight: .medium))
+                Spacer()
+                Text("\(monitor.usageData.sessionBurnRate) tokens/min")
+                    .font(.system(size: 14))
+                    .foregroundColor(.orange)
+            }
+            
+            HStack {
+                Label("Cost/Hour", systemImage: "dollarsign.circle.fill")
+                    .font(.system(size: 14, weight: .medium))
+                Spacer()
+                Text(monitor.usageData.sessionCostPerHour)
+                    .font(.system(size: 14))
+                    .foregroundColor(.accentColor)
+            }
+            
+            HStack {
+                Label("Time Left", systemImage: "clock.fill")
+                    .font(.system(size: 14, weight: .medium))
+                Spacer()
+                Text(monitor.usageData.sessionRemainingTime)
+                    .font(.system(size: 14))
+                    .foregroundColor(.blue)
+            }
+            
+            Divider()
+            
+            // Session details
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Session Details")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.secondary)
+                
+                Text("Started: \(formatTime(session.startTime))")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                
+                Text("Ends: \(formatTime(session.endTime))")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+    
+    private func formatTime(_ timeString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        if let date = formatter.date(from: timeString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "HH:mm"
+            return displayFormatter.string(from: date)
+        }
+        return timeString
     }
 }
 

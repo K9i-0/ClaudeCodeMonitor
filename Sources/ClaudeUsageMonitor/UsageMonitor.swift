@@ -31,6 +31,7 @@ class UsageMonitor: ObservableObject {
     
     func fetchUsageData() {
         Task {
+            await fetchSessionData()
             await fetchDailyUsage()
             await fetchMonthlyUsage()
         }
@@ -132,6 +133,52 @@ class UsageMonitor: ObservableObject {
     private func fetchMonthlyUsage() async {
         // Monthly data is now fetched together with daily data
         // This method is kept for compatibility but does nothing
+    }
+    
+    private func fetchSessionData() async {
+        do {
+            // Try local server first for session data
+            if let url = URL(string: "http://127.0.0.1:3456/blocks/active") {
+                let (data, response) = try await URLSession.shared.data(from: url)
+                
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                    let blocksResponse = try JSONDecoder().decode(BlocksResponse.self, from: data)
+                    
+                    // Get the active block
+                    if let activeBlock = blocksResponse.blocks.first(where: { $0.isActive }) {
+                        usageData.activeSession = activeBlock
+                        print("Active session: \(activeBlock.totalTokens) tokens, \(activeBlock.isActive ? "active" : "inactive")")
+                    }
+                    return
+                }
+            }
+        } catch {
+            print("Failed to fetch session data: \(error)")
+        }
+        
+        // Fallback: Try npx command directly
+        do {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+            process.arguments = ["-l", "-c", "npx ccusage blocks --active --json"]
+            
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = Pipe()
+            
+            try process.run()
+            process.waitUntilExit()
+            
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if !data.isEmpty {
+                let blocksResponse = try JSONDecoder().decode(BlocksResponse.self, from: data)
+                if let activeBlock = blocksResponse.blocks.first(where: { $0.isActive }) {
+                    usageData.activeSession = activeBlock
+                }
+            }
+        } catch {
+            print("Fallback session fetch failed: \(error)")
+        }
     }
     
     func formatTokens(_ tokens: Int) -> String {
