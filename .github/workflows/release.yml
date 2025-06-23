@@ -46,13 +46,19 @@ jobs:
         /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" ClaudeUsageMonitor.app/Contents/Info.plist
         /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.version }}" ClaudeUsageMonitor.app/Contents/Info.plist
     
-    - name: Code sign (if certificate available)
+    # ===== OPTIONAL: Code Signing and Notarization =====
+    # If you want to distribute without Apple's security warnings, set up these secrets.
+    # See docs/APPLE-SIGNING.md for details.
+    # Without this, the app will still work but users will see "unidentified developer" warnings.
+    
+    - name: Code sign (optional - reduces security warnings)
       if: ${{ env.MACOS_CERTIFICATE && env.MACOS_CERTIFICATE_PWD }}
       env:
         MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
         MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
         MACOS_CERTIFICATE_NAME: ${{ secrets.MACOS_CERTIFICATE_NAME }}
       run: |
+        echo "🔏 Signing app with Developer ID certificate..."
         # Create temporary keychain
         security create-keychain -p "$MACOS_CERTIFICATE_PWD" build.keychain
         security default-keychain -s build.keychain
@@ -68,14 +74,16 @@ jobs:
         
         # Verify signature
         codesign --verify --verbose ClaudeUsageMonitor.app
+        echo "✅ App signed successfully"
     
-    - name: Notarize app (if credentials available)
+    - name: Notarize app (optional - for smooth installation)
       if: ${{ env.APPLE_ID && env.APPLE_ID_PASSWORD }}
       env:
         APPLE_ID: ${{ secrets.APPLE_ID }}
         APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       run: |
+        echo "🍎 Submitting app for Apple notarization..."
         # Create zip for notarization
         ditto -c -k --keepParent ClaudeUsageMonitor.app ClaudeUsageMonitor.zip
         
@@ -88,6 +96,7 @@ jobs:
         
         # Staple the ticket
         xcrun stapler staple ClaudeUsageMonitor.app
+        echo "✅ App notarized successfully"
     
     - name: Create DMG
       run: |
