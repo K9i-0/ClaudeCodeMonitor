@@ -101,7 +101,7 @@ struct HistoryView: View {
                         icon: "calendar",
                         title: "今日",
                         cost: monitor.formatCost(daily.totalCost),
-                        tokens: monitor.formatTokens(daily.totalTokens),
+                        tokens: monitor.formatTokens(daily.inputTokens + daily.outputTokens),
                         accentColor: .green
                     )
                 }
@@ -112,7 +112,7 @@ struct HistoryView: View {
                         icon: "calendar.badge.clock",
                         title: "今月",
                         cost: monitor.formatCost(monthly.totalCost),
-                        tokens: monitor.formatTokens(monthly.totalTokens),
+                        tokens: monitor.formatTokens(monthly.inputTokens + monthly.outputTokens),
                         accentColor: .purple
                     )
                 }

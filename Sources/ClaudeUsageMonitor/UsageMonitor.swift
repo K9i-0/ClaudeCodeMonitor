@@ -12,7 +12,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
     private let userDefaults = UserDefaults.standard
     private let detectedPlanKey = "ClaudeUsageMonitor.detectedPlan"
     private let userPlanKey = "ClaudeUsageMonitor.userSelectedPlan"
-    private let notificationManager = NotificationManager.shared
+    private lazy var notificationManager = NotificationManager.shared
     private var lastSessionId: String?
     
     // エラーメッセージ（後方互換性のため）
@@ -165,6 +165,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
                 // Find today's usage from the array
                 if let todayData = response.daily.first(where: { $0.date == today }) {
                     usageData.todayUsage = todayData
+                    print("[DEBUG] Today's totalTokens: \(todayData.totalTokens) (billable: \(todayData.inputTokens + todayData.outputTokens))")
                 } else {
                     // If no data for today, create empty data
                     usageData.todayUsage = nil
@@ -172,6 +173,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
                 
                 // Store monthly total
                 usageData.monthlyTotal = response.totals
+                print("[DEBUG] Monthly totalTokens: \(response.totals.totalTokens) (billable: \(response.totals.inputTokens + response.totals.outputTokens))")
                 usageData.lastUpdated = Date()
             }
         } catch {

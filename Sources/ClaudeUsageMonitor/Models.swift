@@ -46,6 +46,17 @@ struct UsageData {
     var detectedPlanType: String? = nil  // ユーザーのプラン（Pro/Max5/Max20）を保存
     var lastUpdated: Date = Date()
     
+    // Helper computed properties for billable tokens (input + output only)
+    var todayBillableTokens: Int {
+        guard let today = todayUsage else { return 0 }
+        return today.inputTokens + today.outputTokens
+    }
+    
+    var monthlyBillableTokens: Int {
+        guard let monthly = monthlyTotal else { return 0 }
+        return monthly.inputTokens + monthly.outputTokens
+    }
+    
     // Claude Code typical cost limits based on documentation
     // $12/day for 90% of users, $60/month average
     static let dailyCostLimit: Double = 12.0

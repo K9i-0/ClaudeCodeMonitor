@@ -28,21 +28,30 @@ app.get('/usage', async (req, res) => {
       const todayTotalsObject = createTotalsObject(todayTotals);
       
       // Get breakdown by model for today
-      const modelBreakdown = {};
-      todayTotals.forEach(item => {
-        modelBreakdown[item.modelId] = {
-          totalTokens: item.totalTokens,
-          cachedTokens: item.cachedTokens,
-          totalCost: item.totalCost
-        };
-      });
+      const modelBreakdown = [];
+      if (Array.isArray(todayTotals)) {
+        todayTotals.forEach(item => {
+          modelBreakdown.push({
+            modelName: item.modelId,
+            inputTokens: item.inputTokens || 0,
+            outputTokens: item.outputTokens || 0,
+            cacheCreationTokens: item.cacheCreationTokens || 0,
+            cacheReadTokens: item.cacheReadTokens || 0,
+            cost: item.totalCost || 0
+          });
+        });
+      }
       
       todayUsage = {
-        date: today,
-        totalTokens: todayTotalsObject.totalTokens,
-        cachedTokens: todayTotalsObject.cachedTokens,
-        totalCost: todayTotalsObject.totalCost,
-        modelBreakdown
+        date: today.slice(0, 4) + '-' + today.slice(4, 6) + '-' + today.slice(6, 8),
+        inputTokens: todayTotalsObject.inputTokens || 0,
+        outputTokens: todayTotalsObject.outputTokens || 0,
+        cacheCreationTokens: todayTotalsObject.cacheCreationTokens || 0,
+        cacheReadTokens: todayTotalsObject.cacheReadTokens || 0,
+        totalTokens: todayTotalsObject.totalTokens || 0,
+        totalCost: todayTotalsObject.totalCost || 0,
+        modelsUsed: modelBreakdown.map(m => m.modelName),
+        modelBreakdowns: modelBreakdown
       };
     }
     
@@ -53,9 +62,12 @@ app.get('/usage', async (req, res) => {
     res.json({
       daily: todayUsage ? [todayUsage] : [],
       totals: {
-        totalTokens: monthTotalsObject.totalTokens,
-        cachedTokens: monthTotalsObject.cachedTokens,
-        totalCost: monthTotalsObject.totalCost
+        inputTokens: monthTotalsObject.inputTokens || 0,
+        outputTokens: monthTotalsObject.outputTokens || 0,
+        cacheCreationTokens: monthTotalsObject.cacheCreationTokens || 0,
+        cacheReadTokens: monthTotalsObject.cacheReadTokens || 0,
+        totalTokens: monthTotalsObject.totalTokens || 0,
+        totalCost: monthTotalsObject.totalCost || 0
       }
     });
   } catch (error) {

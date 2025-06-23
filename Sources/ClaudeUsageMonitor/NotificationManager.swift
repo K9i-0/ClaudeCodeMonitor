@@ -18,7 +18,10 @@ class NotificationManager: NSObject {
     
     override init() {
         super.init()
-        requestNotificationPermission()
+        // アプリバンドルから実行されている場合のみ通知を初期化
+        if Bundle.main.bundleIdentifier != nil {
+            requestNotificationPermission()
+        }
     }
     
     func requestNotificationPermission() {
@@ -33,6 +36,7 @@ class NotificationManager: NSObject {
     
     func checkAndSendNotification(for percentage: Double, burnRate: Double, remainingTime: String) {
         guard isNotificationEnabled else { return }
+        guard Bundle.main.bundleIdentifier != nil else { return }
         
         // 使用率が前回の通知時より下がった場合はリセット
         if percentage < lastNotificationPercentage - 5 {
@@ -101,6 +105,7 @@ class NotificationManager: NSObject {
     
     func sendSessionResetNotification() {
         guard isNotificationEnabled else { return }
+        guard Bundle.main.bundleIdentifier != nil else { return }
         
         let content = UNMutableNotificationContent()
         content.title = "✨ セッションがリセットされました"
