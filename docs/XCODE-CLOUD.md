@@ -2,75 +2,85 @@
 
 This document describes how to set up Xcode Cloud for automatic TestFlight distribution.
 
-## Prerequisites
+## ⚠️ 人間がやる必要があること
 
-1. Apple Developer Program membership
-2. App Store Connect access
-3. Valid signing certificates and provisioning profiles
+### 1. Apple Developer Program
+- [ ] Apple Developer Programに登録（年額$99）
+- [ ] Apple IDで[developer.apple.com](https://developer.apple.com)にサインイン
 
-## Initial Setup
+### 2. App IDの作成
+1. [ ] [Apple Developer Portal](https://developer.apple.com)にアクセス
+2. [ ] Certificates, Identifiers & Profilesに移動
+3. [ ] Identifiers → + ボタン → App IDs → Continue
+4. [ ] 以下を設定:
+   - **Description**: Claude Usage Monitor
+   - **Bundle ID**: Explicit → `com.k9i.claude-usage-monitor`
+   - **Capabilities**:
+     - ✅ App Sandbox
+     - ✅ Hardened Runtime
 
-### 1. Create App ID
+### 3. App Store Connectでアプリ作成
+1. [ ] [App Store Connect](https://appstoreconnect.apple.com)にサインイン
+2. [ ] My Apps → + → New App
+3. [ ] 以下を入力:
+   - **Platform**: macOS
+   - **Name**: Claude Usage Monitor
+   - **Primary Language**: Japanese (or English)
+   - **Bundle ID**: 先ほど作成したものを選択
+   - **SKU**: claude-usage-monitor
 
-1. Go to [Apple Developer Portal](https://developer.apple.com)
-2. Navigate to Certificates, Identifiers & Profiles
-3. Create new App ID with bundle identifier: `com.k9i.claude-usage-monitor`
-4. Enable required capabilities:
-   - App Sandbox
-   - Hardened Runtime
+### 4. Xcodeでの設定
+1. [ ] プロジェクトを開く
+2. [ ] Signing & Capabilities:
+   - **Team**: あなたのDeveloper Team
+   - **Bundle Identifier**: `com.k9i.claude-usage-monitor`
+   - **Signing**: Automatically manage signing
+3. [ ] Product → Xcode Cloud → Create Workflow
+4. [ ] GitHubと連携（初回のみ）
+5. [ ] ワークフローを設定:
 
-### 2. Create App in App Store Connect
-
-1. Go to [App Store Connect](https://appstoreconnect.apple.com)
-2. Create new macOS app
-3. Set bundle ID to `com.k9i.claude-usage-monitor`
-4. Configure app information
-
-### 3. Configure Xcode Cloud
-
-1. Open project in Xcode
-2. Navigate to Product → Xcode Cloud
-3. Set up new workflow with these settings:
-
-#### Workflow: TestFlight Release
-
-**Environment:**
+#### ワークフロー設定
+**基本設定:**
 - **Name**: TestFlight Release
-- **Environment**: macOS
+- **Description**: Automatic TestFlight distribution on version tags
 
 **Start Conditions:**
-- **Source**: Tag
-- **Condition**: Tags starting with `v`
-- **Branch**: main
+- **Source Control Changes**
+  - **Branch Changes**: OFF
+  - **Tag Changes**: ON
+    - **Tags Beginning With**: `v`
+    - **Source Branch**: main
+
+**Environment:**
+- **Platform**: macOS
+- **Xcode Version**: Latest Release
+- **macOS Version**: Latest
 
 **Actions:**
-1. **Archive - macOS**
-   - **Scheme**: ClaudeUsageMonitor
-   - **Platform**: macOS
-   - **Distribution**: TestFlight (Internal Testing)
+- **Archive - macOS**
+  - **Platform**: macOS
+  - **Scheme**: ClaudeUsageMonitor
+  - **Configuration**: Release
 
 **Post-Actions:**
-- **TestFlight Internal Testing**: Automatic
-- **Notify**: Team members when build is available
+- **TestFlight Internal Testing**: External Groups
+- **Notify**: ON
 
-### 4. Custom Build Scripts
+### 5. TestFlightの設定
+1. [ ] App Store Connect → TestFlight
+2. [ ] Test Information を入力
+3. [ ] Internal Groupを作成（任意の名前）
+4. [ ] テスターを追加
 
-Xcode Cloud will automatically detect and run scripts in the `ci_scripts` directory:
+## Xcode Cloudのカスタムスクリプト（オプション）
 
-- `ci_post_clone.sh`: Runs after repository clone
-  - Sets build number from CI_BUILD_NUMBER
-  - Sets version from git tag
-  
-- `ci_post_xcodebuild.sh`: Runs after build completion
-  - Verifies build artifacts
-  - Checks binary architecture
+もしビルド時にカスタム処理が必要な場合は、リポジトリに`ci_scripts`ディレクトリを作成して以下のスクリプトを配置できます：
 
-### 5. Environment Variables
+- `ci_post_clone.sh`: クローン後に実行
+- `ci_pre_xcodebuild.sh`: ビルド前に実行  
+- `ci_post_xcodebuild.sh`: ビルド後に実行
 
-Configure these in Xcode Cloud settings if needed:
-
-- `MARKETING_VERSION`: Override CFBundleShortVersionString
-- `CURRENT_PROJECT_VERSION`: Override CFBundleVersion
+現時点では不要なので、リポジトリには含めていません。
 
 ## Workflow
 
