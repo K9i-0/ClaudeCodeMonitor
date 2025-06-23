@@ -27,9 +27,9 @@ class NotificationManager: NSObject {
     func requestNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if granted {
-                print("通知許可が得られました")
+                print(L10n.Notification.permissionGranted)
             } else if let error = error {
-                print("通知許可エラー: \(error)")
+                print(L10n.Notification.permissionError(error: error.localizedDescription))
             }
         }
     }
@@ -58,8 +58,8 @@ class NotificationManager: NSObject {
     private func sendUsageNotification(percentage: Double, burnRate: Double, remainingTime: String) {
         let content = UNMutableNotificationContent()
         
-        content.title = "🔥 使用率が90%を超えました"
-        content.body = "現在の使用率: \(Int(percentage))%\n残り時間: \(remainingTime)\n燃焼率: \(Int(burnRate)) tokens/分"
+        content.title = L10n.Notification.highUsageTitle
+        content.body = L10n.Notification.highUsageBodyDetailed(percentage: Int(percentage), timeRemaining: remainingTime, burnRate: Int(burnRate))
         content.sound = .default
         content.categoryIdentifier = "USAGE_ALERT"
         content.threadIdentifier = "claude-usage"
@@ -76,9 +76,9 @@ class NotificationManager: NSObject {
         
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("通知送信エラー: \(error)")
+                print(L10n.Notification.sendError(error: error.localizedDescription))
             } else {
-                print("90%通知を送信しました")
+                print(L10n.Notification.sent90Percent)
             }
         }
     }
@@ -88,8 +88,8 @@ class NotificationManager: NSObject {
         guard Bundle.main.bundleIdentifier != nil else { return }
         
         let content = UNMutableNotificationContent()
-        content.title = "✨ セッションがリセットされました"
-        content.body = "新しい5時間セッションが開始されました"
+        content.title = L10n.Notification.sessionResetTitle
+        content.body = L10n.Notification.sessionResetBodyDetailed
         content.sound = .default
         content.categoryIdentifier = "SESSION_RESET"
         content.threadIdentifier = "claude-usage"
@@ -102,7 +102,7 @@ class NotificationManager: NSObject {
         
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("セッションリセット通知エラー: \(error)")
+                print(L10n.Notification.sessionResetError(error: error.localizedDescription))
             }
         }
         

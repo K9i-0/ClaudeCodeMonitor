@@ -28,9 +28,9 @@ extension Date {
         let minutes = (Int(elapsed) % 3600) / 60
         
         if hours > 0 {
-            return "\(hours)時間\(minutes)分"
+            return L10n.Time.hoursMinutes(hours: hours, minutes: minutes)
         } else {
-            return "\(minutes)分"
+            return L10n.Time.minutes(minutes: minutes)
         }
     }
     

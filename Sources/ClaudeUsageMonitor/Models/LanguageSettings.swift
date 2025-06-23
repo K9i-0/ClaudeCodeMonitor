@@ -1,0 +1,62 @@
+import Foundation
+
+enum AppLanguage: String, CaseIterable {
+    case system = "system"
+    case english = "en"
+    case japanese = "ja"
+    
+    var displayName: String {
+        switch self {
+        case .system:
+            return L10n.Language.system
+        case .english:
+            return L10n.Language.english
+        case .japanese:
+            return L10n.Language.japanese
+        }
+    }
+    
+    var languageCode: String? {
+        switch self {
+        case .system:
+            return nil
+        case .english:
+            return "en"
+        case .japanese:
+            return "ja"
+        }
+    }
+}
+
+class LanguageSettings: ObservableObject {
+    static let shared = LanguageSettings()
+    
+    @Published var currentLanguage: AppLanguage {
+        didSet {
+            UserDefaults.standard.set(currentLanguage.rawValue, forKey: "AppLanguage")
+            applyLanguage()
+        }
+    }
+    
+    private init() {
+        let savedLanguage = UserDefaults.standard.string(forKey: "AppLanguage") ?? AppLanguage.system.rawValue
+        self.currentLanguage = AppLanguage(rawValue: savedLanguage) ?? .system
+        applyLanguage()
+    }
+    
+    private func applyLanguage() {
+        if let languageCode = currentLanguage.languageCode {
+            UserDefaults.standard.set([languageCode], forKey: "AppleLanguages")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        }
+        UserDefaults.standard.synchronize()
+    }
+    
+    func effectiveLanguageCode() -> String {
+        if let code = currentLanguage.languageCode {
+            return code
+        }
+        return Bundle.main.preferredLocalizations.first ?? "en"
+    }
+}

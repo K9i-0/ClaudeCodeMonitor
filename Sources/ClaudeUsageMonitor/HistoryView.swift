@@ -8,7 +8,7 @@ struct HistoryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // ヘッダー
-            Text("使用状況サマリー")
+            Text(L10n.History.usageSummary)
                 .font(.system(size: 16, weight: .semibold))
             
             // 現在のセッション情報（カード風デザイン）
@@ -19,7 +19,7 @@ struct HistoryView: View {
                             Image(systemName: "bolt.circle.fill")
                                 .font(.system(size: 16))
                                 .foregroundStyle(.blue)
-                            Text("現在のセッション")
+                            Text(L10n.History.currentSession)
                                 .font(.system(size: 14, weight: .semibold))
                         }
                         Spacer()
@@ -29,7 +29,7 @@ struct HistoryView: View {
                     }
                     
                     HStack {
-                        Label("\(monitor.formatTokens(session.totalTokens)) トークン", systemImage: "number.circle")
+                        Label(L10n.History.tokensFormat(tokens: monitor.formatTokens(session.totalTokens)), systemImage: "number.circle")
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                         Spacer()
@@ -75,7 +75,7 @@ struct HistoryView: View {
                 if let daily = monitor.usageData.todayUsage {
                     StatCard(
                         icon: "calendar",
-                        title: "今日",
+                        title: L10n.Usage.today,
                         cost: monitor.formatCost(daily.totalCost),
                         tokens: monitor.formatTokens(daily.inputTokens + daily.outputTokens),
                         accentColor: .green
@@ -86,7 +86,7 @@ struct HistoryView: View {
                 if let monthly = monitor.usageData.monthlyTotal {
                     StatCard(
                         icon: "calendar.badge.clock",
-                        title: "今月",
+                        title: L10n.Usage.thisMonth,
                         cost: monitor.formatCost(monthly.totalCost),
                         tokens: monitor.formatTokens(monthly.inputTokens + monthly.outputTokens),
                         accentColor: .purple
@@ -94,7 +94,7 @@ struct HistoryView: View {
                 }
             }
             
-            Text("※日次・月次のコスト情報は参考値です。\nClaude Codeは5時間セッションごとにトークン制限がリセットされます。")
+            Text(L10n.History.referenceNote)
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .padding(.top, 4)
@@ -171,7 +171,7 @@ struct StatCard: View {
                 .font(.system(size: 18, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
             
-            Text("\(tokens) トークン")
+            Text(L10n.History.tokensFormat(tokens: tokens))
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
         }
@@ -203,15 +203,15 @@ struct UsageChartView: View {
             if !data.isEmpty {
                 Chart(data) { item in
                     LineMark(
-                        x: .value("時間", item.time),
-                        y: .value("トークン", item.value)
+                        x: .value(L10n.History.time, item.time),
+                        y: .value(L10n.History.tokens, item.value)
                     )
                     .foregroundStyle(.blue)
                     .lineStyle(StrokeStyle(lineWidth: 2))
                     
                     AreaMark(
-                        x: .value("時間", item.time),
-                        y: .value("トークン", item.value)
+                        x: .value(L10n.History.time, item.time),
+                        y: .value(L10n.History.tokens, item.value)
                     )
                     .foregroundStyle(
                         LinearGradient(
@@ -240,7 +240,7 @@ struct UsageChartView: View {
                 .frame(height: 120)
                 .padding(.horizontal, 4)
             } else {
-                Text("データがありません")
+                Text(L10n.History.noData)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

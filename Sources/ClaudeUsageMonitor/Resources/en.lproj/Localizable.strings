@@ -11,20 +11,37 @@
 
 // Session information
 "session.remaining" = "Remaining";
+"session.remainingTokens" = "Remaining Tokens";
 "session.tokens" = "tokens";
 "session.burnRate" = "Burn Rate";
 "session.tokensPerMin" = "tokens/min";
 "session.timeRemaining" = "Time Remaining";
+"session.timeUntilReset" = "Until Reset";
 "session.cost" = "Session Cost";
 "session.referenceValue" = "Reference";
 "session.noActiveSession" = "No Active Session";
 "session.waitingForData" = "Waiting for data...";
+"session.highUsageWarning" = "High usage rate";
+"session.used" = "%@ Used";
+"session.resetTime" = "Reset: %@";
+"session.sessionDetails" = "Session Details (5-hour session)";
+"session.plan" = "Plan:";
+"session.startTime" = "Start:";
+"session.endTime" = "End:";
+"session.elapsedTime" = "Elapsed:";
+"session.startWorkingMessage" = "Start working in Claude Code\nto see usage status here";
 
 // History
+"history.usageSummary" = "Usage Summary";
 "history.currentSession" = "Current Session";
 "history.pastSessions" = "Past Sessions";
 "history.sessionDetails" = "Session: %@ tokens, from %@ to %@";
 "history.noHistory" = "No history available";
+"history.tokensFormat" = "%@ tokens";
+"history.referenceNote" = "※Daily and monthly cost information is for reference only.\nClaude Code resets token limits every 5-hour session.";
+"history.time" = "Time";
+"history.tokens" = "Tokens";
+"history.noData" = "No data available";
 
 // Plan settings
 "plan.title" = "Plan";
@@ -35,11 +52,15 @@
 // Daily/Monthly
 "usage.today" = "Today";
 "usage.thisMonth" = "This Month";
+"usage.usage" = "Usage";
+"usage.percentage" = "%d%% Used";
 
 // Actions
 "action.refresh" = "Refresh";
 "action.settings" = "Settings";
 "action.quit" = "Quit";
+"action.close" = "Close";
+"action.quitApp" = "Quit Application";
 
 // Errors
 "error.loadingData" = "Loading data...";
@@ -47,8 +68,43 @@
 "error.networkError" = "Network error";
 "error.unknown" = "Unknown error";
 
+// Time format
+"time.hoursMinutes" = "%d hours %d minutes";
+"time.minutes" = "%d minutes";
+
+// Settings
+"settings.planSelection" = "Select Plan";
+"settings.notificationSettings" = "Notification Settings";
+"settings.enableUsageNotifications" = "Enable usage notifications";
+"settings.notificationDescription" = "You will be notified when usage reaches 90%%";
+"settings.languageSettings" = "Language";
+"settings.useSystemLanguage" = "Use system language";
+"settings.selectLanguage" = "Select language";
+"settings.languageChangeTitle" = "Language Changed";
+"settings.languageChangeMessage" = "Please restart the app for the language change to take effect.";
+"settings.restartButton" = "Restart";
+"settings.cancelButton" = "Cancel";
+
+// Language options
+"language.system" = "System";
+"language.english" = "English";
+"language.japanese" = "Japanese";
+
+// Status
+"status.lastUpdated" = "Updated: %@";
+"status.loading" = "Loading usage data...";
+"status.noActiveSession" = "No active session";
+"status.usageFormat" = "Usage: %.1f%%\nCost: $%.2f\nBurn rate: %.0f tokens/min\nTime remaining: %@";
+
 // Notifications
 "notification.highUsage.title" = "High Usage Warning";
 "notification.highUsage.body" = "Claude Code usage has reached %d%%. Burn rate: %.1f tokens/min";
+"notification.highUsage.bodyDetailed" = "Current usage: %d%%\nTime remaining: %@\nBurn rate: %d tokens/min";
 "notification.sessionReset.title" = "Session Reset";
 "notification.sessionReset.body" = "Your Claude Code session has been reset";
+"notification.sessionReset.bodyDetailed" = "New 5-hour session has started";
+"notification.permissionGranted" = "Notification permission granted";
+"notification.permissionError" = "Notification permission error: %@";
+"notification.sent90Percent" = "90%% notification sent";
+"notification.sendError" = "Notification send error: %@";
+"notification.sessionResetError" = "Session reset notification error: %@";
