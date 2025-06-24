@@ -59,8 +59,8 @@ macOSのメニューバーに常駐し、Claude Codeの使用状況をリアル�
 ### 1. リポジトリのクローン
 
 ```bash
-git clone https://github.com/K9i-0/ClaudeUsageMonitor.git
-cd ClaudeUsageMonitor
+git clone https://github.com/K9i-0/ClaudeCodeMonitor.git
+cd ClaudeCodeMonitor
 ```
 
 ### 2. Node.jsサーバーのセットアップ（推奨）
@@ -94,20 +94,50 @@ Xcodeで:
 swift build -c release
 
 # アプリバンドルの作成
-mkdir -p ClaudeUsageMonitor.app/Contents/MacOS
-mkdir -p ClaudeUsageMonitor.app/Contents/Resources
-cp .build/arm64-apple-macosx/release/ClaudeUsageMonitor ClaudeUsageMonitor.app/Contents/MacOS/
-cp Info.plist ClaudeUsageMonitor.app/Contents/
+mkdir -p ClaudeCodeMonitor.app/Contents/MacOS
+mkdir -p ClaudeCodeMonitor.app/Contents/Resources
+cp .build/arm64-apple-macosx/release/ClaudeCodeMonitor ClaudeCodeMonitor.app/Contents/MacOS/
+cp Info.plist ClaudeCodeMonitor.app/Contents/
 
 # アプリを起動
-open ClaudeUsageMonitor.app
+open ClaudeCodeMonitor.app
 ```
 
 ## 🖼️ スクリーンショット
 
-<p align="center">
-  <i>スクリーンショットは準備中です</i>
-</p>
+### メニューバーアイコン
+現在のセッション使用率をメニューバーに直接表示：
+- 🔵 青（0-50%）：安全な使用範囲
+- 🟠 オレンジ（50-75%）：中程度の使用
+- 🔴 赤（75%+）：高使用率警告
+
+![メニューバーアイコン](docs/images/menubar-icon.png)
+
+### 現在のセッション表示
+5時間セッションの詳細表示：
+- 大きくて読みやすい残りトークン数表示
+- 色分けされたプログレスバー
+- バーンレート計算（トークン/分）
+- 残り時間の推定
+
+![現在のセッション](docs/images/current-session.png)
+
+### 履歴表示
+時間経過による使用パターンの追跡：
+- セッション別の内訳
+- 日別使用量サマリ
+- モデル別の使用統計
+- コスト追跡（参考値）
+
+![履歴表示](docs/images/history-view.png)
+
+### 設定
+アプリをカスタマイズ：
+- プラン選択（Pro/Max5/Max20）
+- 自動更新間隔
+- 言語設定（英語/日本語）
+
+![設定タブ](docs/images/settings-tab.png)
 
 ## 🤝 コントリビューション
 
@@ -132,8 +162,8 @@ open ClaudeUsageMonitor.app
 
 ## 💬 サポート
 
-- **Issues**: [GitHub Issues](https://github.com/K9i-0/ClaudeUsageMonitor/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/K9i-0/ClaudeUsageMonitor/discussions)
+- **Issues**: [GitHub Issues](https://github.com/K9i-0/ClaudeCodeMonitor/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/K9i-0/ClaudeCodeMonitor/discussions)
 
 ## 🔗 関連リンク
 

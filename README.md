@@ -105,9 +105,39 @@ open ClaudeCodeMonitor.app
 
 ## 🖼️ Screenshots
 
-<p align="center">
-  <i>Screenshots coming soon</i>
-</p>
+### Menubar Icon
+Shows current session usage percentage directly in your menubar:
+- 🔵 Blue (0-50%): Safe usage zone
+- 🟠 Orange (50-75%): Moderate usage
+- 🔴 Red (75%+): High usage warning
+
+![Menubar Icon](docs/images/menubar-icon.png)
+
+### Current Session View
+Detailed view of your current 5-hour session:
+- Large, easy-to-read remaining tokens display
+- Visual progress bar with color coding
+- Burn rate calculation (tokens/minute)
+- Estimated time remaining
+
+![Current Session](docs/images/current-session.png)
+
+### History View
+Track your usage patterns over time:
+- Session-by-session breakdown
+- Daily usage summaries
+- Model-specific usage statistics
+- Cost tracking (reference values)
+
+![History View](docs/images/history-view.png)
+
+### Settings
+Customize the app to your needs:
+- Plan selection (Pro/Max5/Max20)
+- Auto-refresh interval
+- Language preferences (English/Japanese)
+
+![Settings Tab](docs/images/settings-tab.png)
 
 ## 🤝 Contributing
 
