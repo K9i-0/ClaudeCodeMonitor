@@ -42,8 +42,8 @@ jobs:
         mkdir -p ClaudeCodeMonitor.app/Contents/Resources
         cp ClaudeCodeMonitor ClaudeCodeMonitor.app/Contents/MacOS/
         cp Info.plist ClaudeCodeMonitor.app/Contents/
-        # Copy localization resources
-        cp -R .build/arm64-apple-macosx/release/ClaudeCodeMonitor_ClaudeCodeMonitor.bundle/* ClaudeCodeMonitor.app/Contents/Resources/ || true
+        # Copy resource bundle
+        cp -R .build/arm64-apple-macosx/release/ClaudeCodeMonitor_ClaudeCodeMonitor.bundle ClaudeCodeMonitor.app/Contents/Resources/ || true
         # Update version in Info.plist
         /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" ClaudeCodeMonitor.app/Contents/Info.plist
         /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.version }}" ClaudeCodeMonitor.app/Contents/Info.plist
