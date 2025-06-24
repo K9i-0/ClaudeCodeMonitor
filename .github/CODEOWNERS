@@ -1,0 +1,21 @@
+# Code Owners for Claude Usage Monitor
+
+# Default owner for everything
+* @K9i-0
+
+# GitHub workflows
+/.github/ @K9i-0
+
+# Source code
+/Sources/ @K9i-0
+
+# Tests
+/Tests/ @K9i-0
+
+# Documentation
+*.md @K9i-0
+/docs/ @K9i-0
+
+# Build configuration
+Package.swift @K9i-0
+*.plist @K9i-0

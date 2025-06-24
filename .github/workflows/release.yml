@@ -5,57 +5,144 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
-    name: Build Release
+    name: Build and Release
     runs-on: macos-latest
     
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # For changelog generation
     
     - name: Select Xcode
-      run: sudo xcode-select -s /Applications/Xcode_15.0.app
+      run: sudo xcode-select -s /Applications/Xcode_15.2.app
     
-    - name: Build for release
+    - name: Get version
+      id: version
+      run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+    
+    - name: Build universal binary
       run: |
-        swift build -c release
+        # Build for Intel
+        swift build -c release --arch x86_64
+        # Build for Apple Silicon
+        swift build -c release --arch arm64
+        # Create universal binary
+        lipo -create -output ClaudeUsageMonitor \
+          .build/x86_64-apple-macosx/release/ClaudeUsageMonitor \
+          .build/arm64-apple-macosx/release/ClaudeUsageMonitor
+    
+    - name: Create app bundle
+      run: |
         mkdir -p ClaudeUsageMonitor.app/Contents/MacOS
         mkdir -p ClaudeUsageMonitor.app/Contents/Resources
-        cp .build/arm64-apple-macosx/release/ClaudeUsageMonitor ClaudeUsageMonitor.app/Contents/MacOS/
+        cp ClaudeUsageMonitor ClaudeUsageMonitor.app/Contents/MacOS/
         cp Info.plist ClaudeUsageMonitor.app/Contents/
+        # Update version in Info.plist
+        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" ClaudeUsageMonitor.app/Contents/Info.plist
+        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.version }}" ClaudeUsageMonitor.app/Contents/Info.plist
+    
+    - name: Code sign (optional)
+      if: ${{ env.MACOS_CERTIFICATE && env.MACOS_CERTIFICATE_PWD }}
+      env:
+        MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+        MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+        MACOS_CERTIFICATE_NAME: ${{ secrets.MACOS_CERTIFICATE_NAME }}
+      run: |
+        echo "🔏 Signing app with Developer ID certificate..."
+        # Create temporary keychain
+        security create-keychain -p "$MACOS_CERTIFICATE_PWD" build.keychain
+        security default-keychain -s build.keychain
+        security unlock-keychain -p "$MACOS_CERTIFICATE_PWD" build.keychain
+        
+        # Import certificate
+        echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
+        security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CERTIFICATE_PWD" build.keychain
+        
+        # Sign the app
+        codesign --force --options runtime --sign "$MACOS_CERTIFICATE_NAME" ClaudeUsageMonitor.app
+        
+        # Verify signature
+        codesign --verify --verbose ClaudeUsageMonitor.app
+        echo "✅ App signed successfully"
+    
+    - name: Notarize app (optional)
+      if: ${{ env.APPLE_ID && env.APPLE_ID_PASSWORD }}
+      env:
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      run: |
+        echo "🍎 Submitting app for Apple notarization..."
+        # Create zip for notarization
+        ditto -c -k --keepParent ClaudeUsageMonitor.app ClaudeUsageMonitor.zip
+        
+        # Submit for notarization
+        xcrun notarytool submit ClaudeUsageMonitor.zip \
+          --apple-id "$APPLE_ID" \
+          --password "$APPLE_ID_PASSWORD" \
+          --team-id "$APPLE_TEAM_ID" \
+          --wait
+        
+        # Staple the ticket
+        xcrun stapler staple ClaudeUsageMonitor.app
+        echo "✅ App notarized successfully"
     
     - name: Create DMG
       run: |
-        mkdir -p dmg
-        cp -r ClaudeUsageMonitor.app dmg/
-        ln -s /Applications dmg/Applications
-        hdiutil create -volname "Claude Usage Monitor" -srcfolder dmg -ov -format UDZO ClaudeUsageMonitor.dmg
+        # Install create-dmg
+        brew install create-dmg
+        
+        # Create DMG with custom settings
+        create-dmg \
+          --volname "Claude Usage Monitor" \
+          --volicon "ClaudeUsageMonitor.app/Contents/Resources/AppIcon.icns" \
+          --window-pos 200 120 \
+          --window-size 600 400 \
+          --icon-size 100 \
+          --icon "ClaudeUsageMonitor.app" 150 185 \
+          --hide-extension "ClaudeUsageMonitor.app" \
+          --app-drop-link 450 185 \
+          --hdiutil-quiet \
+          "ClaudeUsageMonitor-${{ steps.version.outputs.version }}.dmg" \
+          "ClaudeUsageMonitor.app"
     
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: ClaudeUsageMonitor-macOS
-        path: |
-          ClaudeUsageMonitor.dmg
-          ClaudeUsageMonitor.app
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Get previous tag
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^)
+        
+        # Generate changelog
+        echo "## What's Changed" > changelog.md
+        echo "" >> changelog.md
+        git log --pretty=format:"* %s (%h)" $PREV_TAG..HEAD >> changelog.md
+        echo "" >> changelog.md
+        echo "" >> changelog.md
+        echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV_TAG...${{ github.ref_name }}" >> changelog.md
+        
+        # Set output
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        cat changelog.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
     
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
+        name: Release ${{ steps.version.outputs.version }}
+        body: ${{ steps.changelog.outputs.changelog }}
         draft: false
-        prerelease: false
+        prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
+        files: |
+          ClaudeUsageMonitor-${{ steps.version.outputs.version }}.dmg
     
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./ClaudeUsageMonitor.dmg
-        asset_name: ClaudeUsageMonitor.dmg
-        asset_content_type: application/x-apple-diskimage
+    - name: Update Homebrew Formula (if not prerelease)
+      if: ${{ !contains(github.ref, 'beta') && !contains(github.ref, 'alpha') }}
+      run: |
+        # This would update your homebrew-tap repository
+        echo "TODO: Implement Homebrew formula update"

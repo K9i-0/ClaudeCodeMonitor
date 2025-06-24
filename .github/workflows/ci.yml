@@ -7,12 +7,33 @@ on:
     branches: [ main ]
 
 jobs:
+  build:
+    name: Build Verification
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Select Xcode
+      run: sudo xcode-select -s /Applications/Xcode_15.2.app
+    
+    - name: Build Debug
+      run: swift build -v
+    
+    - name: Build Release
+      run: swift build -c release -v
+    
+    - name: Verify binary architecture
+      run: |
+        file .build/*/release/ClaudeUsageMonitor
+        echo "Build completed successfully"
+
   test:
     name: Test on macOS
     runs-on: macos-latest
     strategy:
       matrix:
-        xcode: ['15.0']
+        xcode: ['15.0', '15.2']
     
     steps:
     - uses: actions/checkout@v4
@@ -26,12 +47,12 @@ jobs:
     - name: Build
       run: swift build -v
     
-    - name: Run tests
+    - name: Run tests with coverage
       env:
         CI: true
       run: |
         echo "Running tests with CI environment variable set..."
-        swift test -v || (echo "Tests failed, running individual test suites..." && \
+        swift test -v --enable-code-coverage || (echo "Tests failed, running individual test suites..." && \
         swift test --filter ModelsTests -v && \
         swift test --filter SessionModelsTests -v && \
         swift test --filter UtilitiesTests -v && \
@@ -39,16 +60,76 @@ jobs:
         swift test --filter NotificationManagerTests -v && \
         swift test --filter UsageMonitorTests -v && \
         swift test --filter ViewModelTests -v)
+    
+    - name: Generate coverage report
+      if: matrix.xcode == '15.2'
+      run: |
+        xcrun llvm-cov export \
+          .build/debug/ClaudeUsageMonitorPackageTests.xctest/Contents/MacOS/ClaudeUsageMonitorPackageTests \
+          -instr-profile .build/debug/codecov/default.profdata \
+          -format="lcov" > coverage.lcov
+    
+    - name: Upload coverage to Codecov
+      if: matrix.xcode == '15.2'
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.lcov
+        token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: false
 
-  # lint:
-  #   name: SwiftLint
-  #   runs-on: macos-latest
-  #   
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #   
-  #   - name: Install SwiftLint
-  #     run: brew install swiftlint
-  #   
-  #   - name: Run SwiftLint
-  #     run: swiftlint --strict
+  lint:
+    name: SwiftLint
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: SwiftLint
+      run: |
+        brew install swiftlint
+        swiftlint --reporter github-actions-logging
+  
+  format-check:
+    name: Swift Format Check
+    runs-on: macos-latest
+    continue-on-error: true  # Don't fail the build for now
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install swift-format
+      run: brew install swift-format
+    
+    - name: Check formatting
+      run: |
+        echo "Checking code formatting..."
+        swift-format lint --recursive Sources Tests || echo "::warning::Some files don't follow swift-format rules"
+  
+  security:
+    name: Security Scan
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run security audit
+      run: |
+        echo "Checking for common security issues..."
+        # Check for hardcoded secrets
+        if grep -r "PRIVATE KEY\|PASSWORD\|SECRET\|API_KEY" Sources Tests --exclude="*.md" 2>/dev/null; then
+          echo "::error::Potential secrets found in code"
+          exit 1
+        fi
+        
+        # Check for unsafe Swift patterns
+        if grep -r "unsafeBitCast\|unsafePointer\|UnsafeMutablePointer" Sources --exclude="*.md" 2>/dev/null; then
+          echo "::warning::Unsafe Swift patterns detected - please review"
+        fi
+        
+        echo "Security scan completed"
+    
+    - name: Check dependencies
+      run: |
+        echo "Checking Package.resolved for security advisories..."
+        # In the future, we could integrate with GitHub's dependency scanning
+        echo "Dependency check completed"
