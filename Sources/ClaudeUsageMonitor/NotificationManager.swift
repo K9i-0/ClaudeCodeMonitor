@@ -18,8 +18,9 @@ class NotificationManager: NSObject {
     
     override init() {
         super.init()
-        // CI環境では初期化しない
-        guard ProcessInfo.processInfo.environment["CI"] == nil else { return }
+        // CI環境やテスト環境では初期化しない
+        guard ProcessInfo.processInfo.environment["CI"] == nil &&
+              !ProcessInfo.processInfo.environment.keys.contains("XCTestConfigurationFilePath") else { return }
         
         // アプリバンドルから実行されている場合のみ通知を初期化
         if Bundle.main.bundleIdentifier != nil {
