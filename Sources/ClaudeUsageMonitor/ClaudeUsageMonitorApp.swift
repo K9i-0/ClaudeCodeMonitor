@@ -5,12 +5,15 @@ struct ClaudeUsageMonitorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {
-        // Return an empty WindowGroup for menubar app
+        // Use Settings scene with empty content for menubar app
         // All UI is handled by AppDelegate and NSPopover
-        WindowGroup {
+        Settings {
             EmptyView()
         }
-        .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 0, height: 0)
+        .commands {
+            // Remove default menu commands that aren't needed for menubar app
+            CommandGroup(replacing: .newItem) { }
+            CommandGroup(replacing: .appSettings) { }
+        }
     }
 }
