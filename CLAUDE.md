@@ -103,6 +103,24 @@ open Package.swift
 - Resource bundles in `Sources/ClaudeUsageMonitor/Resources/`
 - LanguageSettings.swift manages language preferences
 
+## Code Signing and Distribution
+
+### Current Status
+- Using ad-hoc signing (`--sign -`) for development releases
+- This causes Gatekeeper warnings on first launch
+- Users need to manually approve in System Settings
+
+### Future: Developer ID Signing
+When Apple Developer Program is available:
+1. Update `DEVELOPER_ID` in `scripts/build-release.sh`
+2. Add notarization step to release workflow
+3. Benefits: No Gatekeeper warnings, smoother user experience
+
+### Distribution Channels Priority
+1. **Homebrew Cask** - Primary distribution method
+2. **GitHub Releases** - Direct DMG downloads
+3. **App Store** - Not recommended due to Sandbox limitations
+
 ## Technical Decisions
 
 ### ccusage Execution Strategy

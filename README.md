@@ -41,9 +41,16 @@ This app wraps the [ccusage](https://github.com/ryoppippi/ccusage) CLI tool to p
 
 ## 🚀 Installation
 
-### Coming Soon
-- **Homebrew Cask**: `brew install --cask ccmonitor` (in preparation)
-- **App Store**: Direct installation from Mac App Store (in preparation)
+### Homebrew Cask (Coming Soon)
+```bash
+brew install --cask ccmonitor
+```
+
+**Note**: On first launch, you may see "Cannot be opened because the developer cannot be verified":
+1. Click "Cancel" on the warning dialog
+2. Open System Settings → Privacy & Security
+3. Click "Open Anyway" for Claude Code Monitor
+4. Or simply right-click the app and select "Open"
 
 ### Current Method (Build from Source)
 

@@ -41,9 +41,16 @@ macOSのメニューバーに常駐し、Claude Codeの使用状況をリアル�
 
 ## 🚀 インストール
 
-### 今後の予定
-- **Homebrew Cask**: `brew install --cask ccmonitor` (準備中)
-- **App Store**: Mac App Storeから直接インストール (準備中)
+### Homebrew Cask（準備中）
+```bash
+brew install --cask ccmonitor
+```
+
+**注意**: 初回起動時に「開発元を検証できません」と表示される場合：
+1. 警告ダイアログで「キャンセル」をクリック
+2. システム設定 → プライバシーとセキュリティを開く
+3. Claude Code Monitorの「このまま開く」をクリック
+4. またはアプリを右クリックして「開く」を選択
 
 ### 現在の方法（ソースからビルド）
 
