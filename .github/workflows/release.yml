@@ -100,7 +100,7 @@ jobs:
         
         # Create DMG with custom settings
         create-dmg \
-          --volname "Claude Usage Monitor" \
+          --volname "Claude Code Usage Monitor" \
           --volicon "ClaudeUsageMonitor.app/Contents/Resources/AppIcon.icns" \
           --window-pos 200 120 \
           --window-size 600 400 \
