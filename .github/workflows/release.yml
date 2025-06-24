@@ -98,10 +98,9 @@ jobs:
         # Install create-dmg
         brew install create-dmg
         
-        # Create DMG with custom settings
+        # Create DMG with custom settings (without icon for now)
         create-dmg \
           --volname "Claude Code Monitor" \
-          --volicon "ClaudeCodeMonitor.app/Contents/Resources/AppIcon.icns" \
           --window-pos 200 120 \
           --window-size 600 400 \
           --icon-size 100 \
