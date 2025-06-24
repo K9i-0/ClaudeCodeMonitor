@@ -34,13 +34,15 @@ class SessionViewModel: ObservableObject {
         planDescription = monitor.usageData.planDescription
         resetTime = Date.formatTime(from: data.endTime)
         
-        // 通知チェック
-        NotificationManager.shared.checkAndSendNotification(
-            for: percentage,
-            burnRate: burnRate,
-            remainingTime: remainingTime,
-            sessionId: data.id
-        )
+        // 通知チェック（テスト環境では無効）
+        if Bundle.main.bundleIdentifier != nil && !ProcessInfo.processInfo.environment.keys.contains("XCTestConfigurationFilePath") {
+            NotificationManager.shared.checkAndSendNotification(
+                for: percentage,
+                burnRate: burnRate,
+                remainingTime: remainingTime,
+                sessionId: data.id
+            )
+        }
     }
     
     var formattedRemainingTokens: String {

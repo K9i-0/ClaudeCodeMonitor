@@ -17,6 +17,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             UNUserNotificationCenter.current().delegate = NotificationManager.shared
         }
         
+        // Hide all windows for menubar-only app
+        NSApp.windows.forEach { window in
+            window.close()
+        }
+        
         // Create status bar item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
