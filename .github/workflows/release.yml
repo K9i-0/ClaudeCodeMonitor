@@ -46,12 +46,7 @@ jobs:
         /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" ClaudeUsageMonitor.app/Contents/Info.plist
         /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.version }}" ClaudeUsageMonitor.app/Contents/Info.plist
     
-    # ===== OPTIONAL: Code Signing and Notarization =====
-    # If you want to distribute without Apple's security warnings, set up these secrets.
-    # See docs/APPLE-SIGNING.md for details.
-    # Without this, the app will still work but users will see "unidentified developer" warnings.
-    
-    - name: Code sign (optional - reduces security warnings)
+    - name: Code sign (optional)
       if: ${{ env.MACOS_CERTIFICATE && env.MACOS_CERTIFICATE_PWD }}
       env:
         MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
@@ -76,7 +71,7 @@ jobs:
         codesign --verify --verbose ClaudeUsageMonitor.app
         echo "✅ App signed successfully"
     
-    - name: Notarize app (optional - for smooth installation)
+    - name: Notarize app (optional)
       if: ${{ env.APPLE_ID && env.APPLE_ID_PASSWORD }}
       env:
         APPLE_ID: ${{ secrets.APPLE_ID }}

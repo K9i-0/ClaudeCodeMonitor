@@ -2,7 +2,7 @@
 
 ## Overview
 
-Claude Usage Monitor uses GitHub Actions for continuous integration and deployment. This document describes the various workflows and how to use them.
+Claude Usage Monitor uses GitHub Actions for continuous integration and deployment. This document helps contributors understand the CI/CD pipeline.
 
 ## Workflows
 
@@ -13,53 +13,30 @@ Claude Usage Monitor uses GitHub Actions for continuous integration and deployme
 **Purpose**: Ensure code quality and test coverage
 
 **Jobs**:
+- **Build**: Verifies the project builds in both debug and release modes
 - **Test**: Runs on multiple Xcode versions (15.0, 15.2)
-  - Builds the project
-  - Runs all tests with code coverage
-  - Uploads coverage reports to Codecov
-- **Lint**: Runs SwiftLint to check code style
-- **Format Check**: Ensures code follows swift-format rules
+  - Executes all unit tests
+  - Generates code coverage reports
+- **SwiftLint**: Checks code style and conventions
+- **Security**: Basic security scanning for hardcoded secrets
+- **Format Check**: Swift-format validation (warnings only)
 
 ### 2. Release Workflow (`.github/workflows/release.yml`)
 
 **Trigger**: Push of tags matching `v*` (e.g., `v1.0.0`, `v2.1.0-beta`)
 
-**Purpose**: Build, sign, notarize, and release the application
+**Purpose**: Automatically build and release the application
 
 **Features**:
 - Builds universal binary (Intel + Apple Silicon)
-- Code signing (when certificates are available)
-- Notarization for macOS Gatekeeper
-- Automatic changelog generation
-- Creates GitHub Release with DMG attachment
-- Supports prerelease versions (beta/alpha)
+- Creates DMG installer
+- Generates changelog from commit messages
+- Creates GitHub Release
+- Optional code signing and notarization
 
 ### 3. Dependabot
 
-**Configuration**: `.github/dependabot.yml`
-
-**Purpose**: Keep dependencies up to date
-
-**Monitors**:
-- GitHub Actions
-- Swift Package Manager dependencies
-
-**Schedule**: Weekly on Mondays at 9:00 AM JST
-
-## Setting up Secrets
-
-For full functionality, configure these secrets in your GitHub repository:
-
-### For Code Signing and Notarization:
-- `MACOS_CERTIFICATE`: Base64 encoded .p12 certificate
-- `MACOS_CERTIFICATE_PWD`: Password for the certificate
-- `MACOS_CERTIFICATE_NAME`: Certificate name for codesign (e.g., "Developer ID Application: Your Name")
-- `APPLE_ID`: Apple ID for notarization
-- `APPLE_ID_PASSWORD`: App-specific password for notarization
-- `APPLE_TEAM_ID`: Your Apple Developer Team ID
-
-### For Code Coverage:
-- `CODECOV_TOKEN`: Token from codecov.io
+Automatically creates PRs for dependency updates weekly.
 
 ## Local Development
 
@@ -108,19 +85,12 @@ swift-format format --recursive Sources Tests -i
 6. Wait for CI checks to pass
 7. Request review from code owners
 
-## Troubleshooting
+## Contributing
 
-### CI Tests Failing
-- Check if running in CI environment affects your code
-- Use `ProcessInfo.processInfo.environment["CI"]` to detect CI environment
-- Some UI/system features may not work in CI
+When submitting a PR:
+1. Ensure all CI checks pass
+2. Follow SwiftLint rules
+3. Add tests for new features
+4. Update documentation as needed
 
-### Code Signing Issues
-- Ensure all secrets are properly configured
-- Certificate must be valid Developer ID Application certificate
-- Check certificate expiration date
-
-### Notarization Issues
-- Use app-specific password, not regular Apple ID password
-- Ensure app is properly signed before notarization
-- Check Apple's notarization service status
+The CI pipeline will automatically validate your changes.
