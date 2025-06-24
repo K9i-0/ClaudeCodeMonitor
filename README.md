@@ -42,7 +42,7 @@ This app wraps the [ccusage](https://github.com/ryoppippi/ccusage) CLI tool to p
 ## 🚀 Installation
 
 ### Coming Soon
-- **Homebrew Cask**: `brew install --cask claude-usage-monitor` (in preparation)
+- **Homebrew Cask**: `brew install --cask ccmonitor` (in preparation)
 - **App Store**: Direct installation from Mac App Store (in preparation)
 
 ### Current Method (Build from Source)

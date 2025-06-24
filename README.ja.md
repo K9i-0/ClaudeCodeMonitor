@@ -42,7 +42,7 @@ macOSのメニューバーに常駐し、Claude Codeの使用状況をリアル�
 ## 🚀 インストール
 
 ### 今後の予定
-- **Homebrew Cask**: `brew install --cask claude-usage-monitor` (準備中)
+- **Homebrew Cask**: `brew install --cask ccmonitor` (準備中)
 - **App Store**: Mac App Storeから直接インストール (準備中)
 
 ### 現在の方法（ソースからビルド）
