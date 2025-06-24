@@ -2,7 +2,7 @@
 
 ## Overview
 
-Claude Usage Monitor uses GitHub Actions for continuous integration and deployment. This document helps contributors understand the CI/CD pipeline.
+Claude Code Usage Monitor uses GitHub Actions for continuous integration and deployment. This document helps contributors understand the CI/CD pipeline.
 
 ## Workflows
 

@@ -1,4 +1,4 @@
-# Claude Usage Monitor
+# Claude Code Usage Monitor
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-macOS-blue.svg" alt="Platform">

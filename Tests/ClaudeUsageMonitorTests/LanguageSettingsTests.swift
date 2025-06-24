@@ -1,5 +1,5 @@
 import XCTest
-@testable import ClaudeUsageMonitor
+@testable import ClaudeCodeUsageMonitor
 
 final class LanguageSettingsTests: XCTestCase {
     

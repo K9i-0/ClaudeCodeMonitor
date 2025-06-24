@@ -1,5 +1,5 @@
 import XCTest
-@testable import ClaudeUsageMonitor
+@testable import ClaudeCodeUsageMonitor
 
 @MainActor
 final class UsageMonitorTests: XCTestCase {

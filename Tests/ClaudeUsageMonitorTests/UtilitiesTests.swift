@@ -1,6 +1,6 @@
 import XCTest
 import SwiftUI
-@testable import ClaudeUsageMonitor
+@testable import ClaudeCodeUsageMonitor
 
 final class UtilitiesTests: XCTestCase {
     

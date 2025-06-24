@@ -1,5 +1,5 @@
 import Foundation
-@testable import ClaudeUsageMonitor
+@testable import ClaudeCodeUsageMonitor
 
 @MainActor
 class MockUsageMonitor: UsageMonitoring {
