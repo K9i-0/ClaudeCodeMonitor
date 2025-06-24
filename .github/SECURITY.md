@@ -9,7 +9,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within Claude Code Usage Monitor, please send an email to security@k9i.dev. All security vulnerabilities will be promptly addressed.
+If you discover a security vulnerability within Claude Code Monitor, please send an email to security@k9i.dev. All security vulnerabilities will be promptly addressed.
 
 Please do not report security vulnerabilities through public GitHub issues.
 

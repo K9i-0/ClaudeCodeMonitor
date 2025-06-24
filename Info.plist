@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>com.k9i.claude-code-usage-monitor</string>
+    <string>com.k9i.claude-code-monitor</string>
     <key>CFBundleName</key>
-    <string>Claude Code Usage Monitor</string>
+    <string>Claude Code Monitor</string>
     <key>CFBundleDisplayName</key>
-    <string>Claude Code Usage Monitor</string>
+    <string>Claude Code Monitor</string>
     <key>CFBundleExecutable</key>
-    <string>ClaudeCodeUsageMonitor</string>
+    <string>ClaudeCodeMonitor</string>
     <key>CFBundleVersion</key>
     <string>1.0</string>
     <key>CFBundleShortVersionString</key>

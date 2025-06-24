@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ClaudeCodeUsageMonitor is a macOS menubar application that monitors Claude Code API usage and costs. It wraps the [ccusage](https://github.com/ryoppippi/ccusage) CLI tool to provide real-time usage tracking with a native macOS interface.
+ClaudeCodeMonitor is a macOS menubar application that monitors Claude Code API usage and costs. It wraps the [ccusage](https://github.com/ryoppippi/ccusage) CLI tool to provide real-time usage tracking with a native macOS interface.
 
 ## Build and Run Commands
 
@@ -19,11 +19,11 @@ swift build
 swift build -c release
 
 # Create app bundle (required after CLI build)
-mkdir -p ClaudeCodeUsageMonitor.app/Contents/MacOS
-mkdir -p ClaudeCodeUsageMonitor.app/Contents/Resources
-cp .build/arm64-apple-macosx/debug/ClaudeCodeUsageMonitor ClaudeCodeUsageMonitor.app/Contents/MacOS/
-cp Info.plist ClaudeCodeUsageMonitor.app/Contents/
-open ClaudeCodeUsageMonitor.app
+mkdir -p ClaudeCodeMonitor.app/Contents/MacOS
+mkdir -p ClaudeCodeMonitor.app/Contents/Resources
+cp .build/arm64-apple-macosx/debug/ClaudeCodeMonitor ClaudeCodeMonitor.app/Contents/MacOS/
+cp Info.plist ClaudeCodeMonitor.app/Contents/
+open ClaudeCodeMonitor.app
 
 # Build release with code signing (requires Developer ID)
 ./scripts/build-release.sh
@@ -110,9 +110,9 @@ open Package.swift
 2. App Sandbox disabled: Try server first, then fall back to direct npx
 
 ### Module Name Mismatch
-- Package name: `ClaudeCodeUsageMonitor`
+- Package name: `ClaudeCodeMonitor`
 - Source directory: `Sources/ClaudeUsageMonitor` (historical reasons)
-- Import statement: `import ClaudeCodeUsageMonitor`
+- Import statement: `import ClaudeCodeMonitor`
 - This is handled via path specifications in Package.swift
 
 ### Error Handling
