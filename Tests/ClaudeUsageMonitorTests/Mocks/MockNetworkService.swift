@@ -1,5 +1,5 @@
 import Foundation
-@testable import ClaudeUsageMonitor
+@testable import ClaudeCodeUsageMonitor
 
 class MockNetworkService: NetworkService {
     var shouldThrowError = false

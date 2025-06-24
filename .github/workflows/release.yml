@@ -32,19 +32,19 @@ jobs:
         # Build for Apple Silicon
         swift build -c release --arch arm64
         # Create universal binary
-        lipo -create -output ClaudeUsageMonitor \
-          .build/x86_64-apple-macosx/release/ClaudeUsageMonitor \
-          .build/arm64-apple-macosx/release/ClaudeUsageMonitor
+        lipo -create -output ClaudeCodeUsageMonitor \
+          .build/x86_64-apple-macosx/release/ClaudeCodeUsageMonitor \
+          .build/arm64-apple-macosx/release/ClaudeCodeUsageMonitor
     
     - name: Create app bundle
       run: |
-        mkdir -p ClaudeUsageMonitor.app/Contents/MacOS
-        mkdir -p ClaudeUsageMonitor.app/Contents/Resources
-        cp ClaudeUsageMonitor ClaudeUsageMonitor.app/Contents/MacOS/
-        cp Info.plist ClaudeUsageMonitor.app/Contents/
+        mkdir -p ClaudeCodeUsageMonitor.app/Contents/MacOS
+        mkdir -p ClaudeCodeUsageMonitor.app/Contents/Resources
+        cp ClaudeCodeUsageMonitor ClaudeCodeUsageMonitor.app/Contents/MacOS/
+        cp Info.plist ClaudeCodeUsageMonitor.app/Contents/
         # Update version in Info.plist
-        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" ClaudeUsageMonitor.app/Contents/Info.plist
-        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.version }}" ClaudeUsageMonitor.app/Contents/Info.plist
+        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" ClaudeCodeUsageMonitor.app/Contents/Info.plist
+        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.version }}" ClaudeCodeUsageMonitor.app/Contents/Info.plist
     
     - name: Code sign (optional)
       if: ${{ env.MACOS_CERTIFICATE && env.MACOS_CERTIFICATE_PWD }}
@@ -65,10 +65,10 @@ jobs:
         security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CERTIFICATE_PWD" build.keychain
         
         # Sign the app
-        codesign --force --options runtime --sign "$MACOS_CERTIFICATE_NAME" ClaudeUsageMonitor.app
+        codesign --force --options runtime --sign "$MACOS_CERTIFICATE_NAME" ClaudeCodeUsageMonitor.app
         
         # Verify signature
-        codesign --verify --verbose ClaudeUsageMonitor.app
+        codesign --verify --verbose ClaudeCodeUsageMonitor.app
         echo "✅ App signed successfully"
     
     - name: Notarize app (optional)
@@ -80,17 +80,17 @@ jobs:
       run: |
         echo "🍎 Submitting app for Apple notarization..."
         # Create zip for notarization
-        ditto -c -k --keepParent ClaudeUsageMonitor.app ClaudeUsageMonitor.zip
+        ditto -c -k --keepParent ClaudeCodeUsageMonitor.app ClaudeCodeUsageMonitor.zip
         
         # Submit for notarization
-        xcrun notarytool submit ClaudeUsageMonitor.zip \
+        xcrun notarytool submit ClaudeCodeUsageMonitor.zip \
           --apple-id "$APPLE_ID" \
           --password "$APPLE_ID_PASSWORD" \
           --team-id "$APPLE_TEAM_ID" \
           --wait
         
         # Staple the ticket
-        xcrun stapler staple ClaudeUsageMonitor.app
+        xcrun stapler staple ClaudeCodeUsageMonitor.app
         echo "✅ App notarized successfully"
     
     - name: Create DMG
@@ -101,16 +101,16 @@ jobs:
         # Create DMG with custom settings
         create-dmg \
           --volname "Claude Code Usage Monitor" \
-          --volicon "ClaudeUsageMonitor.app/Contents/Resources/AppIcon.icns" \
+          --volicon "ClaudeCodeUsageMonitor.app/Contents/Resources/AppIcon.icns" \
           --window-pos 200 120 \
           --window-size 600 400 \
           --icon-size 100 \
-          --icon "ClaudeUsageMonitor.app" 150 185 \
-          --hide-extension "ClaudeUsageMonitor.app" \
+          --icon "ClaudeCodeUsageMonitor.app" 150 185 \
+          --hide-extension "ClaudeCodeUsageMonitor.app" \
           --app-drop-link 450 185 \
           --hdiutil-quiet \
-          "ClaudeUsageMonitor-${{ steps.version.outputs.version }}.dmg" \
-          "ClaudeUsageMonitor.app"
+          "ClaudeCodeUsageMonitor-${{ steps.version.outputs.version }}.dmg" \
+          "ClaudeCodeUsageMonitor.app"
     
     - name: Generate changelog
       id: changelog
@@ -139,7 +139,7 @@ jobs:
         draft: false
         prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
         files: |
-          ClaudeUsageMonitor-${{ steps.version.outputs.version }}.dmg
+          ClaudeCodeUsageMonitor-${{ steps.version.outputs.version }}.dmg
     
     - name: Update Homebrew Formula (if not prerelease)
       if: ${{ !contains(github.ref, 'beta') && !contains(github.ref, 'alpha') }}

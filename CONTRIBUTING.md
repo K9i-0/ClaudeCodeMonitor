@@ -52,8 +52,8 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ClaudeUsageMonitor.git
-cd ClaudeUsageMonitor
+git clone https://github.com/K9i-0/ClaudeCodeUsageMonitor.git
+cd ClaudeCodeUsageMonitor
 
 # Build with Swift
 swift build

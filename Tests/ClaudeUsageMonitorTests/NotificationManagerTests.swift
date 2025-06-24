@@ -1,6 +1,6 @@
 import XCTest
 import UserNotifications
-@testable import ClaudeUsageMonitor
+@testable import ClaudeCodeUsageMonitor
 
 @MainActor
 final class NotificationManagerTests: XCTestCase {

@@ -1,6 +1,6 @@
 import XCTest
 import SwiftUI
-@testable import ClaudeUsageMonitor
+@testable import ClaudeCodeUsageMonitor
 
 @MainActor
 final class ViewModelTests: XCTestCase {
