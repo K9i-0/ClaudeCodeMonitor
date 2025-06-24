@@ -4,30 +4,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Claude Code Usage Monitor is a macOS menubar application that monitors Claude Code API usage and costs. It wraps the [ccusage](https://github.com/ryoppippi/ccusage) CLI tool to provide real-time usage tracking with a native macOS interface.
+ClaudeCodeUsageMonitor is a macOS menubar application that monitors Claude Code API usage and costs. It wraps the [ccusage](https://github.com/ryoppippi/ccusage) CLI tool to provide real-time usage tracking with a native macOS interface.
 
 ## Build and Run Commands
 
 ```bash
-# Option 1: Using Xcode (Recommended)
-open Package.swift
-# Then Build (⌘B) and Run (⌘R) in Xcode
+# Run tests
+swift test
 
-# Option 2: Swift CLI
+# Build debug version
 swift build
-swift build -c release  # For release build
+
+# Build release version
+swift build -c release
 
 # Create app bundle (required after CLI build)
-mkdir -p ClaudeUsageMonitor.app/Contents/MacOS
-mkdir -p ClaudeUsageMonitor.app/Contents/Resources
-cp .build/arm64-apple-macosx/debug/ClaudeUsageMonitor ClaudeUsageMonitor.app/Contents/MacOS/
-cp Info.plist ClaudeUsageMonitor.app/Contents/
-open ClaudeUsageMonitor.app
+mkdir -p ClaudeCodeUsageMonitor.app/Contents/MacOS
+mkdir -p ClaudeCodeUsageMonitor.app/Contents/Resources
+cp .build/arm64-apple-macosx/debug/ClaudeCodeUsageMonitor ClaudeCodeUsageMonitor.app/Contents/MacOS/
+cp Info.plist ClaudeCodeUsageMonitor.app/Contents/
+open ClaudeCodeUsageMonitor.app
 
-# Run local server (recommended to avoid npx path issues)
+# Build release with code signing (requires Developer ID)
+./scripts/build-release.sh
+
+# Run local server (REQUIRED for App Sandbox mode)
 cd server
 npm install
 npm start  # Runs on http://127.0.0.1:3456
+
+# Open in Xcode (recommended for development)
+open Package.swift
+# Then Build (⌘B) and Run (⌘R) in Xcode
 ```
 
 ## Architecture
@@ -42,7 +50,7 @@ npm start  # Runs on http://127.0.0.1:3456
 - **App Sandbox is enabled** for App Store distribution
 - When App Sandbox is enabled, the local server (http://127.0.0.1:3456) is **required**
 - Direct command execution (npx) is not possible with App Sandbox
-- Network entitlements allow localhost connections
+- Network entitlements allow localhost connections only
 
 ### Key Components
 
@@ -54,12 +62,13 @@ npm start  # Runs on http://127.0.0.1:3456
 
 **UsageMonitor.swift**
 - Central data management with @Published properties
-- Multi-strategy ccusage execution (server → npx paths → shell)
+- Server-first strategy when App Sandbox is enabled
 - Handles Pro/Max5/Max20 plan detection and persistence
 - Implements UsageMonitoring protocol for dependency injection
+- Key methods: `fetchUsageData()`, `startMonitoring()`, `stopMonitoring()`
 
 **ContentView.swift**
-- Two-tab interface: "現在" (current session) / "履歴" (history)
+- Three-tab interface: Current Session / History / Settings
 - CurrentSessionView: Large remaining tokens display, progress bar, burn rate
 - Compact 480x300 popover with scrollable content
 - Visual effects blur background for modern appearance
@@ -76,47 +85,51 @@ npm start  # Runs on http://127.0.0.1:3456
 - Handles Xcode debug build limitations with bundle checks
 - Implements UNUserNotificationCenterDelegate
 
-### UI Design Decisions
+**ServerManager.swift**
+- Manages local Express server lifecycle
+- Auto-starts server when app launches
+- Handles server health checks and restarts
+- Logs server output for debugging
 
-**Menubar Display**
-- Shows SF Symbol + percentage for clarity
-- Dynamic icon based on usage: circle.fill → flame.fill → bolt.fill → exclamationmark.triangle.fill
-- Color gradient from blue → orange → red based on usage
-- No cost display in menubar (context-dependent)
+### Testing Strategy
+- Unit tests with mocks for UsageMonitor and network services
+- CI environment detection to skip locale-dependent tests
+- Test files follow naming pattern: `*Tests.swift`
+- Mock implementations in `Tests/ClaudeUsageMonitorTests/Mocks/`
 
-**Session Cost Display**
-- Current session cost shown prominently in popover
-- Historical costs marked as "参考値" (reference) since billing is session-based
-- Plan selection via settings (gear icon)
+### Localization
+- Supports English and Japanese
+- Uses Localization.swift with generated L10n enum
+- Resource bundles in `Sources/ClaudeUsageMonitor/Resources/`
+- LanguageSettings.swift manages language preferences
 
 ## Technical Decisions
 
 ### ccusage Execution Strategy
-1. Try local Express server first (avoids PATH issues)
-2. Search common npx locations (mise, homebrew, volta, nvm)
-3. Use `which npx` command
-4. Fall back to shell with extended PATH
+1. App Sandbox enabled: Server-only mode (required)
+2. App Sandbox disabled: Try server first, then fall back to direct npx
 
-### Xcode Execution Issues
-Xcode has limited PATH environment. Debug with:
-- Check console for `[DEBUG]` messages
-- Ensure server is running: `cd server && npm start`
-- Add new npx paths to `npxSearchPaths` array in UsageMonitor.swift
+### Module Name Mismatch
+- Package name: `ClaudeCodeUsageMonitor`
+- Source directory: `Sources/ClaudeUsageMonitor` (historical reasons)
+- Import statement: `import ClaudeCodeUsageMonitor`
+- This is handled via path specifications in Package.swift
 
-### Plan Detection
-- Stores selected plan in UserDefaults
-- Manual selection overrides auto-detection
-- Detects Max5/Max20 from historical token usage
+### Error Handling
+- ClaudeMonitorError enum for typed errors
+- Localized error descriptions and recovery suggestions
+- Network errors, parsing errors, command execution errors
 
-### Architecture Patterns
-- MVVM with SessionViewModel and HistoryViewModel
-- Protocol-oriented design (UsageMonitoring, SessionBlockConvertible)
-- Centralized formatting utilities (NumberFormatters, Date extensions)
-- Error handling with ClaudeUsageError enum
+### UI/UX Principles
+- Menubar icon changes based on usage level
+- Color gradient: blue (0-50%) → orange (50-75%) → red (75%+)
+- Minimal popover size (480x300) for quick glancing
+- All content scrollable to handle varying data
 
 ## Environment Requirements
 
 - macOS 13.0+
 - Swift 5.9+
-- Node.js (for ccusage CLI)
+- Node.js 18+ (for ccusage CLI and local server)
+- Xcode 15+ (for development)
 - App runs as LSUIElement (menubar only, no Dock icon)
