@@ -6,8 +6,8 @@
 set -e
 
 # Configuration
-APP_NAME="ClaudeCodeUsageMonitor"
-BUNDLE_ID="com.k9i.claude-code-usage-monitor"  # Replace with your bundle ID
+APP_NAME="ClaudeCodeMonitor"
+BUNDLE_ID="com.k9i.claude-code-monitor"  # Replace with your bundle ID
 BUILD_DIR=".build/release"
 APP_DIR="$APP_NAME.app"
 DEVELOPER_ID="Developer ID Application: Your Name (XXXXXXXXXX)"  # Replace with your Developer ID
@@ -41,14 +41,14 @@ cp "$BUILD_DIR/$APP_NAME" "$APP_DIR/Contents/MacOS/"
 cp Info.plist "$APP_DIR/Contents/"
 
 # Copy entitlements
-cp ClaudeCodeUsageMonitor.entitlements "$APP_DIR/Contents/"
+cp ClaudeCodeMonitor.entitlements "$APP_DIR/Contents/"
 
 # Sign the app with hardened runtime and entitlements
 echo -e "${YELLOW}Signing app with hardened runtime...${NC}"
 if [ -z "$SKIP_SIGNING" ]; then
     codesign --force --deep --strict \
         --options runtime \
-        --entitlements ClaudeCodeUsageMonitor.entitlements \
+        --entitlements ClaudeCodeMonitor.entitlements \
         --sign "$DEVELOPER_ID" \
         "$APP_DIR"
     

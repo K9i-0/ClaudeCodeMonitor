@@ -1,4 +1,4 @@
-# Claude Code Usage Monitor
+# Claude Code Monitor
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-macOS-blue.svg" alt="Platform">
@@ -59,8 +59,8 @@ This app wraps the [ccusage](https://github.com/ryoppippi/ccusage) CLI tool to p
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/K9i-0/ClaudeUsageMonitor.git
-cd ClaudeUsageMonitor
+git clone https://github.com/K9i-0/ClaudeCodeMonitor.git
+cd ClaudeCodeMonitor
 ```
 
 ### 2. Node.js Server Setup (Recommended)
@@ -94,13 +94,13 @@ In Xcode:
 swift build -c release
 
 # Create app bundle
-mkdir -p ClaudeUsageMonitor.app/Contents/MacOS
-mkdir -p ClaudeUsageMonitor.app/Contents/Resources
-cp .build/arm64-apple-macosx/release/ClaudeUsageMonitor ClaudeUsageMonitor.app/Contents/MacOS/
-cp Info.plist ClaudeUsageMonitor.app/Contents/
+mkdir -p ClaudeCodeMonitor.app/Contents/MacOS
+mkdir -p ClaudeCodeMonitor.app/Contents/Resources
+cp .build/arm64-apple-macosx/release/ClaudeCodeMonitor ClaudeCodeMonitor.app/Contents/MacOS/
+cp Info.plist ClaudeCodeMonitor.app/Contents/
 
 # Launch the app
-open ClaudeUsageMonitor.app
+open ClaudeCodeMonitor.app
 ```
 
 ## 🖼️ Screenshots
@@ -132,8 +132,8 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## 💬 Support
 
-- **Issues**: [GitHub Issues](https://github.com/K9i-0/ClaudeUsageMonitor/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/K9i-0/ClaudeUsageMonitor/discussions)
+- **Issues**: [GitHub Issues](https://github.com/K9i-0/ClaudeCodeMonitor/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/K9i-0/ClaudeCodeMonitor/discussions)
 
 ## 🔗 Related Links
 

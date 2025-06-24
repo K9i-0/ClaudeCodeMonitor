@@ -2,28 +2,28 @@
 import PackageDescription
 
 let package = Package(
-    name: "ClaudeCodeUsageMonitor",
+    name: "ClaudeCodeMonitor",
     defaultLocalization: "en",
     platforms: [
         .macOS(.v13)
     ],
     products: [
         .executable(
-            name: "ClaudeCodeUsageMonitor",
-            targets: ["ClaudeCodeUsageMonitor"]
+            name: "ClaudeCodeMonitor",
+            targets: ["ClaudeCodeMonitor"]
         )
     ],
     targets: [
         .executableTarget(
-            name: "ClaudeCodeUsageMonitor",
+            name: "ClaudeCodeMonitor",
             path: "Sources/ClaudeUsageMonitor",
             resources: [
                 .process("Resources")
             ]
         ),
         .testTarget(
-            name: "ClaudeCodeUsageMonitorTests",
-            dependencies: ["ClaudeCodeUsageMonitor"],
+            name: "ClaudeCodeMonitorTests",
+            dependencies: ["ClaudeCodeMonitor"],
             path: "Tests/ClaudeUsageMonitorTests"
         )
     ]

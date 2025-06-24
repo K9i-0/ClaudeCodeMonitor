@@ -23,7 +23,7 @@ struct ContentView: View {
                             Image(systemName: "chart.line.uptrend.xyaxis.circle.fill")
                                 .font(.system(size: 16))
                                 .foregroundStyle(.blue)
-                            Text("Claude Code Usage Monitor")
+                            Text("Claude Code Monitor")
                                 .font(.system(size: 14, weight: .semibold))
                         }
                         

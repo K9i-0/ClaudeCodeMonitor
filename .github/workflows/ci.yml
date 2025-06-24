@@ -65,7 +65,7 @@ jobs:
       if: matrix.xcode == '15.2'
       run: |
         xcrun llvm-cov export \
-          .build/debug/ClaudeCodeUsageMonitorPackageTests.xctest/Contents/MacOS/ClaudeCodeUsageMonitorPackageTests \
+          .build/debug/ClaudeCodeMonitorPackageTests.xctest/Contents/MacOS/ClaudeCodeMonitorPackageTests \
           -instr-profile .build/debug/codecov/default.profdata \
           -format="lcov" > coverage.lcov
     
