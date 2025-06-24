@@ -22,7 +22,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         if let button = statusItem.button {
             // SF Symbolsを使用した初期アイコン
-            if let image = NSImage(systemSymbolName: "hourglass", accessibilityDescription: "Claude Usage Monitor") {
+            if let image = NSImage(systemSymbolName: "hourglass", accessibilityDescription: "Claude Code Usage Monitor") {
                 let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
                 button.image = image.withSymbolConfiguration(config)
                 button.imagePosition = .imageLeading
