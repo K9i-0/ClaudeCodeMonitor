@@ -4,7 +4,7 @@ cask "ccmonitor" do
 
   url "https://github.com/K9i-0/ClaudeCodeMonitor/releases/download/v#{version}/ClaudeCodeMonitor-#{version}.dmg"
   name "Claude Code Monitor"
-  desc "Real-time monitoring for Claude Code API usage"
+  desc "Monitor Claude Code API usage and costs in your menubar"
   homepage "https://github.com/K9i-0/ClaudeCodeMonitor"
 
   livecheck do
