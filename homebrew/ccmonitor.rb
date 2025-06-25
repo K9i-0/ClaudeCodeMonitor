@@ -1,6 +1,6 @@
 cask "ccmonitor" do
-  version "0.1.5"
-  sha256 "f6004ac4931a90506c032e25afbd75ee43334fcf82add57cd429f7ca4d3b6e72"
+  version "0.1.6"
+  sha256 "4913490738222396f361ad5dd48d0620ff26fad80db8bd75967a1f353b240140"
 
   url "https://github.com/K9i-0/ClaudeCodeMonitor/releases/download/v#{version}/ClaudeCodeMonitor-#{version}.dmg"
   name "Claude Code Monitor"
