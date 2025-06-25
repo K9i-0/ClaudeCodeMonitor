@@ -49,14 +49,14 @@ echo "New version: $NEW_VERSION"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEW_VERSION" Info.plist
 
 # Update Package.swift version comment (optional)
+# Note: Don't add comment at line 1 to avoid swift-tools-version confusion
 if [ -f "Package.swift" ]; then
-  # Add or update version comment at the top of the file
-  if grep -q "// Version:" Package.swift; then
-    sed -i '' "s|// Version:.*|// Version: $NEW_VERSION|" Package.swift
+  # Add or update version comment at line 2 (after swift-tools-version)
+  if grep -q "// Package Version:" Package.swift; then
+    sed -i '' "s|// Package Version:.*|// Package Version: $NEW_VERSION|" Package.swift
   else
-    sed -i '' "1i\\
-// Version: $NEW_VERSION\\
-" Package.swift
+    sed -i '' "2i\\
+// Package Version: $NEW_VERSION" Package.swift
   fi
 fi
 
