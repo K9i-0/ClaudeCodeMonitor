@@ -55,10 +55,14 @@ if [ -f "Package.swift" ]; then
   if grep -q "// Package Version:" Package.swift; then
     sed -i '' "s|// Package Version:.*|// Package Version: $NEW_VERSION|" Package.swift
   else
-    sed -i '' "2i\\
-// Package Version: $NEW_VERSION" Package.swift
+    # Use different approach for inserting at line 2 with proper newline
+    sed -i '' $'1 a\\\n// Package Version: '"$NEW_VERSION" Package.swift
   fi
 fi
 
 echo "✅ Version updated to $NEW_VERSION"
-echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+# Output for GitHub Actions
+if [ -n "$GITHUB_OUTPUT" ]; then
+  echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+fi
