@@ -97,13 +97,22 @@ jobs:
           "$KEYCHAIN_PATH"
         
         # Find the certificate name dynamically
-        CERT_NAME=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.+)".*/\1/')
+        echo "=== Looking for certificates ==="
+        security find-identity -v -p codesigning "$KEYCHAIN_PATH"
         
-        if [ -n "$CERT_NAME" ]; then
-          echo "✅ Found certificate: $CERT_NAME"
+        # Extract certificate name more carefully
+        CERT_LINE=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1)
+        echo "Certificate line: $CERT_LINE"
+        
+        # Extract the name between quotes
+        CERT_NAME=$(echo "$CERT_LINE" | cut -d'"' -f2)
+        
+        if [ -n "$CERT_NAME" ] && [ "$CERT_NAME" != "" ]; then
+          echo "✅ Found certificate: '$CERT_NAME'"
           echo "CERT_NAME=$CERT_NAME" >> $GITHUB_ENV
         else
           echo "❌ No Developer ID Application certificate found"
+          echo "Available certificates:"
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
           exit 1
         fi
@@ -177,12 +186,37 @@ jobs:
       run: |
         echo "🔏 Signing app with: $CERT_NAME"
         
+        # Debug: Check certificate availability
+        echo "=== Available certificates in keychain ==="
+        security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+        
+        # Debug: Check if CERT_NAME is properly set
+        if [ -z "$CERT_NAME" ]; then
+          echo "❌ CERT_NAME is empty!"
+          exit 1
+        fi
+        
+        # Debug: Check entitlements file
+        if [ ! -f "ClaudeCodeMonitor.entitlements" ]; then
+          echo "❌ Entitlements file not found!"
+          ls -la
+          exit 1
+        fi
+        
+        # Try signing with more verbose output
+        echo "=== Attempting to sign ==="
         codesign --force --deep --strict \
           --options runtime \
           --entitlements ClaudeCodeMonitor.entitlements \
           --sign "$CERT_NAME" \
           --timestamp \
-          "ClaudeCodeMonitor.app"
+          --verbose=4 \
+          "ClaudeCodeMonitor.app" 2>&1 || {
+            echo "❌ Signing failed with exit code: $?"
+            # Try to get more info about the failure
+            codesign --verify --verbose=4 "ClaudeCodeMonitor.app" 2>&1 || true
+            exit 1
+          }
         
         # Verify signature
         codesign --verify --deep --strict --verbose=2 "ClaudeCodeMonitor.app"
