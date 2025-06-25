@@ -12,10 +12,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         usageMonitor = UsageMonitor()
         
+        // 通知機能は初回リリースでは無効化
+        /*
         // Setup notification center delegate
         if Bundle.main.bundleIdentifier != nil {
             UNUserNotificationCenter.current().delegate = NotificationManager.shared
         }
+        */
         
         // Hide all windows for menubar-only app
         NSApp.windows.forEach { window in

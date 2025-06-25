@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server-fixed.js"
   },
   "dependencies": {
     "ccusage": "^0.8.0",
