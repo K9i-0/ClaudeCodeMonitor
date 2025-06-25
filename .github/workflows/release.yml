@@ -177,7 +177,7 @@ jobs:
         codesign --verify --verbose=2 "$DMG_PATH"
     
     - name: Notarize app
-      if: env.CERT_AVAILABLE == 'true' && secrets.NOTARIZATION_APPLE_ID != '' && secrets.NOTARIZATION_PASSWORD != '' && secrets.NOTARIZATION_TEAM_ID != ''
+      if: env.CERT_AVAILABLE == 'true' && secrets.NOTARIZATION_APPLE_ID && secrets.NOTARIZATION_PASSWORD && secrets.NOTARIZATION_TEAM_ID
       env:
         NOTARIZATION_APPLE_ID: ${{ secrets.NOTARIZATION_APPLE_ID }}
         NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
