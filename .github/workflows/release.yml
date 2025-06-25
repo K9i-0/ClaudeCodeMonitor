@@ -13,9 +13,6 @@ jobs:
     name: Build and Release
     runs-on: macos-latest
     
-    env:
-      KEYCHAIN_NAME: "build-temp.keychain"
-    
     steps:
     - uses: actions/checkout@v4
       with:
@@ -27,109 +24,158 @@ jobs:
     - name: Generate version tag
       id: version
       run: |
+        # Generate timestamp-based tag
         TAG="v$(date +%Y%m%d-%H%M%S)"
         echo "tag=$TAG" >> $GITHUB_OUTPUT
         echo "version=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
     
-    - name: Set up temporary keychain
+    # Check if we have signing certificates
+    - name: Check signing prerequisites
+      id: check_signing
+      env:
+        CERT_P12: ${{ secrets.CERTIFICATES_P12 }}
+        CERT_PWD: ${{ secrets.CERTIFICATES_PASSWORD }}
+        NOTARIZE_ID: ${{ secrets.NOTARIZATION_APPLE_ID }}
+        NOTARIZE_PWD: ${{ secrets.NOTARIZATION_PASSWORD }}
+        NOTARIZE_TEAM: ${{ secrets.NOTARIZATION_TEAM_ID }}
       run: |
+        if [ -n "$CERT_P12" ] && [ -n "$CERT_PWD" ]; then
+          echo "has_signing_cert=true" >> $GITHUB_OUTPUT
+          echo "✅ Signing certificates found"
+        else
+          echo "has_signing_cert=false" >> $GITHUB_OUTPUT
+          echo "⚠️ No signing certificates configured"
+        fi
+        
+        if [ -n "$NOTARIZE_ID" ] && [ -n "$NOTARIZE_PWD" ] && [ -n "$NOTARIZE_TEAM" ]; then
+          echo "has_notarization=true" >> $GITHUB_OUTPUT
+          echo "✅ Notarization credentials found"
+        else
+          echo "has_notarization=false" >> $GITHUB_OUTPUT
+          echo "⚠️ No notarization credentials configured"
+        fi
+    
+    # Setup keychain if we have certificates
+    - name: Set up keychain
+      if: steps.check_signing.outputs.has_signing_cert == 'true'
+      run: |
+        # Create a temporary keychain
+        KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
         KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
         
-        security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
-        security set-keychain-settings -lut 21600 "$KEYCHAIN_NAME"
-        security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+        security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+        security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+        security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
         
-        security list-keychains -d user -s "$KEYCHAIN_NAME" $(security list-keychains -d user | sed 's/"//g')
-        security default-keychain -s "$KEYCHAIN_NAME"
+        # Add to search list
+        security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed 's/"//g')
+        security default-keychain -s "$KEYCHAIN_PATH"
         
+        # Store for later use
+        echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
         echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
     
-    - name: Import and find Developer ID certificate
-      if: ${{ secrets.CERTIFICATES_P12 != '' && secrets.CERTIFICATES_PASSWORD != '' }}
+    # Import certificates
+    - name: Import certificates
+      if: steps.check_signing.outputs.has_signing_cert == 'true'
       env:
         CERTIFICATES_P12: ${{ secrets.CERTIFICATES_P12 }}
         CERTIFICATES_PASSWORD: ${{ secrets.CERTIFICATES_PASSWORD }}
       run: |
-        # Import certificate
+        # Decode and import certificate
         echo "$CERTIFICATES_P12" | base64 --decode > certificate.p12
         
         security import certificate.p12 \
-          -k "$KEYCHAIN_NAME" \
+          -k "$KEYCHAIN_PATH" \
           -P "$CERTIFICATES_PASSWORD" \
           -T /usr/bin/codesign \
-          -T /usr/bin/xcrun \
-          -T /usr/bin/xcodebuild
+          -T /usr/bin/xcrun
         
         security set-key-partition-list \
           -S apple-tool:,apple:,codesign: \
           -s -k "$KEYCHAIN_PASSWORD" \
-          "$KEYCHAIN_NAME"
+          "$KEYCHAIN_PATH"
         
-        # Find available Developer ID Application certificate
-        AVAILABLE_CERTS=$(security find-identity -v -p codesigning "$KEYCHAIN_NAME" | grep "Developer ID Application")
+        # Find the certificate name dynamically
+        CERT_NAME=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.+)".*/\1/')
         
-        if [ -n "$AVAILABLE_CERTS" ]; then
-          # Extract the first available Developer ID Application certificate name
-          CERT_NAME=$(echo "$AVAILABLE_CERTS" | head -1 | sed 's/.*") //g')
+        if [ -n "$CERT_NAME" ]; then
           echo "✅ Found certificate: $CERT_NAME"
           echo "CERT_NAME=$CERT_NAME" >> $GITHUB_ENV
-          echo "CERT_AVAILABLE=true" >> $GITHUB_ENV
         else
           echo "❌ No Developer ID Application certificate found"
-          echo "Available certificates:"
-          security find-identity -v -p codesigning "$KEYCHAIN_NAME"
-          echo "CERT_AVAILABLE=false" >> $GITHUB_ENV
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+          exit 1
         fi
         
         rm certificate.p12
     
+    # Build the app
     - name: Build universal binary
       run: |
         echo "🔨 Building universal binary..."
         
-        if ! swift build -c release --arch arm64 --arch x86_64; then
-          echo "❌ Swift build failed"
-          exit 1
-        fi
+        # Build for both architectures
+        swift build -c release --arch arm64 --arch x86_64
         
+        # Find the executable
         EXECUTABLE_PATH=".build/apple/Products/Release/ClaudeCodeMonitor"
         
+        # Fallback paths if the primary one doesn't exist
+        if [ ! -f "$EXECUTABLE_PATH" ]; then
+          echo "Primary path not found, searching alternatives..."
+          EXECUTABLE_PATH=$(find .build -name ClaudeCodeMonitor -type f -perm +111 | grep -v '.dSYM' | head -1)
+        fi
+        
         if [ -f "$EXECUTABLE_PATH" ]; then
-          echo "✅ Universal binary created"
+          echo "✅ Binary found at: $EXECUTABLE_PATH"
           file "$EXECUTABLE_PATH"
           lipo -info "$EXECUTABLE_PATH"
           echo "EXECUTABLE_PATH=$EXECUTABLE_PATH" >> $GITHUB_ENV
         else
-          echo "❌ Executable not found"
+          echo "❌ Failed to find executable"
           find .build -name ClaudeCodeMonitor -type f
           exit 1
         fi
     
+    # Create app bundle
     - name: Create app bundle
       run: |
+        # Create app structure
         mkdir -p "ClaudeCodeMonitor.app/Contents/MacOS"
         mkdir -p "ClaudeCodeMonitor.app/Contents/Resources"
         
-        # Copy executable and Info.plist
+        # Copy executable
         cp "$EXECUTABLE_PATH" "ClaudeCodeMonitor.app/Contents/MacOS/"
-        cp Info.plist "ClaudeCodeMonitor.app/Contents/"
-        cp ClaudeCodeMonitor.entitlements "ClaudeCodeMonitor.app/Contents/"
         
-        # Update version
+        # Copy Info.plist and update version
+        cp Info.plist "ClaudeCodeMonitor.app/Contents/"
         /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" "ClaudeCodeMonitor.app/Contents/Info.plist"
         /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.version }}" "ClaudeCodeMonitor.app/Contents/Info.plist"
         
+        # Copy entitlements for reference
+        cp ClaudeCodeMonitor.entitlements "ClaudeCodeMonitor.app/Contents/"
+        
         # Copy resource bundles if they exist
-        if find .build -name "*.bundle" -type d | head -1 | grep -q .; then
-          find .build -name "*.bundle" -type d | while read bundle; do
-            cp -R "$bundle" "ClaudeCodeMonitor.app/Contents/Resources/" 2>/dev/null || true
-          done
-        fi
+        echo "Looking for resource bundles..."
+        find .build -name "*.bundle" -type d | while read bundle; do
+          echo "Found bundle: $bundle"
+          cp -R "$bundle" "ClaudeCodeMonitor.app/Contents/Resources/" || true
+          # Also copy to app root for SPM compatibility
+          cp -R "$bundle" "ClaudeCodeMonitor.app/" || true
+        done
+        
+        # Verify app structure
+        echo "=== App bundle structure ==="
+        ls -la "ClaudeCodeMonitor.app/Contents/"
+        ls -la "ClaudeCodeMonitor.app/Contents/MacOS/"
+        file "ClaudeCodeMonitor.app/Contents/MacOS/ClaudeCodeMonitor"
     
+    # Sign the app
     - name: Sign app bundle
-      if: env.CERT_AVAILABLE == 'true'
+      if: steps.check_signing.outputs.has_signing_cert == 'true'
       run: |
-        echo "🔏 Signing with: $CERT_NAME"
+        echo "🔏 Signing app with: $CERT_NAME"
         
         codesign --force --deep --strict \
           --options runtime \
@@ -138,23 +184,28 @@ jobs:
           --timestamp \
           "ClaudeCodeMonitor.app"
         
+        # Verify signature
         codesign --verify --deep --strict --verbose=2 "ClaudeCodeMonitor.app"
+        codesign -dvvv "ClaudeCodeMonitor.app"
     
+    # Ad-hoc sign if no certificates
     - name: Ad-hoc sign app bundle
-      if: env.CERT_AVAILABLE != 'true'
+      if: steps.check_signing.outputs.has_signing_cert != 'true'
       run: |
-        echo "⚠️ Ad-hoc signing (development only)"
+        echo "⚠️ Ad-hoc signing app (no Developer ID certificate)"
         codesign --force --deep --sign - "ClaudeCodeMonitor.app"
     
+    # Create DMG
     - name: Create DMG
       run: |
+        # Install create-dmg if needed
         if ! command -v create-dmg &> /dev/null; then
-          echo "Installing create-dmg..."
           brew install create-dmg
         fi
         
         DMG_NAME="ClaudeCodeMonitor-${{ steps.version.outputs.version }}.dmg"
         
+        # Create DMG
         create-dmg \
           --volname "Claude Code Monitor" \
           --window-pos 200 120 \
@@ -169,48 +220,48 @@ jobs:
           "ClaudeCodeMonitor.app"
         
         echo "DMG_PATH=$DMG_NAME" >> $GITHUB_ENV
+        echo "✅ Created DMG: $DMG_NAME"
     
+    # Sign DMG
     - name: Sign DMG
-      if: env.CERT_AVAILABLE == 'true'
+      if: steps.check_signing.outputs.has_signing_cert == 'true'
       run: |
+        echo "🔏 Signing DMG..."
         codesign --force --sign "$CERT_NAME" --timestamp "$DMG_PATH"
         codesign --verify --verbose=2 "$DMG_PATH"
     
+    # Notarize using action
     - name: Notarize app
-      if: env.CERT_AVAILABLE == 'true' && secrets.NOTARIZATION_APPLE_ID && secrets.NOTARIZATION_PASSWORD && secrets.NOTARIZATION_TEAM_ID
-      env:
-        NOTARIZATION_APPLE_ID: ${{ secrets.NOTARIZATION_APPLE_ID }}
-        NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
-        NOTARIZATION_TEAM_ID: ${{ secrets.NOTARIZATION_TEAM_ID }}
-      run: |
-        echo "📦 Submitting for notarization..."
-        
-        xcrun notarytool submit \
-          "$DMG_PATH" \
-          --apple-id "$NOTARIZATION_APPLE_ID" \
-          --password "$NOTARIZATION_PASSWORD" \
-          --team-id "$NOTARIZATION_TEAM_ID" \
-          --wait \
-          --verbose
-        
-        echo "📎 Stapling notarization ticket..."
-        xcrun stapler staple "$DMG_PATH"
-        
-        echo "✅ Verifying notarization..."
-        xcrun stapler validate "$DMG_PATH"
-        spctl -a -t open --context context:primary-signature -v "$DMG_PATH"
+      if: steps.check_signing.outputs.has_signing_cert == 'true' && steps.check_signing.outputs.has_notarization == 'true'
+      uses: lando/notarize-action@v2
+      with:
+        product-path: ${{ env.DMG_PATH }}
+        appstore-connect-username: ${{ secrets.NOTARIZATION_APPLE_ID }}
+        appstore-connect-password: ${{ secrets.NOTARIZATION_PASSWORD }}
+        appstore-connect-team-id: ${{ secrets.NOTARIZATION_TEAM_ID }}
+        verbose: true
     
+    # Staple notarization
+    - name: Staple notarization
+      if: steps.check_signing.outputs.has_signing_cert == 'true' && steps.check_signing.outputs.has_notarization == 'true'
+      run: |
+        echo "📎 Stapling notarization..."
+        xcrun stapler staple "$DMG_PATH"
+        xcrun stapler validate "$DMG_PATH"
+    
+    # Generate changelog
     - name: Generate changelog
       id: changelog
       run: |
+        # Get previous tag
         PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
         
         if [ -z "$PREV_TAG" ]; then
           echo "## 🎉 Initial Release" > changelog.md
           echo "" >> changelog.md
-          echo "Claude Code Monitorの初回リリースです！" >> changelog.md
+          echo "First release of Claude Code Monitor!" >> changelog.md
         else
-          echo "## 変更内容" > changelog.md
+          echo "## What's Changed" > changelog.md
           echo "" >> changelog.md
           git log --pretty=format:"* %s (%h)" $PREV_TAG..HEAD >> changelog.md
           echo "" >> changelog.md
@@ -218,12 +269,14 @@ jobs:
           echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV_TAG...${{ steps.version.outputs.tag }}" >> changelog.md
         fi
         
+        # Set output
         {
           echo "changelog<<EOF"
           cat changelog.md
           echo "EOF"
         } >> $GITHUB_OUTPUT
     
+    # Create and push tag
     - name: Create and push tag
       run: |
         git config user.name "GitHub Actions"
@@ -231,6 +284,7 @@ jobs:
         git tag -a "${{ steps.version.outputs.tag }}" -m "Release ${{ steps.version.outputs.tag }}"
         git push origin "${{ steps.version.outputs.tag }}"
     
+    # Create release
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
@@ -241,9 +295,15 @@ jobs:
         prerelease: false
         files: ${{ env.DMG_PATH }}
     
+    # Cleanup
     - name: Clean up keychain
-      if: always()
+      if: always() && steps.check_signing.outputs.has_signing_cert == 'true'
       run: |
-        if [ -n "$KEYCHAIN_NAME" ] && security list-keychains | grep -q "$KEYCHAIN_NAME"; then
-          security delete-keychain "$KEYCHAIN_NAME" || echo "キーチェーンの削除に失敗しましたが、続行します"
+        if [ -n "$KEYCHAIN_PATH" ]; then
+          security delete-keychain "$KEYCHAIN_PATH" || true
         fi
+    
+    # TODO: Update Homebrew formula
+    - name: Update Homebrew Formula
+      run: |
+        echo "ℹ️ Homebrew formula update not implemented yet"
