@@ -71,7 +71,11 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         do {
             // Try local server first
             if let url = URL(string: "http://127.0.0.1:3456/usage") {
-                let (data, response) = try await URLSession.shared.data(from: url)
+                var request = URLRequest(url: url)
+                request.timeoutInterval = 5.0 // 5 second timeout
+                
+                print("Attempting to fetch from server: \(url)")
+                let (data, response) = try await URLSession.shared.data(for: request)
                 
                 if let httpResponse = response as? HTTPURLResponse {
                     guard httpResponse.statusCode == 200 else {
@@ -85,23 +89,34 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
                     if let first = ccusageResponse.daily.first {
                         print("First daily entry: date=\(first.date), cost=$\(first.totalCost)")
                     }
+                    if let last = ccusageResponse.daily.last {
+                        print("Last daily entry: date=\(last.date), cost=$\(last.totalCost)")
+                    }
                     print("Monthly total: $\(ccusageResponse.totals.totalCost)")
                     
                     // Get today's date in YYYY-MM-DD format
                     let formatter = DateFormatter()
                     formatter.dateFormat = "yyyy-MM-dd"
                     let today = formatter.string(from: Date())
+                    print("Looking for today's date: \(today)")
                     
                     // Find today's usage from the array
                     if let todayData = ccusageResponse.daily.first(where: { $0.date == today }) {
+                        print("Found today's data: cost=$\(todayData.totalCost)")
                         usageData.todayUsage = todayData
                     } else {
+                        print("No data found for today")
                         usageData.todayUsage = nil
                     }
                     
                     // Store monthly total
                     usageData.monthlyTotal = ccusageResponse.totals
                     usageData.lastUpdated = Date()
+                    
+                    // Debug final state
+                    print("Final state - Today's cost: $\(usageData.todayUsage?.totalCost ?? 0)")
+                    print("Final state - Monthly cost: $\(usageData.monthlyTotal?.totalCost ?? 0)")
+                    
                     isLoading = false
                     return
                 }
@@ -112,7 +127,10 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         } catch {
             // Server not running or request failed
             print("Local server not available: \(error.localizedDescription)")
+            print("Error type: \(type(of: error))")
+            print("Full error: \(error)")
             self.error = ClaudeMonitorError.networkError(L10n.Error.serverNotRunning)
+            isLoading = false
             return
         }
         
@@ -412,7 +430,9 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
     }
     
     func formatCost(_ cost: Double) -> String {
-        return NumberFormatters.formatCost(cost)
+        let formatted = NumberFormatters.formatCost(cost)
+        print("formatCost input: \(cost), output: \(formatted)")
+        return formatted
     }
     
     private func updateDetectedPlan(_ plan: String) {
