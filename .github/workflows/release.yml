@@ -198,9 +198,9 @@ jobs:
         # Copy Info.plist (version already updated by bump script)
         cp Info.plist "ClaudeCodeMonitor.app/Contents/"
         
-        # Copy resource bundles if they exist (ONLY to Resources directory)
+        # Copy resource bundles from arm64 build (they are identical across architectures)
         echo "Looking for resource bundles..."
-        find .build -name "*.bundle" -type d | while read bundle; do
+        find .build -path "*arm64*/release/*.bundle" -type d | while read bundle; do
           echo "Found bundle: $bundle"
           cp -R "$bundle" "ClaudeCodeMonitor.app/Contents/Resources/"
         done
