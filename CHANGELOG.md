@@ -11,3 +11,4 @@ All notable changes to this project will be documented in this file.
 ## [0.1.8] - TBD
 ### Fixed
 - Semantic versioning workflow implementation
+- Package.swift version comment handling
