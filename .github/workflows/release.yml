@@ -1,7 +1,8 @@
 name: Release
 
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches:
       - main
 
@@ -12,6 +13,7 @@ jobs:
   build:
     name: Build and Release
     runs-on: macos-latest
+    if: github.event.pull_request.merged == true
     
     steps:
     - uses: actions/checkout@v4
@@ -21,13 +23,34 @@ jobs:
     - name: Select Xcode
       run: sudo xcode-select -s /Applications/Xcode_15.2.app
     
-    - name: Generate version tag
+    - name: Determine version bump type
+      id: version_type
+      run: |
+        # Check PR labels for version type
+        LABELS="${{ join(github.event.pull_request.labels.*.name, ',') }}"
+        echo "PR Labels: $LABELS"
+        
+        if [[ "$LABELS" == *"version:major"* ]]; then
+          echo "type=major" >> $GITHUB_OUTPUT
+        elif [[ "$LABELS" == *"version:minor"* ]]; then
+          echo "type=minor" >> $GITHUB_OUTPUT
+        else
+          echo "type=patch" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Bump version
       id: version
       run: |
-        # Generate timestamp-based tag
-        TAG="v$(date +%Y%m%d-%H%M%S)"
-        echo "tag=$TAG" >> $GITHUB_OUTPUT
-        echo "version=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+        VERSION_TYPE="${{ steps.version_type.outputs.type }}"
+        echo "Bumping version: $VERSION_TYPE"
+        
+        # Run bump script and capture output
+        ./scripts/bump-version.sh "$VERSION_TYPE"
+        
+        # Read the new version
+        NEW_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist)
+        echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
     
     # Check if we have signing certificates
     - name: Check signing prerequisites
@@ -157,10 +180,8 @@ jobs:
         # Copy executable
         cp "$EXECUTABLE_PATH" "ClaudeCodeMonitor.app/Contents/MacOS/"
         
-        # Copy Info.plist and update version
+        # Copy Info.plist (version already updated by bump script)
         cp Info.plist "ClaudeCodeMonitor.app/Contents/"
-        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" "ClaudeCodeMonitor.app/Contents/Info.plist"
-        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.version }}" "ClaudeCodeMonitor.app/Contents/Info.plist"
         
         # Copy resource bundles if they exist (ONLY to Resources directory)
         echo "Looking for resource bundles..."
