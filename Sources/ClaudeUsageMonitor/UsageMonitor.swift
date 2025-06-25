@@ -430,9 +430,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
     }
     
     func formatCost(_ cost: Double) -> String {
-        let formatted = NumberFormatters.formatCost(cost)
-        print("formatCost input: \(cost), output: \(formatted)")
-        return formatted
+        return NumberFormatters.formatCost(cost)
     }
     
     private func updateDetectedPlan(_ plan: String) {
