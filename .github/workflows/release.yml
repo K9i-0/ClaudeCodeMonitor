@@ -162,22 +162,28 @@ jobs:
         /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" "ClaudeCodeMonitor.app/Contents/Info.plist"
         /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.version }}" "ClaudeCodeMonitor.app/Contents/Info.plist"
         
-        # Copy entitlements for reference
-        cp ClaudeCodeMonitor.entitlements "ClaudeCodeMonitor.app/Contents/"
-        
-        # Copy resource bundles if they exist
+        # Copy resource bundles if they exist (ONLY to Resources directory)
         echo "Looking for resource bundles..."
         find .build -name "*.bundle" -type d | while read bundle; do
           echo "Found bundle: $bundle"
-          cp -R "$bundle" "ClaudeCodeMonitor.app/Contents/Resources/" || true
-          # Also copy to app root for SPM compatibility
-          cp -R "$bundle" "ClaudeCodeMonitor.app/" || true
+          cp -R "$bundle" "ClaudeCodeMonitor.app/Contents/Resources/"
         done
         
         # Verify app structure
         echo "=== App bundle structure ==="
+        echo "Root directory (should only contain Contents):"
+        ls -la "ClaudeCodeMonitor.app/"
+        echo ""
+        echo "Contents directory:"
         ls -la "ClaudeCodeMonitor.app/Contents/"
+        echo ""
+        echo "MacOS directory:"
         ls -la "ClaudeCodeMonitor.app/Contents/MacOS/"
+        echo ""
+        echo "Resources directory:"
+        ls -la "ClaudeCodeMonitor.app/Contents/Resources/" || echo "No Resources directory"
+        echo ""
+        echo "Executable info:"
         file "ClaudeCodeMonitor.app/Contents/MacOS/ClaudeCodeMonitor"
     
     # Sign the app
@@ -203,20 +209,23 @@ jobs:
           exit 1
         fi
         
-        # Try signing with more verbose output
+        # Clean up app bundle root (just in case)
+        echo "=== Cleaning app bundle root ==="
+        find "ClaudeCodeMonitor.app" -maxdepth 1 -type f -delete 2>/dev/null || true
+        find "ClaudeCodeMonitor.app" -maxdepth 1 -name "*.bundle" -type d -exec rm -rf {} + 2>/dev/null || true
+        
+        # Verify clean structure before signing
+        echo "=== App bundle root after cleanup ==="
+        ls -la "ClaudeCodeMonitor.app/"
+        
+        # Try signing
         echo "=== Attempting to sign ==="
         codesign --force --deep --strict \
           --options runtime \
           --entitlements ClaudeCodeMonitor.entitlements \
           --sign "$CERT_NAME" \
           --timestamp \
-          --verbose=4 \
-          "ClaudeCodeMonitor.app" 2>&1 || {
-            echo "❌ Signing failed with exit code: $?"
-            # Try to get more info about the failure
-            codesign --verify --verbose=4 "ClaudeCodeMonitor.app" 2>&1 || true
-            exit 1
-          }
+          "ClaudeCodeMonitor.app"
         
         # Verify signature
         codesign --verify --deep --strict --verbose=2 "ClaudeCodeMonitor.app"
