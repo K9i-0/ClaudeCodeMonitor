@@ -34,6 +34,8 @@ class SessionViewModel: ObservableObject {
         planDescription = monitor.usageData.planDescription
         resetTime = Date.formatTime(from: data.endTime)
         
+        // 通知機能は初回リリースでは無効化
+        /*
         // 通知チェック（テスト環境では無効）
         if Bundle.main.bundleIdentifier != nil && !ProcessInfo.processInfo.environment.keys.contains("XCTestConfigurationFilePath") {
             NotificationManager.shared.checkAndSendNotification(
@@ -43,6 +45,7 @@ class SessionViewModel: ObservableObject {
                 sessionId: data.id
             )
         }
+        */
     }
     
     var formattedRemainingTokens: String {

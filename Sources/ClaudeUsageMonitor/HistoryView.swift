@@ -69,29 +69,25 @@ struct HistoryView: View {
                 )
             }
             
-            // 今日と今月の統計（横並び）
+            // 今日と今月の統計（横並び）- アクティブセッションに関係なく表示
             HStack(spacing: 12) {
                 // 今日の使用量
-                if let daily = monitor.usageData.todayUsage {
-                    StatCard(
-                        icon: "calendar",
-                        title: L10n.Usage.today,
-                        cost: monitor.formatCost(daily.totalCost),
-                        tokens: monitor.formatTokens(daily.inputTokens + daily.outputTokens),
-                        accentColor: .green
-                    )
-                }
+                StatCard(
+                    icon: "calendar",
+                    title: L10n.Usage.today,
+                    cost: monitor.formatCost(monitor.usageData.todayUsage?.totalCost ?? 0),
+                    tokens: monitor.formatTokens((monitor.usageData.todayUsage?.inputTokens ?? 0) + (monitor.usageData.todayUsage?.outputTokens ?? 0)),
+                    accentColor: .green
+                )
                 
                 // 今月の使用量
-                if let monthly = monitor.usageData.monthlyTotal {
-                    StatCard(
-                        icon: "calendar.badge.clock",
-                        title: L10n.Usage.thisMonth,
-                        cost: monitor.formatCost(monthly.totalCost),
-                        tokens: monitor.formatTokens(monthly.inputTokens + monthly.outputTokens),
-                        accentColor: .purple
-                    )
-                }
+                StatCard(
+                    icon: "calendar.badge.clock",
+                    title: L10n.Usage.thisMonth,
+                    cost: monitor.formatCost(monitor.usageData.monthlyTotal?.totalCost ?? 0),
+                    tokens: monitor.formatTokens((monitor.usageData.monthlyTotal?.inputTokens ?? 0) + (monitor.usageData.monthlyTotal?.outputTokens ?? 0)),
+                    accentColor: .purple
+                )
             }
             
             Text(L10n.History.referenceNote)

@@ -3,7 +3,7 @@ import SwiftUI
 struct SettingsTabView: View {
     @EnvironmentObject var monitor: UsageMonitor
     @StateObject private var languageSettings = LanguageSettings.shared
-    @State private var notificationEnabled = Bundle.main.bundleIdentifier != nil ? NotificationManager.shared.isNotificationEnabled : false
+    // @State private var notificationEnabled = Bundle.main.bundleIdentifier != nil ? NotificationManager.shared.isNotificationEnabled : false
     
     let plans = [
         ("Pro", "7,000 tokens/session", L10n.Plan.pro),
@@ -80,6 +80,8 @@ struct SettingsTabView: View {
                 }
             }
             
+            // 通知機能は初回リリースでは無効化
+            /*
             Divider()
             
             // Notification settings section
@@ -113,6 +115,7 @@ struct SettingsTabView: View {
                         .padding(.leading, 26)
                 }
             }
+            */
             
             Spacer()
         }
