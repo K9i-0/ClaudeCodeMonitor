@@ -25,7 +25,7 @@ jobs:
     
     - name: Verify binary architecture
       run: |
-        file .build/*/release/ClaudeUsageMonitor
+        file .build/*/release/ClaudeCodeMonitor
         echo "Build completed successfully"
 
   test:

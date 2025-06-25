@@ -147,26 +147,41 @@ jobs:
       run: |
         echo "🔨 Building universal binary..."
         
-        # Build for both architectures
-        swift build -c release --arch arm64 --arch x86_64
+        # Build for arm64
+        echo "Building for arm64..."
+        swift build -c release --arch arm64
         
-        # Find the executable
-        EXECUTABLE_PATH=".build/apple/Products/Release/ClaudeCodeMonitor"
+        # Build for x86_64
+        echo "Building for x86_64..."
+        swift build -c release --arch x86_64
         
-        # Fallback paths if the primary one doesn't exist
-        if [ ! -f "$EXECUTABLE_PATH" ]; then
-          echo "Primary path not found, searching alternatives..."
-          EXECUTABLE_PATH=$(find .build -name ClaudeCodeMonitor -type f -perm +111 | grep -v '.dSYM' | head -1)
+        # Find the arm64 executable
+        ARM64_PATH=$(find .build -path "*arm64*/release/ClaudeCodeMonitor" -type f | head -1)
+        X86_64_PATH=$(find .build -path "*x86_64*/release/ClaudeCodeMonitor" -type f | head -1)
+        
+        if [ -z "$ARM64_PATH" ] || [ -z "$X86_64_PATH" ]; then
+          echo "❌ Failed to find one or both architectures"
+          echo "ARM64: $ARM64_PATH"
+          echo "X86_64: $X86_64_PATH"
+          find .build -name ClaudeCodeMonitor -type f
+          exit 1
         fi
         
-        if [ -f "$EXECUTABLE_PATH" ]; then
-          echo "✅ Binary found at: $EXECUTABLE_PATH"
-          file "$EXECUTABLE_PATH"
-          lipo -info "$EXECUTABLE_PATH"
-          echo "EXECUTABLE_PATH=$EXECUTABLE_PATH" >> $GITHUB_ENV
+        echo "ARM64 binary: $ARM64_PATH"
+        echo "X86_64 binary: $X86_64_PATH"
+        
+        # Create universal binary
+        UNIVERSAL_PATH=".build/universal/release/ClaudeCodeMonitor"
+        mkdir -p .build/universal/release
+        lipo -create -output "$UNIVERSAL_PATH" "$ARM64_PATH" "$X86_64_PATH"
+        
+        if [ -f "$UNIVERSAL_PATH" ]; then
+          echo "✅ Universal binary created at: $UNIVERSAL_PATH"
+          file "$UNIVERSAL_PATH"
+          lipo -info "$UNIVERSAL_PATH"
+          echo "EXECUTABLE_PATH=$UNIVERSAL_PATH" >> $GITHUB_ENV
         else
-          echo "❌ Failed to find executable"
-          find .build -name ClaudeCodeMonitor -type f
+          echo "❌ Failed to create universal binary"
           exit 1
         fi
     
