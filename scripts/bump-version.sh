@@ -48,17 +48,6 @@ echo "New version: $NEW_VERSION"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $NEW_VERSION" Info.plist
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEW_VERSION" Info.plist
 
-# Update Package.swift version comment (optional)
-# Note: Don't add comment at line 1 to avoid swift-tools-version confusion
-if [ -f "Package.swift" ]; then
-  # Add or update version comment at line 2 (after swift-tools-version)
-  if grep -q "// Package Version:" Package.swift; then
-    sed -i '' "s|// Package Version:.*|// Package Version: $NEW_VERSION|" Package.swift
-  else
-    # Use different approach for inserting at line 2 with proper newline
-    sed -i '' $'1 a\\\n// Package Version: '"$NEW_VERSION" Package.swift
-  fi
-fi
 
 echo "✅ Version updated to $NEW_VERSION"
 
