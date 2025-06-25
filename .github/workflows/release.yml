@@ -49,10 +49,22 @@ jobs:
         echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
     
     - name: Import Developer ID certificate
+      if: ${{ secrets.CERTIFICATES_P12 != '' }}
       env:
         CERTIFICATES_P12: ${{ secrets.CERTIFICATES_P12 }}
         CERTIFICATES_PASSWORD: ${{ secrets.CERTIFICATES_PASSWORD }}
       run: |
+        # Check if secrets are properly set
+        if [ -z "$CERTIFICATES_P12" ]; then
+          echo "❌ CERTIFICATES_P12 secret is not set"
+          exit 1
+        fi
+        
+        if [ -z "$CERTIFICATES_PASSWORD" ]; then
+          echo "❌ CERTIFICATES_PASSWORD secret is not set"
+          exit 1
+        fi
+        
         # Decode and import certificate
         echo "$CERTIFICATES_P12" | base64 --decode > certificate.p12
         
@@ -75,33 +87,29 @@ jobs:
         # Clean up
         rm certificate.p12
     
-    - name: Generate Xcode project
+    - name: Build with Swift
       run: |
-        # Generate Xcode project from Package.swift
-        swift package generate-xcodeproj
+        # Build universal binary with Swift Package Manager
+        echo "🔨 Building universal binary..."
         
-        # Update project settings for signing
-        PROJECT_NAME="ClaudeCodeMonitor.xcodeproj"
-        /usr/libexec/PlistBuddy -c "Set :objects:*:attributes:TargetAttributes:*:DevelopmentTeam X4XA2SC7M4" "$PROJECT_NAME/project.pbxproj" 2>/dev/null || true
-    
-    - name: Build with Xcode
-      run: |
-        xcodebuild \
-          -project ClaudeCodeMonitor.xcodeproj \
-          -scheme ClaudeCodeMonitor \
-          -configuration Release \
-          -derivedDataPath build \
-          CODE_SIGN_IDENTITY="$CERT_IDENTITY" \
-          OTHER_CODE_SIGN_FLAGS="--options=runtime --timestamp" \
-          DEVELOPMENT_TEAM="X4XA2SC7M4" \
-          CODE_SIGN_STYLE="Manual" \
-          PRODUCT_BUNDLE_IDENTIFIER="com.k9i.claude-code-monitor" \
-          clean build
+        # Build for Intel
+        swift build -c release --arch x86_64
+        
+        # Build for Apple Silicon
+        swift build -c release --arch arm64
+        
+        # Create universal binary
+        mkdir -p .build/universal/release
+        lipo -create -output .build/universal/release/ClaudeCodeMonitor \
+          .build/x86_64-apple-macosx/release/ClaudeCodeMonitor \
+          .build/arm64-apple-macosx/release/ClaudeCodeMonitor
+        
+        echo "✅ Universal binary created"
     
     - name: Create app bundle
       run: |
-        # Find built executable
-        EXECUTABLE_PATH=$(find build -name ClaudeCodeMonitor -type f -perm +111 | grep -v '.dSYM' | head -1)
+        # Use universal binary
+        EXECUTABLE_PATH=".build/universal/release/ClaudeCodeMonitor"
         
         # Create app bundle structure
         mkdir -p "ClaudeCodeMonitor.app/Contents/MacOS"
@@ -116,7 +124,8 @@ jobs:
         /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.version }}" "ClaudeCodeMonitor.app/Contents/Info.plist"
         
         # Copy resource bundles
-        find build -name "*.bundle" -type d | while read bundle; do
+        # Copy from arm64 build (resource bundles are architecture-independent)
+        find .build/arm64-apple-macosx/release -name "*.bundle" -type d | while read bundle; do
           cp -R "$bundle" "ClaudeCodeMonitor.app/Contents/Resources/" || true
           cp -R "$bundle" "ClaudeCodeMonitor.app/" || true  # SPM compatibility
         done
@@ -125,6 +134,7 @@ jobs:
         cp ClaudeCodeMonitor.entitlements "ClaudeCodeMonitor.app/Contents/"
     
     - name: Sign app bundle
+      if: ${{ env.CERT_IDENTITY != '' }}
       run: |
         # Sign the app bundle with Developer ID
         codesign --force --deep --strict \
@@ -139,6 +149,12 @@ jobs:
         
         # Display signature info
         codesign -dvvv "ClaudeCodeMonitor.app"
+    
+    - name: Ad-hoc sign app bundle
+      if: ${{ env.CERT_IDENTITY == '' }}
+      run: |
+        echo "⚠️ Ad-hoc signing app bundle (no Developer ID certificate)"
+        codesign --force --deep --sign - "ClaudeCodeMonitor.app"
     
     - name: Create DMG
       run: |
@@ -160,6 +176,7 @@ jobs:
           "ClaudeCodeMonitor.app"
     
     - name: Sign DMG
+      if: ${{ env.CERT_IDENTITY != '' }}
       run: |
         # Sign the DMG file
         codesign --force --sign "$CERT_IDENTITY" \
@@ -170,6 +187,7 @@ jobs:
         codesign --verify --verbose=2 "ClaudeCodeMonitor-${{ steps.version.outputs.version }}.dmg"
     
     - name: Notarize app
+      if: ${{ env.CERT_IDENTITY != '' && secrets.NOTARIZATION_APPLE_ID != '' }}
       env:
         NOTARIZATION_APPLE_ID: ${{ secrets.NOTARIZATION_APPLE_ID }}
         NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
