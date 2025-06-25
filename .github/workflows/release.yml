@@ -49,10 +49,22 @@ jobs:
         echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
     
     - name: Import Developer ID certificate
+      if: ${{ secrets.CERTIFICATES_P12 != '' }}
       env:
         CERTIFICATES_P12: ${{ secrets.CERTIFICATES_P12 }}
         CERTIFICATES_PASSWORD: ${{ secrets.CERTIFICATES_PASSWORD }}
       run: |
+        # Check if secrets are properly set
+        if [ -z "$CERTIFICATES_P12" ]; then
+          echo "❌ CERTIFICATES_P12 secret is not set"
+          exit 1
+        fi
+        
+        if [ -z "$CERTIFICATES_PASSWORD" ]; then
+          echo "❌ CERTIFICATES_PASSWORD secret is not set"
+          exit 1
+        fi
+        
         # Decode and import certificate
         echo "$CERTIFICATES_P12" | base64 --decode > certificate.p12
         
@@ -69,39 +81,53 @@ jobs:
           "$KEYCHAIN_NAME"
         
         # Find and display certificate info
-        CERT_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_NAME" | grep "Developer ID Application" | head -1 | awk '{print $2}')
-        echo "CERT_IDENTITY=$CERT_IDENTITY" >> $GITHUB_ENV
+        echo "=== Available certificates ==="
+        security find-identity -v -p codesigning "$KEYCHAIN_NAME"
+        
+        # Get the full certificate name (not just the hash)
+        CERT_NAME="Developer ID Application: Kota Hayashi (X4XA2SC7M4)"
+        echo "CERT_NAME=$CERT_NAME" >> $GITHUB_ENV
+        
+        # Verify certificate exists
+        if security find-identity -v -p codesigning "$KEYCHAIN_NAME" | grep -q "$CERT_NAME"; then
+          echo "✅ Certificate found: $CERT_NAME"
+        else
+          echo "❌ Certificate not found: $CERT_NAME"
+          echo "Available certificates:"
+          security find-identity -v -p codesigning "$KEYCHAIN_NAME"
+          exit 1
+        fi
         
         # Clean up
         rm certificate.p12
     
-    - name: Generate Xcode project
+    - name: Build with Swift Package Manager
       run: |
-        # Generate Xcode project from Package.swift
-        swift package generate-xcodeproj
+        # Build universal binary with Swift Package Manager
+        echo "🔨 Building universal binary..."
         
-        # Update project settings for signing
-        PROJECT_NAME="ClaudeCodeMonitor.xcodeproj"
-        /usr/libexec/PlistBuddy -c "Set :objects:*:attributes:TargetAttributes:*:DevelopmentTeam X4XA2SC7M4" "$PROJECT_NAME/project.pbxproj" 2>/dev/null || true
-    
-    - name: Build with Xcode
-      run: |
-        xcodebuild \
-          -project ClaudeCodeMonitor.xcodeproj \
-          -scheme ClaudeCodeMonitor \
-          -configuration Release \
-          -derivedDataPath build \
-          CODE_SIGN_IDENTITY="$CERT_IDENTITY" \
-          OTHER_CODE_SIGN_FLAGS="--options=runtime --timestamp" \
-          DEVELOPMENT_TEAM="X4XA2SC7M4" \
-          CODE_SIGN_STYLE="Manual" \
-          PRODUCT_BUNDLE_IDENTIFIER="com.k9i.claude-code-monitor" \
-          clean build
+        # Build for both architectures in one command
+        swift build -c release --arch arm64 --arch x86_64
+        
+        # The universal binary is created at .build/apple/Products/Release/
+        EXECUTABLE_PATH=".build/apple/Products/Release/ClaudeCodeMonitor"
+        
+        # Verify the binary was created
+        if [ -f "$EXECUTABLE_PATH" ]; then
+          echo "✅ Universal binary created at: $EXECUTABLE_PATH"
+          file "$EXECUTABLE_PATH"
+          lipo -info "$EXECUTABLE_PATH"
+        else
+          echo "❌ Failed to find executable at expected path"
+          echo "Looking for executable..."
+          find .build -name ClaudeCodeMonitor -type f
+          exit 1
+        fi
     
     - name: Create app bundle
       run: |
-        # Find built executable
-        EXECUTABLE_PATH=$(find build -name ClaudeCodeMonitor -type f -perm +111 | grep -v '.dSYM' | head -1)
+        # Use universal binary from correct path
+        EXECUTABLE_PATH=".build/apple/Products/Release/ClaudeCodeMonitor"
         
         # Create app bundle structure
         mkdir -p "ClaudeCodeMonitor.app/Contents/MacOS"
@@ -116,7 +142,9 @@ jobs:
         /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.version }}" "ClaudeCodeMonitor.app/Contents/Info.plist"
         
         # Copy resource bundles
-        find build -name "*.bundle" -type d | while read bundle; do
+        # Find and copy resource bundles from the unified build output
+        find .build -name "*.bundle" -type d | while read bundle; do
+          echo "Found bundle: $bundle"
           cp -R "$bundle" "ClaudeCodeMonitor.app/Contents/Resources/" || true
           cp -R "$bundle" "ClaudeCodeMonitor.app/" || true  # SPM compatibility
         done
@@ -124,13 +152,27 @@ jobs:
         # Copy entitlements
         cp ClaudeCodeMonitor.entitlements "ClaudeCodeMonitor.app/Contents/"
     
+    - name: Debug - Check app bundle
+      run: |
+        echo "=== App bundle structure ==="
+        ls -la ClaudeCodeMonitor.app/Contents/
+        ls -la ClaudeCodeMonitor.app/Contents/MacOS/
+        
+        echo "=== Executable info ==="
+        file ClaudeCodeMonitor.app/Contents/MacOS/ClaudeCodeMonitor
+        
+        echo "=== Bundle resources ==="
+        find ClaudeCodeMonitor.app -name "*.bundle" -type d
+    
     - name: Sign app bundle
+      if: ${{ env.CERT_NAME != '' }}
       run: |
         # Sign the app bundle with Developer ID
+        echo "🔏 Signing with: $CERT_NAME"
         codesign --force --deep --strict \
           --options runtime \
           --entitlements ClaudeCodeMonitor.entitlements \
-          --sign "$CERT_IDENTITY" \
+          --sign "$CERT_NAME" \
           --timestamp \
           "ClaudeCodeMonitor.app"
         
@@ -139,6 +181,12 @@ jobs:
         
         # Display signature info
         codesign -dvvv "ClaudeCodeMonitor.app"
+    
+    - name: Ad-hoc sign app bundle
+      if: ${{ env.CERT_NAME == '' }}
+      run: |
+        echo "⚠️ Ad-hoc signing app bundle (no Developer ID certificate)"
+        codesign --force --deep --sign - "ClaudeCodeMonitor.app"
     
     - name: Create DMG
       run: |
@@ -160,9 +208,10 @@ jobs:
           "ClaudeCodeMonitor.app"
     
     - name: Sign DMG
+      if: ${{ env.CERT_NAME != '' }}
       run: |
         # Sign the DMG file
-        codesign --force --sign "$CERT_IDENTITY" \
+        codesign --force --sign "$CERT_NAME" \
           --timestamp \
           "ClaudeCodeMonitor-${{ steps.version.outputs.version }}.dmg"
         
@@ -170,6 +219,7 @@ jobs:
         codesign --verify --verbose=2 "ClaudeCodeMonitor-${{ steps.version.outputs.version }}.dmg"
     
     - name: Notarize app
+      if: ${{ env.CERT_NAME != '' && secrets.NOTARIZATION_APPLE_ID != '' }}
       env:
         NOTARIZATION_APPLE_ID: ${{ secrets.NOTARIZATION_APPLE_ID }}
         NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
