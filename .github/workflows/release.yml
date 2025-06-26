@@ -38,17 +38,17 @@ jobs:
           echo "type=patch" >> $GITHUB_OUTPUT
         fi
     
-    - name: Bump version
+    - name: Determine next version
       id: version
       run: |
         VERSION_TYPE="${{ steps.version_type.outputs.type }}"
-        echo "Bumping version: $VERSION_TYPE"
+        echo "Determining next version: $VERSION_TYPE"
         
-        # Run bump script and capture output
-        ./scripts/bump-version.sh "$VERSION_TYPE"
+        # Get next version from git tags
+        ./scripts/get-next-version.sh "$VERSION_TYPE"
         
-        # Read the new version
-        NEW_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist)
+        # Capture output for GitHub Actions
+        NEW_VERSION=$(./scripts/get-next-version.sh "$VERSION_TYPE" 2>/dev/null)
         echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
         echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
     
@@ -195,8 +195,10 @@ jobs:
         # Copy executable
         cp "$EXECUTABLE_PATH" "ClaudeCodeMonitor.app/Contents/MacOS/"
         
-        # Copy Info.plist (version already updated by bump script)
+        # Copy Info.plist and update version
         cp Info.plist "ClaudeCodeMonitor.app/Contents/"
+        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" "ClaudeCodeMonitor.app/Contents/Info.plist"
+        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.version }}" "ClaudeCodeMonitor.app/Contents/Info.plist"
         
         # Copy resource bundles from arm64 build (they are identical across architectures)
         echo "Looking for resource bundles..."
