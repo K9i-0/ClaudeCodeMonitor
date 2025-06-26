@@ -44,11 +44,59 @@ jobs:
         VERSION_TYPE="${{ steps.version_type.outputs.type }}"
         echo "Determining next version: $VERSION_TYPE"
         
-        # Get next version from git tags
-        ./scripts/get-next-version.sh "$VERSION_TYPE"
+        # Check if get-next-version.sh exists and is executable
+        if [ -f "./scripts/get-next-version.sh" ] && [ -x "./scripts/get-next-version.sh" ]; then
+          echo "Using get-next-version.sh"
+          # Get next version from git tags
+          ./scripts/get-next-version.sh "$VERSION_TYPE"
+          
+          # Capture output for GitHub Actions
+          NEW_VERSION=$(./scripts/get-next-version.sh "$VERSION_TYPE" 2>/dev/null)
+        else
+          echo "Warning: get-next-version.sh not found or not executable"
+          echo "Falling back to manual version calculation"
+          
+          # Fallback: Calculate version manually
+          LATEST_TAG=$(git tag -l "v*.*.*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -1)
+          if [ -z "$LATEST_TAG" ]; then
+            CURRENT_VERSION="0.0.0"
+          else
+            CURRENT_VERSION=${LATEST_TAG#v}
+          fi
+          
+          # Parse and increment version
+          IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR="${VERSION_PARTS[0]:-0}"
+          MINOR="${VERSION_PARTS[1]:-0}"
+          PATCH="${VERSION_PARTS[2]:-0}"
+          
+          case "$VERSION_TYPE" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch|*)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+          
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+        fi
         
-        # Capture output for GitHub Actions
-        NEW_VERSION=$(./scripts/get-next-version.sh "$VERSION_TYPE" 2>/dev/null)
+        # Validate version
+        if [ -z "$NEW_VERSION" ] || [ "$NEW_VERSION" = "0.0.0-dev" ]; then
+          echo "Error: Failed to determine version"
+          echo "Latest tags:"
+          git tag -l "v*.*.*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -5
+          exit 1
+        fi
+        
+        echo "New version: $NEW_VERSION"
         echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
         echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
     
