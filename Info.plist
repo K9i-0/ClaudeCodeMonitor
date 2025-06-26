@@ -11,9 +11,9 @@
     <key>CFBundleExecutable</key>
     <string>ClaudeCodeMonitor</string>
     <key>CFBundleVersion</key>
-    <string>0.1.7</string>
+    <string>0.0.0-dev</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.7</string>
+    <string>0.0.0-dev</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>CFBundlePackageType</key>
