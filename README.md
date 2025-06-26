@@ -118,6 +118,8 @@ Shows current session usage percentage directly in your menubar:
 - 🟠 Orange (50-75%): Moderate usage
 - 🔴 Red (75%+): High usage warning
 
+The icon updates automatically every 5 minutes to reflect your current usage.
+
 ![Menubar Icon](docs/images/menubar-icon.png)
 
 ### Current Session View
