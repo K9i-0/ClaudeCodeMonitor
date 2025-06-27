@@ -1,28 +1,28 @@
-## 概要
-<!-- このPRで何をしたか、なぜ必要だったかを簡潔に説明してください -->
+## Summary
+<!-- Briefly describe what this PR does and why it was needed -->
 
-## 変更内容
-<!-- 主な変更点をリストアップしてください -->
+## Changes
+<!-- List the main changes -->
 - 
 - 
 - 
 
-## 関連Issue
-<!-- 関連するIssueがあればリンクしてください -->
+## Related Issues
+<!-- Link any related issues -->
 Closes #
 
-## テスト方法
-<!-- レビュアーがこの変更をテストする方法を説明してください -->
+## Testing
+<!-- Explain how reviewers can test these changes -->
 
-## スクリーンショット（UIの変更がある場合）
-<!-- UIに変更がある場合は、before/afterのスクリーンショットを添付してください -->
+## Screenshots (if UI changes)
+<!-- If there are UI changes, please attach before/after screenshots -->
 
-## チェックリスト
-- [ ] コードがプロジェクトのスタイルガイドラインに従っている
-- [ ] セルフレビューを実施した
-- [ ] コードにコメントを追加した（特に理解しにくい部分）
-- [ ] ドキュメントを更新した（必要な場合）
-- [ ] 変更によって既存の機能が壊れていない
-- [ ] 新しいテストを追加した（機能追加の場合）
-- [ ] 既存のテストがすべてパスする
-- [ ] 依存関係の変更がある場合は、その理由を説明した
+## Checklist
+- [ ] Code follows the project's style guidelines
+- [ ] Self-review completed
+- [ ] Comments added to code (especially complex parts)
+- [ ] Documentation updated (if necessary)
+- [ ] Changes don't break existing functionality
+- [ ] New tests added (for new features)
+- [ ] All existing tests pass
+- [ ] Dependency changes explained (if any)

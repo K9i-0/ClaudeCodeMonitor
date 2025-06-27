@@ -20,8 +20,6 @@ macOSのメニューバーに常駐し、Claude Codeの使用状況をリアル�
 - **リアルタイム表示**: メニューバーに現在のセッション使用率を表示
 - **セッション管理**: Claude Codeの5時間セッションに基づいた正確な追跡
 - **プラン対応**: Pro/Max5/Max20プランの自動検出と手動設定
-- **使用率通知**: 90%到達時に通知
-
 ### 詳細な使用状況分析
 - 📊 **現在のセッション情報**
   - 残りトークン数とパーセンテージ
@@ -41,18 +39,15 @@ macOSのメニューバーに常駐し、Claude Codeの使用状況をリアル�
 
 ## 🚀 インストール
 
-### Homebrew Cask（準備中）
-```bash
-brew install --cask ccmonitor
-```
+### ダウンロード
+
+最新のリリースを[GitHub Releases](https://github.com/K9i-0/ClaudeCodeMonitor/releases/latest)からダウンロードしてください。
 
 **注意**: 初回起動時に「開発元を検証できません」と表示される場合：
 1. 警告ダイアログで「キャンセル」をクリック
 2. システム設定 → プライバシーとセキュリティを開く
 3. Claude Code Monitorの「このまま開く」をクリック
 4. またはアプリを右クリックして「開く」を選択
-
-### 現在の方法（ソースからビルド）
 
 ## 📋 必要な環境
 
@@ -97,54 +92,10 @@ Xcodeで:
 #### 方法2: コマンドラインでビルド
 
 ```bash
-# リリースビルド
-swift build -c release
-
-# アプリバンドルの作成
-mkdir -p ClaudeCodeMonitor.app/Contents/MacOS
-mkdir -p ClaudeCodeMonitor.app/Contents/Resources
-cp .build/arm64-apple-macosx/release/ClaudeCodeMonitor ClaudeCodeMonitor.app/Contents/MacOS/
-cp Info.plist ClaudeCodeMonitor.app/Contents/
-
-# アプリを起動
-open ClaudeCodeMonitor.app
+# ビルドとアプリバンドルの作成
+./scripts/create-app-bundle.sh
 ```
 
-## 🖼️ スクリーンショット
-
-### メニューバーアイコン
-現在のセッション使用率をメニューバーに直接表示：
-- 🔵 青（0-50%）：安全な使用範囲
-- 🟠 オレンジ（50-75%）：中程度の使用
-- 🔴 赤（75%+）：高使用率警告
-
-![メニューバーアイコン](docs/images/menubar-icon.png)
-
-### 現在のセッション表示
-5時間セッションの詳細表示：
-- 大きくて読みやすい残りトークン数表示
-- 色分けされたプログレスバー
-- バーンレート計算（トークン/分）
-- 残り時間の推定
-
-![現在のセッション](docs/images/current-session.png)
-
-### 履歴表示
-時間経過による使用パターンの追跡：
-- セッション別の内訳
-- 日別使用量サマリ
-- モデル別の使用統計
-- コスト追跡（参考値）
-
-![履歴表示](docs/images/history-view.png)
-
-### 設定
-アプリをカスタマイズ：
-- プラン選択（Pro/Max5/Max20）
-- 自動更新間隔
-- 言語設定（英語/日本語）
-
-![設定タブ](docs/images/settings-tab.png)
 
 ## 🤝 コントリビューション
 
@@ -166,11 +117,6 @@ open ClaudeCodeMonitor.app
 
 - [ccusage](https://github.com/ryoppippi/ccusage) - Claude使用状況を取得するCLIツール
 - [Anthropic](https://www.anthropic.com/) - Claude AIの開発元
-
-## 💬 サポート
-
-- **Issues**: [GitHub Issues](https://github.com/K9i-0/ClaudeCodeMonitor/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/K9i-0/ClaudeCodeMonitor/discussions)
 
 ## 🔗 関連リンク
 
