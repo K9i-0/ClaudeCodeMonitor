@@ -1,6 +1,39 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Resource Bundle Helper
+private struct ResourceBundle {
+    static let current: Bundle = {
+        let bundleName = "ClaudeCodeMonitor_ClaudeCodeMonitor.bundle"
+        
+        // Try different possible locations in order of preference
+        let candidates = [
+            // 1. macOS app bundle structure (production)
+            Bundle.main.bundleURL
+                .appendingPathComponent("Contents/Resources/\(bundleName)"),
+            
+            // 2. Same directory as executable (SwiftPM default behavior)
+            Bundle.main.bundleURL
+                .appendingPathComponent(bundleName),
+            
+            // 3. Parent directory (some development scenarios)
+            Bundle.main.bundleURL
+                .deletingLastPathComponent()
+                .appendingPathComponent(bundleName)
+        ]
+        
+        // Try each candidate path
+        for candidate in candidates {
+            if let bundle = Bundle(url: candidate) {
+                return bundle
+            }
+        }
+        
+        // Fallback: use the auto-generated Bundle.module
+        return Bundle.module
+    }()
+}
+
 // MARK: - Localization Helper
 extension String {
     var localized: String {
@@ -10,15 +43,16 @@ extension String {
         }
         
         let languageCode = LanguageSettings.shared.effectiveLanguageCode()
+        let resourceBundle = ResourceBundle.current
         
         // Try to get the bundle for the specific language
-        if let path = Bundle.module.path(forResource: languageCode, ofType: "lproj"),
+        if let path = resourceBundle.path(forResource: languageCode, ofType: "lproj"),
            let bundle = Bundle(path: path) {
             return NSLocalizedString(self, bundle: bundle, comment: "")
         }
         
         // Fallback to module bundle
-        return NSLocalizedString(self, bundle: .module, comment: "")
+        return NSLocalizedString(self, bundle: resourceBundle, comment: "")
     }
     
     func localized(with arguments: CVarArg...) -> String {
@@ -28,15 +62,16 @@ extension String {
         }
         
         let languageCode = LanguageSettings.shared.effectiveLanguageCode()
+        let resourceBundle = ResourceBundle.current
         
         // Try to get the bundle for the specific language
-        if let path = Bundle.module.path(forResource: languageCode, ofType: "lproj"),
+        if let path = resourceBundle.path(forResource: languageCode, ofType: "lproj"),
            let bundle = Bundle(path: path) {
             return String(format: NSLocalizedString(self, bundle: bundle, comment: ""), arguments: arguments)
         }
         
         // Fallback to module bundle
-        return String(format: NSLocalizedString(self, bundle: .module, comment: ""), arguments: arguments)
+        return String(format: NSLocalizedString(self, bundle: resourceBundle, comment: ""), arguments: arguments)
     }
 }
 
