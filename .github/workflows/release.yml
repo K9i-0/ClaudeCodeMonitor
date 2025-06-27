@@ -188,86 +188,10 @@ jobs:
         rm certificate.p12
     
     # Build the app
-    - name: Build universal binary
-      run: |
-        echo "🔨 Building universal binary..."
-        
-        # Build for arm64
-        echo "Building for arm64..."
-        swift build -c release --arch arm64
-        
-        # Build for x86_64
-        echo "Building for x86_64..."
-        swift build -c release --arch x86_64
-        
-        # Find the arm64 executable
-        ARM64_PATH=$(find .build -path "*arm64*/release/ClaudeCodeMonitor" -type f | head -1)
-        X86_64_PATH=$(find .build -path "*x86_64*/release/ClaudeCodeMonitor" -type f | head -1)
-        
-        if [ -z "$ARM64_PATH" ] || [ -z "$X86_64_PATH" ]; then
-          echo "❌ Failed to find one or both architectures"
-          echo "ARM64: $ARM64_PATH"
-          echo "X86_64: $X86_64_PATH"
-          find .build -name ClaudeCodeMonitor -type f
-          exit 1
-        fi
-        
-        echo "ARM64 binary: $ARM64_PATH"
-        echo "X86_64 binary: $X86_64_PATH"
-        
-        # Create universal binary
-        UNIVERSAL_PATH=".build/universal/release/ClaudeCodeMonitor"
-        mkdir -p .build/universal/release
-        lipo -create -output "$UNIVERSAL_PATH" "$ARM64_PATH" "$X86_64_PATH"
-        
-        if [ -f "$UNIVERSAL_PATH" ]; then
-          echo "✅ Universal binary created at: $UNIVERSAL_PATH"
-          file "$UNIVERSAL_PATH"
-          lipo -info "$UNIVERSAL_PATH"
-          echo "EXECUTABLE_PATH=$UNIVERSAL_PATH" >> $GITHUB_ENV
-        else
-          echo "❌ Failed to create universal binary"
-          exit 1
-        fi
-    
-    # Create app bundle
     - name: Create app bundle
       run: |
-        # Create app structure
-        mkdir -p "ClaudeCodeMonitor.app/Contents/MacOS"
-        mkdir -p "ClaudeCodeMonitor.app/Contents/Resources"
-        
-        # Copy executable
-        cp "$EXECUTABLE_PATH" "ClaudeCodeMonitor.app/Contents/MacOS/"
-        
-        # Copy Info.plist and update version
-        cp Info.plist "ClaudeCodeMonitor.app/Contents/"
-        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" "ClaudeCodeMonitor.app/Contents/Info.plist"
-        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.version }}" "ClaudeCodeMonitor.app/Contents/Info.plist"
-        
-        # Copy resource bundles from arm64 build (they are identical across architectures)
-        echo "Looking for resource bundles..."
-        find .build -path "*arm64*/release/*.bundle" -type d | while read bundle; do
-          echo "Found bundle: $bundle"
-          cp -R "$bundle" "ClaudeCodeMonitor.app/Contents/Resources/"
-        done
-        
-        # Verify app structure
-        echo "=== App bundle structure ==="
-        echo "Root directory (should only contain Contents):"
-        ls -la "ClaudeCodeMonitor.app/"
-        echo ""
-        echo "Contents directory:"
-        ls -la "ClaudeCodeMonitor.app/Contents/"
-        echo ""
-        echo "MacOS directory:"
-        ls -la "ClaudeCodeMonitor.app/Contents/MacOS/"
-        echo ""
-        echo "Resources directory:"
-        ls -la "ClaudeCodeMonitor.app/Contents/Resources/" || echo "No Resources directory"
-        echo ""
-        echo "Executable info:"
-        file "ClaudeCodeMonitor.app/Contents/MacOS/ClaudeCodeMonitor"
+        # Use the create-app-bundle.sh script
+        ./scripts/create-app-bundle.sh "${{ steps.version.outputs.version }}"
     
     # Sign the app
     - name: Sign app bundle
