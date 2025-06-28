@@ -10,6 +10,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var usageMonitor: UsageMonitor!
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Start the local server first
+        ServerManager.shared.checkAndStartServer()
+        
         usageMonitor = UsageMonitor()
         
         // 通知機能は初回リリースでは無効化

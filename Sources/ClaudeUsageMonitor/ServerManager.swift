@@ -45,33 +45,53 @@ class ServerManager: ObservableObject {
     private func startServer() {
         print("[ServerManager] Attempting to start server")
         
-        // Find the server directory
-        let appPath = Bundle.main.bundlePath
-        let serverPath = (appPath as NSString).deletingLastPathComponent
-            .appending("/server")
+        // First, try to find server in the app bundle (production)
+        var serverPath: String?
+        if let bundledServerPath = Bundle.main.path(forResource: "server", ofType: nil) {
+            serverPath = bundledServerPath
+            print("[ServerManager] Using bundled server at: \(bundledServerPath)")
+        } else {
+            // Fallback to development location
+            let appPath = Bundle.main.bundlePath
+            let devServerPath = (appPath as NSString).deletingLastPathComponent
+                .appending("/server")
+            if FileManager.default.fileExists(atPath: devServerPath) {
+                serverPath = devServerPath
+                print("[ServerManager] Using development server at: \(devServerPath)")
+            }
+        }
         
         // Check if server directory exists
-        guard FileManager.default.fileExists(atPath: serverPath) else {
-            print("[ServerManager] Server directory not found at: \(serverPath)")
+        guard let validServerPath = serverPath else {
+            print("[ServerManager] Server directory not found")
             return
         }
         
         // Create process to start server
         let process = Process()
         
-        // Find node/npm
-        let nodePaths = [
-            "/Users/\(NSUserName())/.local/share/mise/shims/node",
-            "/opt/homebrew/bin/node",
-            "/usr/local/bin/node"
-        ]
-        
+        // Find Node.js
         var nodePath: String?
-        for path in nodePaths {
-            let expandedPath = (path as NSString).expandingTildeInPath
-            if FileManager.default.fileExists(atPath: expandedPath) {
-                nodePath = expandedPath
-                break
+        
+        // First, try to use bundled Node.js (production)
+        if let bundledNodePath = Bundle.main.path(forResource: "node/node", ofType: nil) {
+            nodePath = bundledNodePath
+            print("[ServerManager] Using bundled Node.js at: \(bundledNodePath)")
+        } else {
+            // Fallback to system Node.js (development)
+            let systemNodePaths = [
+                "/Users/\(NSUserName())/.local/share/mise/shims/node",
+                "/opt/homebrew/bin/node",
+                "/usr/local/bin/node"
+            ]
+            
+            for path in systemNodePaths {
+                let expandedPath = (path as NSString).expandingTildeInPath
+                if FileManager.default.fileExists(atPath: expandedPath) {
+                    nodePath = expandedPath
+                    print("[ServerManager] Using system Node.js at: \(expandedPath)")
+                    break
+                }
             }
         }
         
@@ -81,8 +101,9 @@ class ServerManager: ObservableObject {
         }
         
         process.executableURL = URL(fileURLWithPath: node)
-        process.arguments = ["server.js"]
-        process.currentDirectoryURL = URL(fileURLWithPath: serverPath)
+        // Use server-fixed.js as specified in package.json
+        process.arguments = ["server-fixed.js"]
+        process.currentDirectoryURL = URL(fileURLWithPath: validServerPath)
         
         // Set up environment
         var environment = ProcessInfo.processInfo.environment
