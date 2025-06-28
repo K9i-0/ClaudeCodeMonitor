@@ -218,7 +218,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    private func closePopover() {
+    func closePopover() {
         popover.performClose(nil)
         eventMonitor?.stop()
     }

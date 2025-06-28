@@ -54,27 +54,25 @@ class ClaudeDataAccessManager: ObservableObject {
     func requestAccess() async -> Bool {
         print("[ClaudeDataAccess] Requesting folder access...")
         
-        let openPanel = NSOpenPanel()
-        openPanel.title = L10n.selectClaudeDataFolder
-        openPanel.message = L10n.claudeDataFolderMessage
-        openPanel.prompt = L10n.select
-        openPanel.canChooseFiles = false
-        openPanel.canChooseDirectories = true
-        openPanel.canCreateDirectories = false
-        openPanel.showsHiddenFiles = true
-        
-        // Set default directory to home
-        openPanel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
-        
-        let response = await openPanel.begin()
-        
-        guard response == .OK,
-              let url = openPanel.url else {
-            print("[ClaudeDataAccess] User cancelled folder selection")
-            return false
+        return await withCheckedContinuation { continuation in
+            FolderAccessHelper.requestFolderAccess { [weak self] url in
+                guard let self = self, let url = url else {
+                    print("[ClaudeDataAccess] User cancelled folder selection")
+                    continuation.resume(returning: false)
+                    return
+                }
+                
+                print("[ClaudeDataAccess] User selected: \(url.path)")
+                
+                Task {
+                    let success = await self.processSelectedFolder(url)
+                    continuation.resume(returning: success)
+                }
+            }
         }
-        
-        print("[ClaudeDataAccess] User selected: \(url.path)")
+    }
+    
+    private func processSelectedFolder(_ url: URL) async -> Bool {
         
         // Verify this is a Claude data folder by checking for projects subdirectory
         let projectsURL = url.appendingPathComponent("projects")
@@ -125,13 +123,15 @@ class ClaudeDataAccessManager: ObservableObject {
     
     /// Show error alert
     private func showError(message: String) async {
-        let alert = NSAlert()
-        alert.messageText = L10n.error
-        alert.informativeText = message
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: L10n.ok)
-        
-        await alert.beginSheetModal(for: NSApp.keyWindow!)
+        await MainActor.run {
+            let alert = NSAlert()
+            alert.messageText = L10n.error
+            alert.informativeText = message
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: L10n.ok)
+            
+            alert.runModal()
+        }
     }
     
     /// Reset access (for testing or if user wants to change folder)

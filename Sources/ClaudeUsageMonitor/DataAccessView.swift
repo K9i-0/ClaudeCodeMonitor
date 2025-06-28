@@ -21,9 +21,20 @@ struct DataAccessView: View {
                 .padding(.horizontal)
             
             Button(action: {
-                Task {
-                    isRequesting = true
+                print("[DataAccessView] Button clicked")
+                isRequesting = true
+                
+                // Close popover temporarily to show file dialog
+                if let appDelegate = NSApp.delegate as? AppDelegate {
+                    appDelegate.closePopover()
+                }
+                
+                Task { @MainActor in
+                    // Small delay to ensure popover is closed
+                    try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+                    
                     let success = await dataAccessManager.requestAccess()
+                    print("[DataAccessView] Request completed with success: \(success)")
                     isRequesting = false
                     
                     if success {
