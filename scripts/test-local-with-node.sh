@@ -57,13 +57,19 @@ echo "🔨 Building app bundle (skipping signing)..."
 
 # Step 3: Sign Node.js with entitlements
 echo ""
-echo "🔏 Signing Node.js binary with entitlements (ad-hoc)..."
+echo "🔏 Checking Node.js binary signature..."
 if [ -f "${APP_NAME}/Contents/Resources/node/node" ]; then
-    # Remove existing signature first
-    codesign --remove-signature "${APP_NAME}/Contents/Resources/node/node" 2>/dev/null || true
-    # Sign with ad-hoc signature
-    codesign --force --sign - --entitlements node.entitlements "${APP_NAME}/Contents/Resources/node/node"
-    echo -e "${GREEN}✅ Node.js binary signed${NC}"
+    # Check if Node.js has valid Developer ID signature
+    if codesign -dvv "${APP_NAME}/Contents/Resources/node/node" 2>&1 | grep -q "Developer ID Application: Node.js Foundation"; then
+        echo -e "${GREEN}✅ Node.js has valid Developer ID signature, keeping it${NC}"
+    else
+        echo "⚠️  Node.js doesn't have Developer ID signature, signing with ad-hoc..."
+        # Remove existing signature first
+        codesign --remove-signature "${APP_NAME}/Contents/Resources/node/node" 2>/dev/null || true
+        # Sign with ad-hoc signature
+        codesign --force --sign - --entitlements node.entitlements "${APP_NAME}/Contents/Resources/node/node"
+        echo -e "${GREEN}✅ Node.js binary signed with ad-hoc${NC}"
+    fi
 else
     echo -e "${RED}❌ Node.js binary not found in app bundle${NC}"
     exit 1
@@ -74,8 +80,8 @@ echo ""
 echo "🔏 Signing app with entitlements (ad-hoc)..."
 # Remove existing signature first
 codesign --remove-signature "${APP_NAME}" 2>/dev/null || true
-# Sign with ad-hoc signature
-codesign --deep --force --sign - --entitlements ClaudeCodeMonitor.entitlements "${APP_NAME}"
+# Sign with ad-hoc signature (without --deep to preserve inner signatures)
+codesign --force --sign - --entitlements ClaudeCodeMonitor.entitlements "${APP_NAME}"
 echo -e "${GREEN}✅ App signed${NC}"
 
 # Step 5: Verify signatures

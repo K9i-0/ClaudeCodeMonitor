@@ -17,6 +17,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Pass claude path to server manager if available
         if dataAccessManager.hasAccess {
             print("[AppDelegate] Data access already available, path: \(dataAccessManager.claudePath ?? "nil")")
+            NSLog("[AppDelegate] Data access already available, path: %@", dataAccessManager.claudePath ?? "nil")
             ServerManager.shared.claudePath = dataAccessManager.claudePath
             
             // Start the local server with path

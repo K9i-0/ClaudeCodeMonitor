@@ -44,12 +44,24 @@ class ServerManager: ObservableObject {
     
     private func startServer() async -> Bool {
         print("[ServerManager] Attempting to start server")
+        NSLog("[ServerManager] Attempting to start server")
         
         // First, try to find server in the app bundle (production)
         var serverPath: String?
+        print("[ServerManager] Bundle.main.bundlePath: \(Bundle.main.bundlePath)")
+        print("[ServerManager] Bundle.main.resourcePath: \(Bundle.main.resourcePath ?? "nil")")
+        
         if let bundledServerPath = Bundle.main.path(forResource: "server", ofType: nil) {
             serverPath = bundledServerPath
             print("[ServerManager] Using bundled server at: \(bundledServerPath)")
+            
+            // Verify server.js exists
+            let serverJsPath = (bundledServerPath as NSString).appendingPathComponent("server.js")
+            if FileManager.default.fileExists(atPath: serverJsPath) {
+                print("[ServerManager] server.js found at: \(serverJsPath)")
+            } else {
+                print("[ServerManager] ERROR: server.js not found at: \(serverJsPath)")
+            }
         } else {
             // Fallback to development location
             let appPath = Bundle.main.bundlePath
@@ -64,6 +76,7 @@ class ServerManager: ObservableObject {
         // Check if server directory exists
         guard let validServerPath = serverPath else {
             print("[ServerManager] Server directory not found")
+            NSLog("[ServerManager] Server directory not found")
             return false
         }
         
@@ -77,6 +90,7 @@ class ServerManager: ObservableObject {
         if let bundledNodePath = Bundle.main.path(forResource: "node/node", ofType: nil) {
             nodePath = bundledNodePath
             print("[ServerManager] Using bundled Node.js at: \(bundledNodePath)")
+            NSLog("[ServerManager] Using bundled Node.js at: %@", bundledNodePath)
         } else {
             // Fallback to system Node.js (development)
             let systemNodePaths = [
@@ -126,14 +140,29 @@ class ServerManager: ObservableObject {
         
         outputPipe.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
-            if let output = String(data: data, encoding: .utf8) {
-                print("[Server] \(output)", terminator: "")
+            if data.count > 0 {
+                if let output = String(data: data, encoding: .utf8) {
+                    print("[Server] \(output)", terminator: "")
+                }
             }
         }
         
+        // Monitor process termination
+        process.terminationHandler = { proc in
+            print("[ServerManager] Process terminated with status: \(proc.terminationStatus)")
+            print("[ServerManager] Termination reason: \(proc.terminationReason)")
+        }
+        
         do {
+            print("[ServerManager] About to run process with:")
+            print("[ServerManager]   Executable: \(node)")
+            print("[ServerManager]   Arguments: \(process.arguments ?? [])")
+            print("[ServerManager]   Directory: \(validServerPath)")
+            print("[ServerManager]   Environment CLAUDE_CONFIG_DIR: \(environment["CLAUDE_CONFIG_DIR"] ?? "not set")")
+            
             try process.run()
             serverProcess = process
+            print("[ServerManager] Process started with PID: \(process.processIdentifier)")
             
             // Wait for server to start with multiple retry attempts
             var retryCount = 0
