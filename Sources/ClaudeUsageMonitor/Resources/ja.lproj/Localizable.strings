@@ -105,3 +105,14 @@
 "notification.sent90Percent" = "90%%通知を送信しました";
 "notification.sendError" = "通知送信エラー: %@";
 "notification.sessionResetError" = "セッションリセット通知エラー: %@";
+
+// General
+"ok" = "OK";
+"error" = "エラー";
+"select" = "選択";
+
+// Claude Data Access
+"selectClaudeDataFolder" = "Claudeデータフォルダを選択";
+"claudeDataFolderMessage" = "Claudeのデータフォルダを選択してください（通常は ~/.claude）。\n\n隠しファイルを表示するには、Command+Shift+ピリオド (.) を押してください。";
+"invalidClaudeFolder" = "選択されたフォルダは有効なClaudeデータフォルダではないようです。'projects'サブディレクトリが含まれていることを確認してください。";
+"failedToSaveAccess" = "フォルダアクセスの保存に失敗しました。もう一度お試しください。";

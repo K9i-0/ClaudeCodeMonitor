@@ -105,3 +105,14 @@
 "notification.sent90Percent" = "90%% notification sent";
 "notification.sendError" = "Notification send error: %@";
 "notification.sessionResetError" = "Session reset notification error: %@";
+
+// General
+"ok" = "OK";
+"error" = "Error";
+"select" = "Select";
+
+// Claude Data Access
+"selectClaudeDataFolder" = "Select Claude Data Folder";
+"claudeDataFolderMessage" = "Please select your Claude data folder (usually ~/.claude).\n\nTo show hidden files, press Command+Shift+Period (.)";
+"invalidClaudeFolder" = "The selected folder doesn't appear to be a valid Claude data folder. Please make sure it contains a 'projects' subdirectory.";
+"failedToSaveAccess" = "Failed to save folder access. Please try again.";

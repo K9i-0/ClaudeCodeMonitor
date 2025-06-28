@@ -7,6 +7,7 @@ class ServerManager: ObservableObject {
     private var serverProcess: Process?
     private let serverPort = 3456
     @Published var isServerRunning = false
+    var claudePath: String?
     
     private init() {}
     
@@ -109,14 +110,11 @@ class ServerManager: ObservableObject {
         var environment = ProcessInfo.processInfo.environment
         environment["PORT"] = "\(serverPort)"
         
-        // Set CLAUDE_CONFIG_DIR to help ccusage find data in App Sandbox
-        // Try multiple possible paths where Claude data might be stored
-        let possiblePaths = [
-            NSHomeDirectory() + "/.config/claude",
-            NSHomeDirectory() + "/.claude",
-            NSHomeDirectory() + "/Library/Application Support/Claude"
-        ]
-        environment["CLAUDE_CONFIG_DIR"] = possiblePaths.joined(separator: ",")
+        // Set CLAUDE_CONFIG_DIR if we have access to Claude data
+        if let claudePath = claudePath {
+            environment["CLAUDE_CONFIG_DIR"] = claudePath
+            print("[ServerManager] Setting CLAUDE_CONFIG_DIR to: \(claudePath)")
+        }
         
         process.environment = environment
         

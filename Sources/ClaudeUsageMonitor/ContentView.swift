@@ -2,11 +2,21 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var monitor: UsageMonitor
+    @EnvironmentObject var dataAccessManager: ClaudeDataAccessManager
     @State private var selectedTab = 0
     @State private var isRefreshing = false
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
+        if !dataAccessManager.hasAccess {
+            DataAccessView()
+                .frame(width: 380, height: 300)
+        } else {
+            mainContent
+        }
+    }
+    
+    var mainContent: some View {
         ZStack {
             // Background with visual effect
             VisualEffectBlur(material: .popover, blendingMode: .behindWindow)

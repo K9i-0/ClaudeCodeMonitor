@@ -8,9 +8,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var popover: NSPopover!
     private var eventMonitor: EventMonitor?
     private var usageMonitor: UsageMonitor!
+    private var dataAccessManager: ClaudeDataAccessManager!
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Start the local server first
+        // Initialize data access manager
+        dataAccessManager = ClaudeDataAccessManager()
+        
+        // Pass claude path to server manager if available
+        if dataAccessManager.hasAccess {
+            ServerManager.shared.claudePath = dataAccessManager.claudePath
+        }
+        
+        // Start the local server
         ServerManager.shared.checkAndStartServer()
         
         usageMonitor = UsageMonitor()
@@ -49,7 +58,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentSize = NSSize(width: 380, height: 480)
         popover.behavior = .transient
         popover.animates = true
-        popover.contentViewController = NSHostingController(rootView: ContentView().environmentObject(usageMonitor))
+        popover.contentViewController = NSHostingController(
+            rootView: ContentView()
+                .environmentObject(usageMonitor)
+                .environmentObject(dataAccessManager)
+        )
         
         // Monitor for clicks outside the popover
         eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
@@ -66,6 +79,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.updateStatusBarTitle()
+            }
+            .store(in: &cancellables)
+        
+        // Observe data access changes
+        dataAccessManager.$hasAccess
+            .receive(on: DispatchQueue.main)
+            .dropFirst() // Skip initial value
+            .sink { [weak self] hasAccess in
+                if hasAccess {
+                    // Update server with claude path
+                    ServerManager.shared.claudePath = self?.dataAccessManager.claudePath
+                    
+                    // Restart server if needed
+                    if ServerManager.shared.isServerRunning {
+                        ServerManager.shared.stopServer()
+                        ServerManager.shared.checkAndStartServer()
+                    }
+                    
+                    // Fetch data
+                    self?.usageMonitor.fetchUsageData()
+                }
             }
             .store(in: &cancellables)
     }
