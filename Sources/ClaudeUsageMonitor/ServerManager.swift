@@ -114,6 +114,8 @@ class ServerManager: ObservableObject {
         if let claudePath = claudePath {
             environment["CLAUDE_CONFIG_DIR"] = claudePath
             print("[ServerManager] Setting CLAUDE_CONFIG_DIR to: \(claudePath)")
+        } else {
+            print("[ServerManager] WARNING: No claudePath set, server may not find data")
         }
         
         process.environment = environment

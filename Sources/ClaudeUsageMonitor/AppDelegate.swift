@@ -16,11 +16,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Pass claude path to server manager if available
         if dataAccessManager.hasAccess {
+            print("[AppDelegate] Data access already available, path: \(dataAccessManager.claudePath ?? "nil")")
             ServerManager.shared.claudePath = dataAccessManager.claudePath
+            
+            // Start the local server with path
+            ServerManager.shared.checkAndStartServer()
+        } else {
+            print("[AppDelegate] No data access yet, server will start after folder selection")
+            // Don't start server yet - will start after user selects folder
         }
-        
-        // Start the local server
-        ServerManager.shared.checkAndStartServer()
         
         usageMonitor = UsageMonitor()
         

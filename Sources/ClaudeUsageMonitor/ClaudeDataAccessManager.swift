@@ -52,6 +52,8 @@ class ClaudeDataAccessManager: ObservableObject {
     
     /// Request access to Claude data folder
     func requestAccess() async -> Bool {
+        print("[ClaudeDataAccess] Requesting folder access...")
+        
         let openPanel = NSOpenPanel()
         openPanel.title = L10n.selectClaudeDataFolder
         openPanel.message = L10n.claudeDataFolderMessage
@@ -72,6 +74,8 @@ class ClaudeDataAccessManager: ObservableObject {
             return false
         }
         
+        print("[ClaudeDataAccess] User selected: \(url.path)")
+        
         // Verify this is a Claude data folder by checking for projects subdirectory
         let projectsURL = url.appendingPathComponent("projects")
         let fileManager = FileManager.default
@@ -85,7 +89,17 @@ class ClaudeDataAccessManager: ObservableObject {
             return false
         }
         
-        // Create security-scoped bookmark
+        // Start accessing the resource BEFORE creating bookmark
+        let startedAccess = url.startAccessingSecurityScopedResource()
+        print("[ClaudeDataAccess] Started security-scoped access: \(startedAccess)")
+        
+        guard startedAccess else {
+            print("[ClaudeDataAccess] Failed to start accessing security-scoped resource")
+            await showError(message: L10n.failedToSaveAccess)
+            return false
+        }
+        
+        // Create security-scoped bookmark while access is active
         do {
             let bookmarkData = try url.bookmarkData(options: .withSecurityScope,
                                                    includingResourceValuesForKeys: nil,
@@ -93,17 +107,15 @@ class ClaudeDataAccessManager: ObservableObject {
             
             // Save bookmark to UserDefaults
             UserDefaults.standard.set(bookmarkData, forKey: bookmarkKey)
+            UserDefaults.standard.synchronize() // Force save
             
-            // Start accessing the resource
-            if url.startAccessingSecurityScopedResource() {
-                claudePath = url.path
-                hasAccess = true
-                print("[ClaudeDataAccess] Successfully saved access to: \(url.path)")
-                return true
-            } else {
-                print("[ClaudeDataAccess] Failed to start accessing security-scoped resource")
-                return false
-            }
+            claudePath = url.path
+            hasAccess = true
+            print("[ClaudeDataAccess] Successfully saved access to: \(url.path)")
+            print("[ClaudeDataAccess] hasAccess is now: \(hasAccess)")
+            
+            // Don't stop accessing here - keep it active for the session
+            return true
         } catch {
             print("[ClaudeDataAccess] Error creating bookmark: \(error)")
             await showError(message: L10n.failedToSaveAccess)

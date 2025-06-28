@@ -27,18 +27,25 @@ struct DataAccessView: View {
                     isRequesting = false
                     
                     if success {
+                        print("[DataAccessView] Access granted, updating server...")
+                        
                         // Update server with new path
                         ServerManager.shared.claudePath = dataAccessManager.claudePath
                         
-                        // Restart server if it's running
+                        // Stop server first if running
                         if ServerManager.shared.isServerRunning {
+                            print("[DataAccessView] Stopping existing server...")
                             ServerManager.shared.stopServer()
-                            ServerManager.shared.checkAndStartServer()
-                        } else {
-                            ServerManager.shared.checkAndStartServer()
                         }
                         
-                        // Fetch data
+                        // Start server with new path
+                        print("[DataAccessView] Starting server with new path...")
+                        ServerManager.shared.checkAndStartServer()
+                        
+                        // Wait a bit for server to start before fetching data
+                        try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                        
+                        print("[DataAccessView] Fetching usage data...")
                         monitor.fetchUsageData()
                     }
                 }
