@@ -3,6 +3,56 @@
 ## 概要
 App Sandboxを維持しながら、XPC Service アーキテクチャを導入することで、現在の問題を解決する。
 
+## 現在直面している具体的な課題
+
+### 1. アクティブセッションが表示されない
+**症状**：
+- 使用状況サマリー（今日/今月）は表示される
+- 「現在」タブのアクティブセッション情報が取得できない
+
+**原因**：
+- Node.jsサーバー（`server/server.js`）が起動できない
+- フォールバック処理（`npx ccusage blocks --active --json`）も実行できない
+- App SandboxがProcess()でのサブプロセス起動を制限
+
+**関連コード**：
+```swift
+// UsageMonitor.swift - 現在の失敗箇所
+private func fetchSessionData() async {
+    // サーバー接続試行 → 失敗
+    if let url = URL(string: "http://127.0.0.1:3456/blocks/active") {
+        // エラー: Could not connect to the server
+    }
+}
+
+// ServerManager.swift - Node.js起動試行
+func startServer() async -> Bool {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: bundledNodePath)
+    // App Sandboxにより起動失敗
+}
+```
+
+### 2. 複雑な実装による保守性の低下
+**現在の実装**：
+- Node.jsバイナリをアプリにバンドル（187MB）
+- 複雑なエンタイトルメント設定
+- GitHub Actionsでの特殊な署名プロセス
+- セキュリティスコープブックマークの管理
+
+**問題のあるファイル**：
+- `ClaudeCodeMonitor.entitlements`
+- `node.entitlements`
+- `scripts/build-release.sh`
+- `scripts/test-local-with-node.sh`
+- `.github/workflows/release.yml`
+
+### 3. Developer ID署名でも解決しない
+**試みた対策**：
+- Node.jsバイナリへのDeveloper ID署名
+- JIT実行エンタイトルメント（`com.apple.security.cs.allow-unsigned-executable-memory`）
+- 結果：それでもApp Sandbox内では動作しない
+
 ## 現状分析
 
 ### 根本的な問題
@@ -71,6 +121,31 @@ App Sandboxを維持しながら、XPC Service アーキテクチャを導入す
   }
   ```
 - [ ] ccusage直接実行の実装
+  ```swift
+  func fetchActiveSession(reply: @escaping (Data?, Error?) -> Void) {
+      let task = Process()
+      task.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+      task.arguments = ["npx", "ccusage", "blocks", "--active", "--json"]
+      
+      if let claudePath = self.claudePath {
+          task.environment = ProcessInfo.processInfo.environment
+          task.environment?["CLAUDE_CONFIG_DIR"] = claudePath
+      }
+      
+      let outputPipe = Pipe()
+      task.standardOutput = outputPipe
+      
+      do {
+          try task.run()
+          task.waitUntilExit()
+          
+          let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
+          reply(data, nil)
+      } catch {
+          reply(nil, error)
+      }
+  }
+  ```
 - [ ] エラーハンドリングとロギング
 
 ### Phase 3: メインアプリの修正
@@ -87,7 +162,27 @@ App Sandboxを維持しながら、XPC Service アーキテクチャを導入す
   }
   ```
 - [ ] UsageMonitorをXPC経由に変更
+  ```swift
+  // UsageMonitor.swift の修正例
+  private func fetchSessionData() async {
+      guard let service = xpcServiceManager.remoteObjectProxy else { return }
+      
+      return await withCheckedContinuation { continuation in
+          service.fetchActiveSession { data, error in
+              if let data = data,
+                 let blocksResponse = try? JSONDecoder().decode(BlocksResponse.self, from: data) {
+                  // アクティブセッションを処理
+                  if let activeBlock = blocksResponse.blocks.first(where: { $0.isActive }) {
+                      self.usageData.activeSession = activeBlock
+                  }
+              }
+              continuation.resume()
+          }
+      }
+  }
+  ```
 - [ ] ServerManagerの削除（不要になる）
+- [ ] ClaudeDataAccessManagerの簡素化（セキュリティスコープ処理を削除）
 
 ### Phase 4: エンタイトルメントと設定
 - [ ] メインアプリのエンタイトルメント
@@ -178,3 +273,50 @@ App Sandboxを維持しながら、XPC Service アーキテクチャを導入す
 
 ## 結論
 XPC Serviceアーキテクチャは、実装の初期コストは高いが、長期的には最も安定した解決策。App Sandboxを維持しながら、必要な機能を実現でき、Appleのセキュリティガイドラインにも準拠する。
+
+## 現在のプロジェクト構成
+
+### 主要ファイル
+```
+ClaudeCodeMonitor/
+├── Sources/ClaudeUsageMonitor/
+│   ├── AppDelegate.swift          # メニューバーアプリのエントリポイント
+│   ├── UsageMonitor.swift         # 使用状況データの取得・管理（要修正）
+│   ├── ServerManager.swift        # Node.jsサーバー管理（XPC移行後は削除）
+│   ├── ClaudeDataAccessManager.swift # フォルダアクセス管理（要簡素化）
+│   ├── Models.swift               # データモデル定義
+│   └── SessionModels.swift        # セッション関連モデル（BlocksResponse等）
+├── server/
+│   └── server.js                  # Express サーバー（XPC Service内に移動）
+├── ClaudeCodeMonitor.entitlements # App Sandboxエンタイトルメント
+└── Package.swift                  # SwiftPMパッケージ定義
+```
+
+### 重要な型定義
+```swift
+// SessionModels.swift
+struct BlocksResponse: Codable {
+    let blocks: [SessionBlock]
+}
+
+struct SessionBlock: Codable {
+    let id: String
+    let startTime: String
+    let endTime: String
+    let isActive: Bool
+    let totalTokens: Int
+    // ...
+}
+```
+
+## デバッグ時の確認コマンド
+```bash
+# 現在のアクティブセッションを確認
+npx ccusage@latest blocks --active --json
+
+# サーバーの状態確認
+curl http://127.0.0.1:3456/blocks/active
+
+# プロセス確認
+ps aux | grep -E "node.*server|ClaudeCodeMonitor"
+```
