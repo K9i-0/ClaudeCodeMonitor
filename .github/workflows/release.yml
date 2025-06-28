@@ -187,6 +187,105 @@ jobs:
         
         rm certificate.p12
     
+    # Set Node.js version
+    - name: Set Node.js version
+      id: node-version
+      run: |
+        echo "NODE_VERSION=v20.18.2" >> $GITHUB_OUTPUT
+        echo "NODE_VERSION_SHORT=20.18.2" >> $GITHUB_OUTPUT
+    
+    # Cache Node.js binaries
+    - name: Cache Node.js binaries
+      id: cache-node
+      uses: actions/cache@v4
+      with:
+        path: Resources/node
+        key: node-binaries-${{ steps.node-version.outputs.NODE_VERSION }}-universal-${{ runner.os }}
+        restore-keys: |
+          node-binaries-${{ steps.node-version.outputs.NODE_VERSION }}-universal-
+    
+    # Download Node.js binaries for bundling (if not cached)
+    - name: Download Node.js binaries
+      if: steps.cache-node.outputs.cache-hit != 'true'
+      run: |
+        echo "📦 Downloading Node.js binaries..."
+        mkdir -p Resources/node
+        
+        # Use Node.js version from previous step
+        NODE_VERSION="${{ steps.node-version.outputs.NODE_VERSION }}"
+        
+        # Download arm64 binary with error handling
+        echo "  Downloading arm64 binary..."
+        if ! curl -L -f -o node-arm64.tar.xz "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-arm64.tar.xz"; then
+          echo "❌ Failed to download arm64 binary"
+          exit 1
+        fi
+        
+        # Download x64 binary with error handling
+        echo "  Downloading x64 binary..."
+        if ! curl -L -f -o node-x64.tar.xz "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-x64.tar.xz"; then
+          echo "❌ Failed to download x64 binary"
+          exit 1
+        fi
+        
+        # Extract binaries with error handling
+        echo "  Extracting binaries..."
+        if ! tar -xf node-arm64.tar.xz || ! tar -xf node-x64.tar.xz; then
+          echo "❌ Failed to extract binaries"
+          exit 1
+        fi
+        
+        # Create universal binary with error handling
+        echo "  Creating universal binary..."
+        if ! lipo -create -output Resources/node/node \
+          "node-${NODE_VERSION}-darwin-arm64/bin/node" \
+          "node-${NODE_VERSION}-darwin-x64/bin/node"; then
+          echo "❌ Failed to create universal binary"
+          exit 1
+        fi
+        
+        # Verify universal binary
+        echo "  Verifying universal binary..."
+        file Resources/node/node
+        lipo -info Resources/node/node
+        
+        # Verify binary is executable
+        if ! Resources/node/node --version; then
+          echo "❌ Node.js binary is not executable or corrupted"
+          exit 1
+        fi
+        
+        # Clean up
+        rm -rf node-*.tar.xz node-${NODE_VERSION}-*
+        
+        echo "✅ Node.js universal binary created"
+    
+    # Verify cached Node.js binary
+    - name: Verify Node.js binary
+      if: steps.cache-node.outputs.cache-hit == 'true'
+      run: |
+        echo "📦 Using cached Node.js binary"
+        
+        # Verify file exists
+        if [ ! -f Resources/node/node ]; then
+          echo "❌ Cached Node.js binary not found"
+          exit 1
+        fi
+        
+        # Verify binary info
+        file Resources/node/node
+        lipo -info Resources/node/node
+        
+        # Verify binary is executable and correct version
+        ACTUAL_VERSION=$(Resources/node/node --version)
+        EXPECTED_VERSION="${{ steps.node-version.outputs.NODE_VERSION }}"
+        if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ]; then
+          echo "❌ Version mismatch: expected $EXPECTED_VERSION, got $ACTUAL_VERSION"
+          exit 1
+        fi
+        
+        echo "✅ Cached Node.js binary verified: $ACTUAL_VERSION"
+    
     # Build the app
     - name: Create app bundle
       run: |
