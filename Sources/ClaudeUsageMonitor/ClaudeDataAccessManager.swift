@@ -7,6 +7,7 @@ class ClaudeDataAccessManager: ObservableObject {
     @Published var claudePath: String?
     
     private let bookmarkKey = "ClaudeDataFolderBookmark"
+    private var securityScopedResourceURL: URL?
     
     init() {
         print("[ClaudeDataAccess] Initializing...")
@@ -56,12 +57,14 @@ class ClaudeDataAccessManager: ObservableObject {
             
             // Start accessing the security-scoped resource
             if url.startAccessingSecurityScopedResource() {
+                // Stop any previous access
+                stopAccessingSecurityScopedResource()
+                
+                // Track the new resource
+                securityScopedResourceURL = url
                 claudePath = url.path
                 hasAccess = true
                 print("[ClaudeDataAccess] Successfully accessed Claude data at: \(url.path)")
-                
-                // We'll stop accessing when the app terminates
-                // In a real app, you might want to manage this more carefully
             } else {
                 print("[ClaudeDataAccess] Failed to access security-scoped resource")
                 hasAccess = false
@@ -115,20 +118,41 @@ class ClaudeDataAccessManager: ObservableObject {
     
     private func processSelectedFolder(_ url: URL) async -> Bool {
         
+        // Resolve any symbolic links to get the real path
+        let resolvedURL = url.resolvingSymlinksInPath()
+        print("[ClaudeDataAccess] Original path: \(url.path)")
+        print("[ClaudeDataAccess] Resolved path: \(resolvedURL.path)")
+        
+        // Security check: Ensure the resolved path is within the user's home directory
+        let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
+        if !resolvedURL.path.hasPrefix(homeDirectory.path) {
+            print("[ClaudeDataAccess] Security warning: Selected path is outside home directory")
+            let errorMessage = """
+            Security Error: The selected folder is outside your home directory.
+            
+            Selected: \(url.path)
+            Resolved to: \(resolvedURL.path)
+            
+            Please select a folder within your home directory.
+            """
+            await showError(message: errorMessage)
+            return false
+        }
+        
         // Verify this is a Claude data folder by checking for projects subdirectory
-        let projectsURL = url.appendingPathComponent("projects")
+        let projectsURL = resolvedURL.appendingPathComponent("projects")
         let fileManager = FileManager.default
         
         var isDirectory: ObjCBool = false
         guard fileManager.fileExists(atPath: projectsURL.path, isDirectory: &isDirectory),
               isDirectory.boolValue else {
-            print("[ClaudeDataAccess] Selected folder doesn't contain 'projects' subdirectory: \(url.path)")
+            print("[ClaudeDataAccess] Selected folder doesn't contain 'projects' subdirectory: \(resolvedURL.path)")
             print("[ClaudeDataAccess] Looking for: \(projectsURL.path)")
             // Show error alert with more detail
             let errorMessage = """
             \(L10n.invalidClaudeFolder)
             
-            Selected: \(url.path)
+            Selected: \(resolvedURL.path)
             Expected: ~/.claude (with projects subdirectory)
             """
             await showError(message: errorMessage)
@@ -138,28 +162,29 @@ class ClaudeDataAccessManager: ObservableObject {
         // Start accessing the resource BEFORE creating bookmark
         // Note: startAccessingSecurityScopedResource returns false for non-security-scoped URLs,
         // which is normal for user-selected folders via NSOpenPanel
-        let startedAccess = url.startAccessingSecurityScopedResource()
+        let startedAccess = resolvedURL.startAccessingSecurityScopedResource()
         print("[ClaudeDataAccess] Started security-scoped access: \(startedAccess)")
-        print("[ClaudeDataAccess] URL: \(url.path)")
+        print("[ClaudeDataAccess] URL: \(resolvedURL.path)")
         
         // Don't fail if startAccessingSecurityScopedResource returns false
         // as it's expected for regular file URLs from NSOpenPanel
         
         // For App Sandbox, we'll simply save the path and rely on the server
         // to access the files with CLAUDE_CONFIG_DIR environment variable
-        claudePath = url.path
+        claudePath = resolvedURL.path
         hasAccess = true
         
-        // Save the path to UserDefaults (not as bookmark, just as string)
-        UserDefaults.standard.set(url.path, forKey: "claudeDataPath")
+        // Save the resolved path to UserDefaults (not as bookmark, just as string)
+        UserDefaults.standard.set(resolvedURL.path, forKey: "claudeDataPath")
         UserDefaults.standard.synchronize()
         
-        print("[ClaudeDataAccess] Successfully saved path: \(url.path)")
+        print("[ClaudeDataAccess] Successfully saved path: \(resolvedURL.path)")
         print("[ClaudeDataAccess] hasAccess is now: \(hasAccess)")
         
-        // Stop accessing if we started it
+        // We don't need to keep the security-scoped resource access active
+        // since we're using the path via environment variable
         if startedAccess {
-            url.stopAccessingSecurityScopedResource()
+            resolvedURL.stopAccessingSecurityScopedResource()
         }
         
         return true
@@ -185,10 +210,24 @@ class ClaudeDataAccessManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "claudeDataPath")
         UserDefaults.standard.synchronize()
         
-        if let path = claudePath {
-            URL(fileURLWithPath: path).stopAccessingSecurityScopedResource()
-        }
+        stopAccessingSecurityScopedResource()
         claudePath = nil
         hasAccess = false
+    }
+    
+    /// Stop accessing any security-scoped resource
+    private func stopAccessingSecurityScopedResource() {
+        if let url = securityScopedResourceURL {
+            url.stopAccessingSecurityScopedResource()
+            securityScopedResourceURL = nil
+            print("[ClaudeDataAccess] Stopped accessing security-scoped resource")
+        }
+    }
+    
+    deinit {
+        // Ensure we release any security-scoped resources on deallocation
+        if let url = securityScopedResourceURL {
+            url.stopAccessingSecurityScopedResource()
+        }
     }
 }
