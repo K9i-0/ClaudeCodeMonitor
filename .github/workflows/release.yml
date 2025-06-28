@@ -187,6 +187,44 @@ jobs:
         
         rm certificate.p12
     
+    # Download Node.js binaries for bundling
+    - name: Download Node.js binaries
+      run: |
+        echo "📦 Downloading Node.js binaries..."
+        mkdir -p Resources/node
+        
+        # Download Node.js v20.18.2 (LTS)
+        NODE_VERSION="v20.18.2"
+        
+        # Download arm64 binary
+        echo "  Downloading arm64 binary..."
+        curl -L -o node-arm64.tar.xz "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-arm64.tar.xz"
+        
+        # Download x64 binary
+        echo "  Downloading x64 binary..."
+        curl -L -o node-x64.tar.xz "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-darwin-x64.tar.xz"
+        
+        # Extract binaries
+        echo "  Extracting binaries..."
+        tar -xf node-arm64.tar.xz
+        tar -xf node-x64.tar.xz
+        
+        # Create universal binary
+        echo "  Creating universal binary..."
+        lipo -create -output Resources/node/node \
+          "node-${NODE_VERSION}-darwin-arm64/bin/node" \
+          "node-${NODE_VERSION}-darwin-x64/bin/node"
+        
+        # Verify universal binary
+        echo "  Verifying universal binary..."
+        file Resources/node/node
+        lipo -info Resources/node/node
+        
+        # Clean up
+        rm -rf node-*.tar.xz node-${NODE_VERSION}-*
+        
+        echo "✅ Node.js universal binary created"
+    
     # Build the app
     - name: Create app bundle
       run: |
