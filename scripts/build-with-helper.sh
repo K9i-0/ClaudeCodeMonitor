@@ -34,10 +34,17 @@ if [ -d Sources/ClaudeUsageMonitor/Resources ]; then
     cp -r Sources/ClaudeUsageMonitor/Resources ClaudeCodeMonitor.app/Contents/
 fi
 
+# Copy resource bundle
+if [ -d .build/arm64-apple-macosx/release/ClaudeCodeMonitor_ClaudeCodeMonitor.bundle ]; then
+    cp -r .build/arm64-apple-macosx/release/ClaudeCodeMonitor_ClaudeCodeMonitor.bundle ClaudeCodeMonitor.app/Contents/Resources/
+fi
+
 # Sign with ad-hoc certificate for local testing
 echo "Signing with ad-hoc certificate..."
-codesign --force --sign - ClaudeCodeMonitor.app/Contents/Library/LoginItems/ClaudeMonitorHelper
-codesign --force --sign - --deep ClaudeCodeMonitor.app
+# Helper Itemにエンタイトルメントを追加して署名
+codesign --force --sign - --entitlements ClaudeMonitorHelper.entitlements ClaudeCodeMonitor.app/Contents/Library/LoginItems/ClaudeMonitorHelper
+# メインアプリにエンタイトルメントを追加して署名
+codesign --force --sign - --entitlements ClaudeCodeMonitor.entitlements --deep ClaudeCodeMonitor.app
 
 echo "Build complete!"
 echo "To run: open ClaudeCodeMonitor.app"

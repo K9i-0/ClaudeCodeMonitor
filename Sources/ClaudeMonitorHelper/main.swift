@@ -36,6 +36,29 @@ class HTTPHandler: ChannelInboundHandler {
     
     private var accumulated = Data()
     
+    init() {
+        // 初期化時には何もしない
+    }
+    
+    private func getSharedEnvironment() -> [String: String] {
+        // リクエストごとに最新の環境変数を読み込む
+        guard let sharedDefaults = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor") else {
+            print("[Helper] Failed to access app group")
+            return [:]
+        }
+        
+        // 強制的に同期
+        sharedDefaults.synchronize()
+        
+        if let env = sharedDefaults.dictionary(forKey: "sharedEnvironment") as? [String: String] {
+            print("[Helper] Loaded shared environment with PATH: \(env["PATH"]?.prefix(100) ?? "not set")...")
+            return env
+        } else {
+            print("[Helper] No shared environment found")
+            return [:]
+        }
+    }
+    
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let reqPart = unwrapInboundIn(data)
         
@@ -66,11 +89,23 @@ class HTTPHandler: ChannelInboundHandler {
         task.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         task.arguments = ["npx", "ccusage@latest", "blocks", "--active", "--json"]
         
-        // CLAUDE_CONFIG_DIRの設定
-        task.environment = ProcessInfo.processInfo.environment
-        if let homeDir = ProcessInfo.processInfo.environment["HOME"] {
-            task.environment?["CLAUDE_CONFIG_DIR"] = "\(homeDir)/.claude"
+        // 共有された環境変数を使用
+        var environment = ProcessInfo.processInfo.environment
+        
+        // App Groupから読み込んだ環境変数をマージ
+        let sharedEnv = getSharedEnvironment()
+        for (key, value) in sharedEnv {
+            environment[key] = value
         }
+        
+        // CLAUDE_CONFIG_DIRの設定
+        if let homeDir = environment["HOME"] ?? ProcessInfo.processInfo.environment["HOME"] {
+            environment["CLAUDE_CONFIG_DIR"] = "\(homeDir)/.claude"
+        }
+        
+        task.environment = environment
+        
+        print("[Helper] Executing npx with PATH: \(environment["PATH"] ?? "not set")")
         
         let pipe = Pipe()
         let errorPipe = Pipe()
@@ -110,11 +145,23 @@ class HTTPHandler: ChannelInboundHandler {
         task.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         task.arguments = ["npx", "ccusage@latest", "--json"]
         
-        // CLAUDE_CONFIG_DIRの設定
-        task.environment = ProcessInfo.processInfo.environment
-        if let homeDir = ProcessInfo.processInfo.environment["HOME"] {
-            task.environment?["CLAUDE_CONFIG_DIR"] = "\(homeDir)/.claude"
+        // 共有された環境変数を使用
+        var environment = ProcessInfo.processInfo.environment
+        
+        // App Groupから読み込んだ環境変数をマージ
+        let sharedEnv = getSharedEnvironment()
+        for (key, value) in sharedEnv {
+            environment[key] = value
         }
+        
+        // CLAUDE_CONFIG_DIRの設定
+        if let homeDir = environment["HOME"] ?? ProcessInfo.processInfo.environment["HOME"] {
+            environment["CLAUDE_CONFIG_DIR"] = "\(homeDir)/.claude"
+        }
+        
+        task.environment = environment
+        
+        print("[Helper] Executing npx with PATH: \(environment["PATH"] ?? "not set")")
         
         let pipe = Pipe()
         let errorPipe = Pipe()
@@ -129,7 +176,10 @@ class HTTPHandler: ChannelInboundHandler {
             let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
             
             if task.terminationStatus != 0 {
-                let errorString = String(data: errorData, encoding: .utf8) ?? "Unknown error"
+                let errorString = String(data: errorData, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .replacingOccurrences(of: "\n", with: " ")
+                    .replacingOccurrences(of: "\"", with: "\\\"") ?? "Unknown error"
                 print("ccusage error: \(errorString)")
                 sendResponse(context: context, status: .internalServerError, 
                            body: "{\"error\":\"ccusage failed: \(errorString)\"}")
@@ -187,6 +237,21 @@ class SignalHandler {
 
 // エントリポイント
 print("Starting ClaudeMonitorHelper...")
+
+// デバッグ：App Groupのデータを確認
+if let sharedDefaults = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor") {
+    sharedDefaults.synchronize()
+    if let env = sharedDefaults.dictionary(forKey: "sharedEnvironment") as? [String: String] {
+        print("[Helper] App Group data found with keys: \(env.keys.joined(separator: ", "))")
+        if let path = env["PATH"] {
+            print("[Helper] PATH from App Group: \(path.prefix(200))...")
+        }
+    } else {
+        print("[Helper] No sharedEnvironment in App Group")
+    }
+} else {
+    print("[Helper] Cannot access App Group")
+}
 
 let service = HelperService()
 let signalHandler = SignalHandler(service: service)

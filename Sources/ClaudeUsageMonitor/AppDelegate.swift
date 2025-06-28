@@ -12,6 +12,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var dataAccessManager: ClaudeDataAccessManager!
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Save environment variables to App Group before starting Helper Item
+        saveEnvironmentVariables()
+        
         // Register Helper Item first
         registerHelperItem()
         
@@ -95,6 +98,45 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
             .store(in: &cancellables)
+    }
+    
+    private func saveEnvironmentVariables() {
+        guard let sharedDefaults = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor") else {
+            print("[AppDelegate] Failed to access app group")
+            return
+        }
+        
+        let environment = ProcessInfo.processInfo.environment
+        
+        // 保存する環境変数を選択（必要なものだけ）
+        var envToSave: [String: String] = [:]
+        
+        // 必須の環境変数
+        if let path = environment["PATH"] {
+            envToSave["PATH"] = path
+        }
+        if let home = environment["HOME"] {
+            envToSave["HOME"] = home
+        }
+        
+        // Node.js関連の環境変数
+        let nodeRelatedKeys = ["MISE_HOME", "MISE_BIN_DIR", "MISE_DATA_DIR", 
+                              "ASDF_DIR", "ASDF_DATA_DIR", 
+                              "NVM_DIR", "NVM_BIN", 
+                              "VOLTA_HOME", 
+                              "NODE_PATH", "NPM_CONFIG_PREFIX"]
+        
+        for key in nodeRelatedKeys {
+            if let value = environment[key] {
+                envToSave[key] = value
+            }
+        }
+        
+        // UserDefaultsに保存
+        sharedDefaults.set(envToSave, forKey: "sharedEnvironment")
+        sharedDefaults.synchronize()
+        
+        print("[AppDelegate] Saved environment variables to app group: \(envToSave.keys.joined(separator: ", "))")
     }
     
     private func registerHelperItem() {
