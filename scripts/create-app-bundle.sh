@@ -84,6 +84,36 @@ find .build -path "*arm64*/release/*.bundle" -type d | while read bundle; do
     cp -R "$bundle" "$APP_PATH/Contents/Resources/"
 done
 
+# Copy Node.js binary
+echo "  Copying Node.js binary..."
+if [ -f "Resources/node/node" ]; then
+    mkdir -p "$APP_PATH/Contents/Resources/node"
+    cp "Resources/node/node" "$APP_PATH/Contents/Resources/node/"
+    echo "    Node.js binary copied"
+else
+    echo "    ⚠️  Node.js binary not found at Resources/node/node"
+fi
+
+# Copy server directory
+echo "  Copying server files..."
+if [ -d "server" ]; then
+    # Create a clean copy without node_modules first
+    mkdir -p "$APP_PATH/Contents/Resources/server"
+    cp server/package.json "$APP_PATH/Contents/Resources/server/"
+    cp server/package-lock.json "$APP_PATH/Contents/Resources/server/" 2>/dev/null || true
+    cp server/server*.js "$APP_PATH/Contents/Resources/server/"
+    
+    # Install production dependencies
+    echo "    Installing server dependencies..."
+    cd "$APP_PATH/Contents/Resources/server"
+    npm install --production --silent
+    cd - > /dev/null
+    
+    echo "    Server files copied"
+else
+    echo "    ⚠️  Server directory not found"
+fi
+
 # Verify app structure
 echo ""
 echo "Verifying app bundle structure..."
@@ -101,6 +131,38 @@ ls -la "$APP_PATH/Contents/Resources/" || echo "  No Resources directory"
 echo ""
 echo "  Executable info:"
 file "$APP_PATH/Contents/MacOS/ClaudeCodeMonitor"
+
+# Sign Node.js binary if Developer ID is available
+if [ -f "$APP_PATH/Contents/Resources/node/node" ]; then
+    echo ""
+    echo "Signing Node.js binary..."
+    
+    # Check if we have a Developer ID
+    if security find-identity -v -p codesigning | grep -q "Developer ID Application"; then
+        # Get the first Developer ID
+        DEVELOPER_ID=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
+        echo "  Using Developer ID: $DEVELOPER_ID"
+        
+        # Sign with node entitlements
+        if [ -f "node.entitlements" ]; then
+            codesign --force --sign "$DEVELOPER_ID" \
+                --entitlements node.entitlements \
+                --options runtime \
+                --timestamp \
+                "$APP_PATH/Contents/Resources/node/node"
+            echo "  ✅ Node.js binary signed"
+        else
+            echo "  ⚠️  node.entitlements not found, signing without entitlements"
+            codesign --force --sign "$DEVELOPER_ID" \
+                --options runtime \
+                --timestamp \
+                "$APP_PATH/Contents/Resources/node/node"
+        fi
+    else
+        echo "  ⚠️  No Developer ID found, using ad-hoc signing"
+        codesign --force --sign - "$APP_PATH/Contents/Resources/node/node"
+    fi
+fi
 
 echo ""
 echo "✅ App bundle created successfully: $APP_PATH"
