@@ -105,3 +105,14 @@
 "notification.sent90Percent" = "90%%通知を送信しました";
 "notification.sendError" = "通知送信エラー: %@";
 "notification.sessionResetError" = "セッションリセット通知エラー: %@";
+
+// General
+"ok" = "OK";
+"error" = "エラー";
+"select" = "アクセスを許可";
+
+// Claude Data Access
+"selectClaudeDataFolder" = "Claudeデータへのアクセスを許可";
+"claudeDataFolderMessage" = "このアプリはClaudeのデータフォルダへのアクセスが必要です。\n\nフォルダは既に選択されています（~/.claude）。\n「アクセスを許可」をクリックして続行してください。";
+"invalidClaudeFolder" = "選択されたフォルダは有効なClaudeデータフォルダではないようです。'projects'サブディレクトリが含まれていることを確認してください。";
+"failedToSaveAccess" = "フォルダアクセスの保存に失敗しました。もう一度お試しください。";

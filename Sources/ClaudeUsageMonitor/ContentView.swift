@@ -2,11 +2,21 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var monitor: UsageMonitor
+    @EnvironmentObject var dataAccessManager: ClaudeDataAccessManager
     @State private var selectedTab = 0
     @State private var isRefreshing = false
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
+        if !dataAccessManager.hasAccess {
+            DataAccessView()
+                .frame(width: 380, height: 300)
+        } else {
+            mainContent
+        }
+    }
+    
+    var mainContent: some View {
         ZStack {
             // Background with visual effect
             VisualEffectBlur(material: .popover, blendingMode: .behindWindow)
@@ -527,13 +537,13 @@ struct UsageDetailView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.secondary)
                 
-                ForEach(modelBreakdowns.sorted(by: { $0.cost > $1.cost }), id: \.modelName) { breakdown in
+                ForEach(modelBreakdowns.sorted(by: { $0.actualCost > $1.actualCost }), id: \.modelName) { breakdown in
                     HStack {
                         Text(formatModelName(breakdown.modelName))
                             .font(.system(size: 12))
                         Spacer()
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text(monitor.formatCost(breakdown.cost))
+                            Text(monitor.formatCost(breakdown.actualCost))
                                 .font(.system(size: 12, weight: .medium))
                             Text("\(monitor.formatTokens(breakdown.inputTokens + breakdown.outputTokens)) tokens")
                                 .font(.system(size: 10))

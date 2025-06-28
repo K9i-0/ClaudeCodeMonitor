@@ -8,10 +8,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var popover: NSPopover!
     private var eventMonitor: EventMonitor?
     private var usageMonitor: UsageMonitor!
+    private var dataAccessManager: ClaudeDataAccessManager!
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Start the local server first
-        ServerManager.shared.checkAndStartServer()
+        // Initialize data access manager
+        dataAccessManager = ClaudeDataAccessManager()
+        
+        // Pass claude path to server manager if available
+        if dataAccessManager.hasAccess {
+            print("[AppDelegate] Data access already available, path: \(dataAccessManager.claudePath ?? "nil")")
+            NSLog("[AppDelegate] Data access already available, path: %@", dataAccessManager.claudePath ?? "nil")
+            ServerManager.shared.claudePath = dataAccessManager.claudePath
+            
+            // Start the local server with path
+            Task {
+                await ServerManager.shared.checkAndStartServer()
+            }
+        } else {
+            print("[AppDelegate] No data access yet, server will start after folder selection")
+            // Don't start server yet - will start after user selects folder
+        }
         
         usageMonitor = UsageMonitor()
         
@@ -49,7 +65,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentSize = NSSize(width: 380, height: 480)
         popover.behavior = .transient
         popover.animates = true
-        popover.contentViewController = NSHostingController(rootView: ContentView().environmentObject(usageMonitor))
+        popover.contentViewController = NSHostingController(
+            rootView: ContentView()
+                .environmentObject(usageMonitor)
+                .environmentObject(dataAccessManager)
+        )
         
         // Monitor for clicks outside the popover
         eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
@@ -66,6 +86,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.updateStatusBarTitle()
+            }
+            .store(in: &cancellables)
+        
+        // Observe data access changes
+        dataAccessManager.$hasAccess
+            .receive(on: DispatchQueue.main)
+            .dropFirst() // Skip initial value
+            .sink { [weak self] hasAccess in
+                if hasAccess {
+                    // Update server with claude path
+                    ServerManager.shared.claudePath = self?.dataAccessManager.claudePath
+                    
+                    // Restart server if needed
+                    if ServerManager.shared.isServerRunning {
+                        ServerManager.shared.stopServer()
+                        Task {
+                            await ServerManager.shared.checkAndStartServer()
+                        }
+                    }
+                    
+                    // Fetch data
+                    self?.usageMonitor.fetchUsageData()
+                }
             }
             .store(in: &cancellables)
     }
@@ -171,7 +214,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @MainActor
-    private func showPopover() {
+    func showPopover() {
         if let button = statusItem.button {
             // Refresh data when opening popover
             usageMonitor.fetchUsageData()
@@ -180,9 +223,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    private func closePopover() {
+    func closePopover() {
         popover.performClose(nil)
         eventMonitor?.stop()
+    }
+    
+    func pauseEventMonitor() {
+        eventMonitor?.stop()
+    }
+    
+    func resumeEventMonitor() {
+        if popover.isShown {
+            eventMonitor?.start()
+        }
     }
     
     func applicationWillTerminate(_ notification: Notification) {

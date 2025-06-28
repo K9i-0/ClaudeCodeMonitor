@@ -36,6 +36,20 @@ npm start  # Runs on http://127.0.0.1:3456
 # Open in Xcode (recommended for development)
 open Package.swift
 # Then Build (⌘B) and Run (⌘R) in Xcode
+
+# Local testing with Node.js bundled (App Sandbox mode)
+./scripts/test-local-with-node.sh
+# This script:
+# 1. Downloads Node.js binaries (if not already present)
+# 2. Creates universal binary
+# 3. Builds the app with --skip-signing flag
+# 4. Signs Node.js with entitlements
+# 5. Signs the app with ad-hoc certificate
+# Then run: open ClaudeCodeMonitor.app
+
+# Clean up processes if needed
+killall ClaudeCodeMonitor 2>/dev/null || true
+ps aux | grep -E "node.*server" | grep -v grep | awk '{print $2}' | xargs kill 2>/dev/null || true
 ```
 
 ## Architecture
@@ -51,6 +65,12 @@ open Package.swift
 - When App Sandbox is enabled, the local server (http://127.0.0.1:3456) is **required**
 - Direct command execution (npx) is not possible with App Sandbox
 - Network entitlements allow localhost connections only
+
+### Data Access (App Sandbox)
+- Uses NSOpenPanel for user to grant access to ~/.claude directory
+- Security-scoped bookmarks persist access across app launches
+- No temporary-exception entitlements (App Store compliant)
+- ClaudeDataAccessManager handles folder selection and bookmark management
 
 ### Key Components
 

@@ -292,6 +292,22 @@ jobs:
         # Use the create-app-bundle.sh script
         ./scripts/create-app-bundle.sh "${{ steps.version.outputs.version }}"
     
+    # Sign Node.js binary with entitlements
+    - name: Sign Node.js binary
+      if: steps.check_signing.outputs.has_signing_cert == 'true'
+      run: |
+        echo "🔏 Signing Node.js binary with entitlements..."
+        
+        # Sign Node.js with entitlements
+        codesign --force --strict \
+          --options runtime \
+          --entitlements node.entitlements \
+          --sign "$CERT_NAME" \
+          --timestamp \
+          "ClaudeCodeMonitor.app/Contents/Resources/node/node"
+        
+        echo "✅ Node.js binary signed"
+        
     # Sign the app
     - name: Sign app bundle
       if: steps.check_signing.outputs.has_signing_cert == 'true'
@@ -324,9 +340,9 @@ jobs:
         echo "=== App bundle root after cleanup ==="
         ls -la "ClaudeCodeMonitor.app/"
         
-        # Try signing
+        # Try signing (without --deep to preserve Node.js signature)
         echo "=== Attempting to sign ==="
-        codesign --force --deep --strict \
+        codesign --force --strict \
           --options runtime \
           --entitlements ClaudeCodeMonitor.entitlements \
           --sign "$CERT_NAME" \

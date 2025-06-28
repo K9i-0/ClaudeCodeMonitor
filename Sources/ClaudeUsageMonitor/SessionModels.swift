@@ -5,6 +5,50 @@ struct BlocksResponse: Codable {
     let blocks: [SessionBlock]
 }
 
+// Response structure for session endpoint
+struct SessionResponse: Codable {
+    let sessions: [SessionData]
+    let totals: SessionTotals
+}
+
+struct SessionData: Codable {
+    let sessionId: String
+    let inputTokens: Int
+    let outputTokens: Int
+    let cacheCreationTokens: Int
+    let cacheReadTokens: Int
+    let totalTokens: Int
+    let totalCost: Double
+    let lastActivity: String
+    let modelsUsed: [String]
+    let modelBreakdowns: [ModelBreakdown]
+}
+
+struct SessionTotals: Codable {
+    let inputTokens: Int
+    let outputTokens: Int
+    let cacheCreationTokens: Int
+    let cacheReadTokens: Int
+    let totalTokens: Int
+    let totalCost: Double
+}
+
+struct ModelBreakdown: Codable {
+    let modelName: String
+    let inputTokens: Int
+    let outputTokens: Int
+    let cacheCreationTokens: Int
+    let cacheReadTokens: Int
+    let totalTokens: Int?
+    let totalCost: Double?
+    let cost: Double?
+    
+    // Provide cost accessor for compatibility
+    var actualCost: Double {
+        return cost ?? totalCost ?? 0.0
+    }
+}
+
 struct SessionBlock: Codable {
     let id: String
     let startTime: String

@@ -76,10 +76,11 @@ app.get('/usage', async (req, res) => {
   }
 });
 
-// Get active session block data
+// Get active block data (5-hour sessions)
 app.get('/blocks/active', async (req, res) => {
   try {
-    const npx = spawn('npx', ['ccusage', 'blocks', '--active', '--json']);
+    const env = process.env.CLAUDE_CONFIG_DIR ? { ...process.env } : process.env;
+    const npx = spawn('npx', ['ccusage', 'blocks', '--active', '--json'], { env });
     let output = '';
     let error = '';
 
@@ -102,6 +103,40 @@ app.get('/blocks/active', async (req, res) => {
         res.json(data);
       } catch (parseError) {
         res.status(500).json({ error: 'Failed to parse blocks data' });
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get session data (conversation sessions)
+app.get('/session', async (req, res) => {
+  try {
+    const env = process.env.CLAUDE_CONFIG_DIR ? { ...process.env } : process.env;
+    const npx = spawn('npx', ['ccusage', 'session', '--json'], { env });
+    let output = '';
+    let error = '';
+
+    npx.stdout.on('data', (data) => {
+      output += data.toString();
+    });
+
+    npx.stderr.on('data', (data) => {
+      error += data.toString();
+    });
+
+    npx.on('close', (code) => {
+      if (code !== 0) {
+        res.status(500).json({ error: error || 'Failed to get session data' });
+        return;
+      }
+
+      try {
+        const data = JSON.parse(output);
+        res.json(data);
+      } catch (parseError) {
+        res.status(500).json({ error: 'Failed to parse session data' });
       }
     });
   } catch (error) {

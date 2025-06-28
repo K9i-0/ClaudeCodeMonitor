@@ -218,4 +218,15 @@ struct L10n {
             return "status.usageFormat".localized(with: usage, cost, burnRate, timeRemaining)
         }
     }
+    
+    // General
+    static var ok: String { "ok".localized }
+    static var error: String { "error".localized }
+    static var select: String { "select".localized }
+    
+    // Claude Data Access
+    static var selectClaudeDataFolder: String { "selectClaudeDataFolder".localized }
+    static var claudeDataFolderMessage: String { "claudeDataFolderMessage".localized }
+    static var invalidClaudeFolder: String { "invalidClaudeFolder".localized }
+    static var failedToSaveAccess: String { "failedToSaveAccess".localized }
 }

@@ -17,14 +17,6 @@ struct DailyUsage: Codable {
     let modelBreakdowns: [ModelBreakdown]
 }
 
-struct ModelBreakdown: Codable {
-    let modelName: String
-    let inputTokens: Int
-    let outputTokens: Int
-    let cacheCreationTokens: Int
-    let cacheReadTokens: Int
-    let cost: Double
-}
 
 struct Totals: Codable {
     let inputTokens: Int
