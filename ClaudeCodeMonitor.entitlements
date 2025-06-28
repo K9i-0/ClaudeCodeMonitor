@@ -16,7 +16,8 @@
     <true/>
     <key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
     <array>
-        <string>/.config/claude.ai/</string>
+        <string>/.claude/</string>
+        <string>/.config/claude/</string>
     </array>
 </dict>
 </plist>

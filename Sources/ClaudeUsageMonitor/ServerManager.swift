@@ -108,6 +108,16 @@ class ServerManager: ObservableObject {
         // Set up environment
         var environment = ProcessInfo.processInfo.environment
         environment["PORT"] = "\(serverPort)"
+        
+        // Set CLAUDE_CONFIG_DIR to help ccusage find data in App Sandbox
+        // Try multiple possible paths where Claude data might be stored
+        let possiblePaths = [
+            NSHomeDirectory() + "/.config/claude",
+            NSHomeDirectory() + "/.claude",
+            NSHomeDirectory() + "/Library/Application Support/Claude"
+        ]
+        environment["CLAUDE_CONFIG_DIR"] = possiblePaths.joined(separator: ",")
+        
         process.environment = environment
         
         // Redirect output
