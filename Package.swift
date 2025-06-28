@@ -11,7 +11,14 @@ let package = Package(
         .executable(
             name: "ClaudeCodeMonitor",
             targets: ["ClaudeCodeMonitor"]
+        ),
+        .executable(
+            name: "ClaudeMonitorHelper",
+            targets: ["ClaudeMonitorHelper"]
         )
+    ],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
     ],
     targets: [
         .executableTarget(
@@ -20,6 +27,14 @@ let package = Package(
             resources: [
                 .process("Resources")
             ]
+        ),
+        .executableTarget(
+            name: "ClaudeMonitorHelper",
+            dependencies: [
+                .product(name: "NIO", package: "swift-nio"),
+                .product(name: "NIOHTTP1", package: "swift-nio"),
+            ],
+            path: "Sources/ClaudeMonitorHelper"
         ),
         .testTarget(
             name: "ClaudeCodeMonitorTests",

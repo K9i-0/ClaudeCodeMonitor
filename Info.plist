@@ -24,5 +24,10 @@
     <true/>
     <key>NSUserNotificationAlertStyle</key>
     <string>banner</string>
+    <key>SMPrivilegedExecutables</key>
+    <dict>
+        <key>com.k9i.ClaudeMonitorHelper</key>
+        <string>identifier "com.k9i.ClaudeMonitorHelper" and anchor apple generic</string>
+    </dict>
 </dict>
 </plist>

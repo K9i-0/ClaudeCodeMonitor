@@ -2,6 +2,7 @@ import Cocoa
 import SwiftUI
 import Combine
 import UserNotifications
+import ServiceManagement
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
@@ -11,22 +12,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var dataAccessManager: ClaudeDataAccessManager!
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Register Helper Item first
+        registerHelperItem()
+        
         // Initialize data access manager
         dataAccessManager = ClaudeDataAccessManager()
         
-        // Pass claude path to server manager if available
-        if dataAccessManager.hasAccess {
-            print("[AppDelegate] Data access already available, path: \(dataAccessManager.claudePath ?? "nil")")
-            NSLog("[AppDelegate] Data access already available, path: %@", dataAccessManager.claudePath ?? "nil")
-            ServerManager.shared.claudePath = dataAccessManager.claudePath
-            
-            // Start the local server with path
-            Task {
-                await ServerManager.shared.checkAndStartServer()
-            }
-        } else {
-            print("[AppDelegate] No data access yet, server will start after folder selection")
-            // Don't start server yet - will start after user selects folder
+        // Helper Item will provide the server, so we don't need ServerManager anymore
+        // Just wait a bit for the helper to start
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            self?.usageMonitor.fetchUsageData()
         }
         
         usageMonitor = UsageMonitor()
@@ -95,22 +90,37 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .dropFirst() // Skip initial value
             .sink { [weak self] hasAccess in
                 if hasAccess {
-                    // Update server with claude path
-                    ServerManager.shared.claudePath = self?.dataAccessManager.claudePath
-                    
-                    // Restart server if needed
-                    if ServerManager.shared.isServerRunning {
-                        ServerManager.shared.stopServer()
-                        Task {
-                            await ServerManager.shared.checkAndStartServer()
-                        }
-                    }
-                    
-                    // Fetch data
+                    // Helper Item is already running, just fetch data
                     self?.usageMonitor.fetchUsageData()
                 }
             }
             .store(in: &cancellables)
+    }
+    
+    private func registerHelperItem() {
+        let helperBundleIdentifier = "com.k9i.ClaudeMonitorHelper"
+        
+        if #available(macOS 13.0, *) {
+            // Use SMAppService for macOS 13+
+            let service = SMAppService.loginItem(identifier: helperBundleIdentifier)
+            
+            do {
+                if service.status == .enabled {
+                    print("[AppDelegate] Helper item is already enabled")
+                } else {
+                    try service.register()
+                    print("[AppDelegate] Helper item registered successfully")
+                }
+            } catch {
+                print("[AppDelegate] Failed to register helper item: \(error)")
+                // Try legacy method as fallback
+                SMLoginItemSetEnabled(helperBundleIdentifier as CFString, true)
+            }
+        } else {
+            // Use legacy SMLoginItemSetEnabled for macOS 12 and earlier
+            let success = SMLoginItemSetEnabled(helperBundleIdentifier as CFString, true)
+            print("[AppDelegate] Helper item registration (legacy): \(success ? "success" : "failed")")
+        }
     }
     
     private var cancellables = Set<AnyCancellable>()

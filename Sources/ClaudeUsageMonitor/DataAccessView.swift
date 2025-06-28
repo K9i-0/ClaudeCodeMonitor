@@ -31,32 +31,15 @@ struct DataAccessView: View {
                     print("[DataAccessView] Request completed with success: \(success)")
                     
                     if success {
-                        print("[DataAccessView] Access granted, updating server...")
+                        print("[DataAccessView] Access granted, fetching usage data...")
                         
-                        // Update server with new path
-                        ServerManager.shared.claudePath = dataAccessManager.claudePath
+                        // Helper item is already running, just fetch data
+                        // Wait a bit for any filesystem operations to complete
+                        let waitTime = UInt64(Constants.Timing.dataAccessWaitTime * 1_000_000_000)
+                        try? await Task.sleep(nanoseconds: waitTime)
                         
-                        // Stop server first if running
-                        if ServerManager.shared.isServerRunning {
-                            print("[DataAccessView] Stopping existing server...")
-                            ServerManager.shared.stopServer()
-                        }
-                        
-                        // Start server with new path
-                        print("[DataAccessView] Starting server with new path...")
-                        let serverStarted = await ServerManager.shared.checkAndStartServer()
-                        
-                        if serverStarted {
-                            // Wait a bit for server to stabilize
-                            let waitTime = UInt64(Constants.Timing.dataAccessWaitTime * 1_000_000_000)
-                            try? await Task.sleep(nanoseconds: waitTime)
-                            
-                            print("[DataAccessView] Fetching usage data...")
-                            monitor.fetchUsageData()
-                        } else {
-                            errorMessage = "Failed to start the monitoring server. Please try again."
-                            showingError = true
-                        }
+                        print("[DataAccessView] Fetching usage data...")
+                        monitor.fetchUsageData()
                     } else {
                         // Access request was cancelled or failed
                         errorMessage = "Access to Claude data folder was not granted."
