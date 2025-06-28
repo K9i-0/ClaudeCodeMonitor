@@ -53,6 +53,12 @@ func startServer() async -> Bool {
 - JIT実行エンタイトルメント（`com.apple.security.cs.allow-unsigned-executable-memory`）
 - 結果：それでもApp Sandbox内では動作しない
 
+### 4. XPC Serviceも解決策にならない
+**重要な発見**：
+- macOS 10.14以降、XPC Serviceも親アプリのSandbox制限を継承
+- つまり、XPC Service内でもNode.jsやnpxの実行は不可能
+- この事実により、以下の「XPC Service アーキテクチャ」案は**実現不可能**
+
 ## 現状分析
 
 ### 根本的な問題
@@ -65,7 +71,9 @@ func startServer() async -> Bool {
 2. **プロセス起動の制限**: Sandbox内からの`Process()`によるサブプロセス起動は厳しく制限
 3. **ネットワークサーバーの制限**: Sandbox内でのサーバー起動も制約が多い
 
-## 解決策: XPC Service アーキテクチャ
+## ~~解決策: XPC Service アーキテクチャ~~ （実現不可能）
+
+**注意**: 以下のXPC Service案は、macOS 10.14以降では機能しません。XPC ServiceもApp Sandboxの制限を継承するため、Node.jsやnpxの実行は不可能です。参考のために残しています。
 
 ### アーキテクチャ概要
 ```
@@ -214,80 +222,338 @@ func startServer() async -> Bool {
   - 2つのターゲットをビルド
   - 適切な場所にXPC Serviceを配置
 
-## 代替案の検討
+## 真の解決策: Login Helper Item アーキテクチャ
 
-### 案1: Login Item Helper (推奨度: ★★★★☆)
-- ユーザーのログイン時に起動する別アプリ
-- システムトレイで常駐し、ローカルサーバーを管理
-- メインアプリはHTTP経由で通信
+### なぜLogin Helper Itemが最適解なのか
+1. **Sandboxの外で動作**: システムレベルで動作し、App Sandboxの制限を受けない
+2. **Apple公式の方法**: `SMLoginItemSetEnabled`で管理
+3. **確実に動作**: XPC Serviceと異なり、Sandbox制限を継承しない
+4. **ユーザー体験**: ログイン時に自動起動、バックグラウンドで動作
 
-### 案2: WebView + JavaScript実装 (推奨度: ★★☆☆☆)
+### 新しいアーキテクチャ概要
+```
+┌─────────────────────────┐                    ┌─────────────────────────┐
+│   ClaudeCodeMonitor     │  HTTP (localhost)  │  ClaudeMonitorHelper    │
+│   (Main App)            │ <----------------> │  (Login Helper Item)    │
+│   [Sandbox: 有効]       │                    │  [Sandbox: 無効]        │
+│                         │                    │                         │
+│  - UI表示               │                    │  - HTTPサーバー提供     │
+│  - データ表示           │                    │  - ccusage実行          │
+│  - 設定管理             │                    │  - Node.js不要          │
+└─────────────────────────┘                    └─────────────────────────┘
+```
+
+## Login Helper Item 実装計画
+
+### Phase 1: Helper Itemの作成
+- [ ] Package.swiftに新しいターゲットを追加
+  ```swift
+  .executable(
+      name: "ClaudeMonitorHelper",
+      dependencies: [
+          .product(name: "NIO", package: "swift-nio"),
+          .product(name: "NIOHTTP1", package: "swift-nio")
+      ]
+  )
+  ```
+
+- [ ] Helper Itemの基本実装（Swift製HTTPサーバー）
+  ```swift
+  // main.swift
+  import Foundation
+  import NIO
+  import NIOHTTP1
+  
+  class HelperService {
+      private let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+      private var channel: Channel?
+      
+      func start() throws {
+          let bootstrap = ServerBootstrap(group: group)
+              .serverChannelOption(ChannelOptions.backlog, value: 256)
+              .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+              .childChannelInitializer { channel in
+                  channel.pipeline.configureHTTPServerPipeline()
+                      .flatMap {
+                          channel.pipeline.addHandler(HTTPHandler())
+                      }
+              }
+          
+          channel = try bootstrap.bind(host: "127.0.0.1", port: 3456).wait()
+          print("Helper server started on port 3456")
+          
+          // Keep running
+          try channel!.closeFuture.wait()
+      }
+  }
+  
+  class HTTPHandler: ChannelInboundHandler {
+      typealias InboundIn = HTTPServerRequestPart
+      typealias OutboundOut = HTTPServerResponsePart
+      
+      func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+          let reqPart = unwrapInboundIn(data)
+          
+          switch reqPart {
+          case .head(let header):
+              if header.uri == "/blocks/active" {
+                  handleBlocksRequest(context: context)
+              } else if header.uri == "/usage" {
+                  handleUsageRequest(context: context)
+              } else if header.uri == "/health" {
+                  sendResponse(context: context, status: .ok, body: "{\"status\":\"ok\"}")
+              } else {
+                  sendResponse(context: context, status: .notFound, body: "{\"error\":\"Not found\"}")
+              }
+          default:
+              break
+          }
+      }
+      
+      private func handleBlocksRequest(context: ChannelHandlerContext) {
+          let task = Process()
+          task.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+          task.arguments = ["npx", "ccusage@latest", "blocks", "--active", "--json"]
+          
+          // CLAUDE_CONFIG_DIRの設定
+          task.environment = ProcessInfo.processInfo.environment
+          if let homeDir = ProcessInfo.processInfo.environment["HOME"] {
+              task.environment?["CLAUDE_CONFIG_DIR"] = "\(homeDir)/.claude"
+          }
+          
+          let pipe = Pipe()
+          task.standardOutput = pipe
+          task.standardError = pipe
+          
+          do {
+              try task.run()
+              task.waitUntilExit()
+              
+              let data = pipe.fileHandleForReading.readDataToEndOfFile()
+              if let jsonString = String(data: data, encoding: .utf8) {
+                  sendResponse(context: context, status: .ok, body: jsonString)
+              } else {
+                  sendResponse(context: context, status: .internalServerError, 
+                             body: "{\"error\":\"Failed to decode response\"}")
+              }
+          } catch {
+              sendResponse(context: context, status: .internalServerError, 
+                         body: "{\"error\":\"\(error.localizedDescription)\"}")
+          }
+      }
+      
+      private func handleUsageRequest(context: ChannelHandlerContext) {
+          let task = Process()
+          task.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+          task.arguments = ["npx", "ccusage@latest", "--json"]
+          
+          // CLAUDE_CONFIG_DIRの設定
+          task.environment = ProcessInfo.processInfo.environment
+          if let homeDir = ProcessInfo.processInfo.environment["HOME"] {
+              task.environment?["CLAUDE_CONFIG_DIR"] = "\(homeDir)/.claude"
+          }
+          
+          let pipe = Pipe()
+          task.standardOutput = pipe
+          task.standardError = pipe
+          
+          do {
+              try task.run()
+              task.waitUntilExit()
+              
+              let data = pipe.fileHandleForReading.readDataToEndOfFile()
+              if let jsonString = String(data: data, encoding: .utf8) {
+                  sendResponse(context: context, status: .ok, body: jsonString)
+              } else {
+                  sendResponse(context: context, status: .internalServerError, 
+                             body: "{\"error\":\"Failed to decode response\"}")
+              }
+          } catch {
+              sendResponse(context: context, status: .internalServerError, 
+                         body: "{\"error\":\"\(error.localizedDescription)\"}")
+          }
+      }
+      
+      private func sendResponse(context: ChannelHandlerContext, status: HTTPResponseStatus, body: String) {
+          var headers = HTTPHeaders()
+          headers.add(name: "Content-Type", value: "application/json")
+          headers.add(name: "Access-Control-Allow-Origin", value: "*")
+          headers.add(name: "Content-Length", value: String(body.utf8.count))
+          
+          let head = HTTPResponseHead(version: .http1_1, status: status, headers: headers)
+          context.write(wrapOutboundOut(.head(head)), promise: nil)
+          
+          let buffer = context.channel.allocator.buffer(string: body)
+          context.write(wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+          context.writeAndFlush(wrapOutboundOut(.end(nil)), promise: nil)
+      }
+  }
+  
+  // エントリポイント
+  let service = HelperService()
+  do {
+      try service.start()
+  } catch {
+      print("Failed to start helper service: \(error)")
+      exit(1)
+  }
+  ```
+
+### Phase 2: メインアプリの修正
+- [ ] Login Helper Itemの登録
+  ```swift
+  // AppDelegate.swift
+  import ServiceManagement
+  
+  func applicationDidFinishLaunching(_ notification: Notification) {
+      // Helper Itemを登録
+      let helperBundleIdentifier = "com.k9i.ClaudeMonitorHelper"
+      SMLoginItemSetEnabled(helperBundleIdentifier as CFString, true)
+      
+      // 少し待ってからデータ取得開始
+      DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+          self.monitor.startMonitoring()
+      }
+  }
+  ```
+
+- [ ] ServerManagerの削除（もはや不要）
+- [ ] Node.jsバンドル関連のコードをすべて削除
+- [ ] UsageMonitorの修正（既存のHTTP通信をそのまま利用）
+  ```swift
+  // 変更不要！既存のコードがそのまま動作
+  private func fetchSessionData() async {
+      if let url = URL(string: "http://127.0.0.1:3456/blocks/active") {
+          // Helper Itemが提供するHTTPサーバーと通信
+      }
+  }
+  ```
+
+### Phase 3: Info.plistとビルド設定
+- [ ] メインアプリのInfo.plist
+  ```xml
+  <key>SMPrivilegedExecutables</key>
+  <dict>
+      <key>com.k9i.ClaudeMonitorHelper</key>
+      <string>identifier "com.k9i.ClaudeMonitorHelper" and certificate leaf[subject.CN] = "Developer ID Application: *"</string>
+  </dict>
+  ```
+
+- [ ] Helper ItemのInfo.plist
+  ```xml
+  <key>LSBackgroundOnly</key>
+  <true/>
+  <key>LSUIElement</key>
+  <true/>
+  ```
+
+- [ ] ビルドスクリプト
+  ```bash
+  #!/bin/bash
+  # build-with-helper.sh
+  
+  # Helper Itemをビルド
+  swift build -c release --product ClaudeMonitorHelper
+  
+  # メインアプリをビルド
+  swift build -c release --product ClaudeCodeMonitor
+  
+  # Helper Itemを適切な場所にコピー
+  mkdir -p ClaudeCodeMonitor.app/Contents/Library/LoginItems/
+  cp .build/release/ClaudeMonitorHelper ClaudeCodeMonitor.app/Contents/Library/LoginItems/
+  
+  # 署名
+  codesign --force --sign "Developer ID Application: Your Name" \
+           ClaudeCodeMonitor.app/Contents/Library/LoginItems/ClaudeMonitorHelper
+  codesign --force --sign "Developer ID Application: Your Name" \
+           --deep ClaudeCodeMonitor.app
+  ```
+
+## 実装の優先順位
+
+1. **最小実装で動作確認**（1日）
+   - Swift NIOでHTTPサーバーを実装
+   - ccusageを直接実行してJSONを返す
+   - 既存のメインアプリとの通信確認
+
+2. **エラーハンドリングとロバスト性**（0.5日）
+   - タイムアウト処理
+   - プロセス終了時の適切なクリーンアップ
+   - ヘルスチェックエンドポイント
+
+3. **パフォーマンス最適化**（オプション）
+   - レスポンスのキャッシュ（5秒程度）
+   - 並行リクエスト処理の改善
+
+## その他の代替案
+
+### 案1: WebView + JavaScript実装 (推奨度: ★★☆☆☆)
 - ccusageの機能をJavaScriptで再実装
 - WebViewで実行（JavaScriptCore使用）
 - Node.js不要だが、実装工数が大きい
 
-### 案3: App Extension (推奨度: ★☆☆☆☆)
+### 案2: App Extension (推奨度: ★☆☆☆☆)
 - 特定の機能に限定される
 - この用途には不適切
 
 ## 実装の詳細
 
-### XPC通信のデータフロー
+### Login Helper Itemのデータフロー
 ```
 1. ユーザーがリフレッシュボタンをクリック
 2. UsageMonitor.fetchUsageData()が呼ばれる
-3. XPCServiceManager経由でClaudeDataServiceにリクエスト
-4. ClaudeDataService内で:
-   - Node.jsサーバーが起動していなければ起動
-   - HTTPリクエストまたはnpx ccusageを実行
-   - 結果をData型で返す
+3. HTTP経由でHelper Itemにリクエスト（localhost:3456）
+4. Helper Item内で:
+   - Swift NIOのHTTPハンドラーがリクエストを受信
+   - npx ccusageを直接実行
+   - 結果をHTTPレスポンスとして返す
 5. メインアプリでJSONデコードして表示
 ```
 
 ### エラーハンドリング
-- XPC接続の失敗
-- サービスのタイムアウト
-- Node.js起動失敗
-- データ取得失敗
+- Helper Itemの未起動
+- HTTPタイムアウト
+- ccusage実行失敗
+- JSONパース失敗
 
 ## メリット
-1. **App Store配布可能**: Sandboxを維持
-2. **安定性向上**: プロセス分離により堅牢
-3. **保守性向上**: 責務が明確に分離
-4. **将来性**: macOSの方向性に合致
+1. **確実に動作**: Sandboxの制限を完全に回避
+2. **シンプル**: XPCより実装が簡単
+3. **Node.js不要**: Swiftのみで完結
+4. **保守性向上**: 複雑なNode.jsバンドルが不要
 
 ## デメリット
-1. **実装の複雑さ**: 初期実装は複雑
-2. **デバッグ**: 2つのプロセス間の通信デバッグ
-3. **配布サイズ**: わずかに増加
+1. **ユーザー許可**: 初回起動時にHelper Itemの許可が必要
+2. **別プロセス**: プロセス管理の複雑さ
 
 ## リスクと対策
 - **リスク**: XPC Serviceの署名や設定ミス
 - **対策**: Appleのサンプルコード（EvenBetterAuthorizationSample）を参考に
 
 ## タイムライン
-- Phase 1-2: 2-3日（XPC基盤構築）
-- Phase 3-4: 2日（統合とテスト）
-- Phase 5: 1日（ビルド設定）
-- 合計: 約1週間
+- Phase 1: 1日（Helper Item実装）
+- Phase 2: 0.5日（メインアプリ統合）
+- Phase 3: 0.5日（ビルド設定とテスト）
+- 合計: 約2日
 
 ## 結論
-XPC Serviceアーキテクチャは、実装の初期コストは高いが、長期的には最も安定した解決策。App Sandboxを維持しながら、必要な機能を実現でき、Appleのセキュリティガイドラインにも準拠する。
+Login Helper Itemアプローチは、XPC Serviceの制限を回避し、確実にApp Sandboxの問題を解決できる唯一の実用的な方法です。Swift NIOを使用した軽量HTTPサーバーにより、Node.js依存も解消でき、全体的にシンプルで保守しやすいアーキテクチャになります。
 
 ## 現在のプロジェクト構成
 
 ### 主要ファイル
 ```
 ClaudeCodeMonitor/
-├── Sources/ClaudeUsageMonitor/
-│   ├── AppDelegate.swift          # メニューバーアプリのエントリポイント
-│   ├── UsageMonitor.swift         # 使用状況データの取得・管理（要修正）
-│   ├── ServerManager.swift        # Node.jsサーバー管理（XPC移行後は削除）
-│   ├── ClaudeDataAccessManager.swift # フォルダアクセス管理（要簡素化）
-│   ├── Models.swift               # データモデル定義
-│   └── SessionModels.swift        # セッション関連モデル（BlocksResponse等）
-├── server/
-│   └── server.js                  # Express サーバー（XPC Service内に移動）
+├── Sources/
+│   ├── ClaudeUsageMonitor/        # メインアプリ
+│   │   ├── AppDelegate.swift      # メニューバーアプリのエントリポイント
+│   │   ├── UsageMonitor.swift     # 使用状況データの取得・管理（HTTP通信のみ）
+│   │   ├── ClaudeDataAccessManager.swift # フォルダアクセス管理（簡素化済み）
+│   │   ├── Models.swift           # データモデル定義
+│   │   └── SessionModels.swift    # セッション関連モデル（BlocksResponse等）
+│   └── ClaudeMonitorHelper/       # Helper Item（新規）
+│       └── main.swift             # HTTPサーバー実装
+├── server/                        # 削除予定（Node.jsサーバーは不要）
 ├── ClaudeCodeMonitor.entitlements # App Sandboxエンタイトルメント
 └── Package.swift                  # SwiftPMパッケージ定義
 ```
