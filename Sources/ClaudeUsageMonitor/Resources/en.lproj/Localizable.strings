@@ -81,6 +81,7 @@
 "settings.languageSettings" = "Language";
 "settings.useSystemLanguage" = "Use system language";
 "settings.selectLanguage" = "Select language";
+"settings.startAtLogin" = "Start at login";
 
 // Language options
 "language.system" = "System";

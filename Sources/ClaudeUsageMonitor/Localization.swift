@@ -167,6 +167,7 @@ struct L10n {
         static var languageSettings: String { "settings.languageSettings".localized }
         static var useSystemLanguage: String { "settings.useSystemLanguage".localized }
         static var selectLanguage: String { "settings.selectLanguage".localized }
+        static var startAtLogin: String { "settings.startAtLogin".localized }
     }
     
     struct Language {

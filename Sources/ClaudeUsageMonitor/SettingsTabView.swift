@@ -1,8 +1,10 @@
 import SwiftUI
+import ServiceManagement
 
 struct SettingsTabView: View {
     @EnvironmentObject var monitor: UsageMonitor
     @StateObject private var languageSettings = LanguageSettings.shared
+    @State private var isLoginItemEnabled = false
     // @State private var notificationEnabled = Bundle.main.bundleIdentifier != nil ? NotificationManager.shared.isNotificationEnabled : false
     
     let plans = [
@@ -117,7 +119,62 @@ struct SettingsTabView: View {
             }
             */
             
+            Divider()
+            
+            // Login item settings section
+            VStack(alignment: .leading, spacing: 12) {
+                Toggle(isOn: $isLoginItemEnabled) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "power")
+                            .font(.system(size: 14))
+                            .foregroundStyle(isLoginItemEnabled ? .blue : .secondary)
+                        Text(L10n.Settings.startAtLogin)
+                            .font(.system(size: 14))
+                    }
+                }
+                .toggleStyle(SwitchToggleStyle(tint: .blue))
+                .onChange(of: isLoginItemEnabled) { newValue in
+                    updateLoginItemStatus(newValue)
+                }
+            }
+            
             Spacer()
+        }
+        .onAppear {
+            checkLoginItemStatus()
+        }
+    }
+    
+    private func checkLoginItemStatus() {
+        if #available(macOS 13.0, *) {
+            let status = SMAppService.mainApp.status
+            isLoginItemEnabled = (status == .enabled)
+        }
+    }
+    
+    private func updateLoginItemStatus(_ enable: Bool) {
+        if #available(macOS 13.0, *) {
+            do {
+                if enable {
+                    if SMAppService.mainApp.status == .enabled {
+                        print("Already registered as login item")
+                    } else {
+                        try SMAppService.mainApp.register()
+                        print("Successfully registered as login item")
+                    }
+                } else {
+                    if SMAppService.mainApp.status == .notRegistered {
+                        print("Not registered as login item")
+                    } else {
+                        try SMAppService.mainApp.unregister()
+                        print("Successfully unregistered as login item")
+                    }
+                }
+            } catch {
+                print("Failed to update login item status: \(error)")
+                // Revert the toggle state on error
+                checkLoginItemStatus()
+            }
         }
     }
 }
