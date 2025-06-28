@@ -70,7 +70,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         
         do {
             // Try local server first
-            if let url = URL(string: "http://127.0.0.1:3456/usage") {
+            if let url = URL(string: "http://127.0.0.1:8456/usage") {
                 var request = URLRequest(url: url)
                 request.timeoutInterval = 5.0 // 5 second timeout
                 
@@ -149,7 +149,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         
         do {
             // Try local server first for session data
-            if let url = URL(string: "http://127.0.0.1:3456/blocks/active") {
+            if let url = URL(string: "http://127.0.0.1:8456/blocks/active") {
                 print("[DEBUG] Attempting server connection to \(url)")
                 
                 var request = URLRequest(url: url)

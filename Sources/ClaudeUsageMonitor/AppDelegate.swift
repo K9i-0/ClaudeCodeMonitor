@@ -12,8 +12,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var dataAccessManager: ClaudeDataAccessManager!
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Save environment variables to App Group before starting Helper Item
+        // Save environment variables and npx path to App Group before starting Helper Item
         saveEnvironmentVariables()
+        findAndSaveHelperPaths()
         
         // Register Helper Item first
         registerHelperItem()
@@ -137,6 +138,103 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         sharedDefaults.synchronize()
         
         print("[AppDelegate] Saved environment variables to app group: \(envToSave.keys.joined(separator: ", "))")
+    }
+    
+    private func findAndSaveHelperPaths() {
+        guard let sharedDefaults = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor") else {
+            print("[AppDelegate] Failed to access app group for helper paths")
+            return
+        }
+        
+        var pathsToSave: [String: String] = [:]
+        var npxPath: String? = nil
+        var nodePath: String? = nil
+        var npmPath: String? = nil
+        
+        // Find npx path
+        let npxTask = Process()
+        npxTask.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        npxTask.arguments = ["bash", "-l", "-c", "which npx"]
+        let npxPipe = Pipe()
+        npxTask.standardOutput = npxPipe
+        npxTask.standardError = npxPipe
+        do {
+            try npxTask.run()
+            npxTask.waitUntilExit()
+            let data = npxPipe.fileHandleForReading.readDataToEndOfFile()
+            if let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), !path.isEmpty {
+                npxPath = path
+                pathsToSave["npxPath"] = path
+                print("[AppDelegate] Found npx path: \(path)")
+            } else {
+                let errorString = String(data: npxPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "Unknown error"
+                print("[AppDelegate] Failed to find npx path. Error: \(errorString)")
+            }
+        } catch { print("[AppDelegate] Error finding npx path: \(error)") }
+        
+        // Find node path
+        let nodeTask = Process()
+        nodeTask.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        nodeTask.arguments = ["bash", "-l", "-c", "which node"]
+        let nodePipe = Pipe()
+        nodeTask.standardOutput = nodePipe
+        nodeTask.standardError = nodePipe
+        do {
+            try nodeTask.run()
+            nodeTask.waitUntilExit()
+            let data = nodePipe.fileHandleForReading.readDataToEndOfFile()
+            if let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), !path.isEmpty {
+                nodePath = path
+                pathsToSave["nodePath"] = path
+                print("[AppDelegate] Found node path: \(path)")
+            } else {
+                let errorString = String(data: nodePipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "Unknown error"
+                print("[AppDelegate] Failed to find node path. Error: \(errorString)")
+            }
+        } catch { print("[AppDelegate] Error finding node path: \(error)") }
+        
+        // Find npm path
+        let npmTask = Process()
+        npmTask.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        npmTask.arguments = ["bash", "-l", "-c", "which npm"]
+        let npmPipe = Pipe()
+        npmTask.standardOutput = npmPipe
+        npmTask.standardError = npmPipe
+        do {
+            try npmTask.run()
+            npmTask.waitUntilExit()
+            let data = npmPipe.fileHandleForReading.readDataToEndOfFile()
+            if let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), !path.isEmpty {
+                npmPath = path
+                pathsToSave["npmPath"] = path
+                print("[AppDelegate] Found npm path: \(path)")
+            } else {
+                let errorString = String(data: npmPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "Unknown error"
+                print("[AppDelegate] Failed to find npm path. Error: \(errorString)")
+            }
+        } catch { print("[AppDelegate] Error finding npm path: \(error)") }
+        
+        // Construct a robust PATH for the helper
+        var helperPathComponents: Set<String> = []
+        if let npxDir = npxPath.map({ URL(fileURLWithPath: $0).deletingLastPathComponent().path }) { helperPathComponents.insert(npxDir) }
+        if let nodeDir = nodePath.map({ URL(fileURLWithPath: $0).deletingLastPathComponent().path }) { helperPathComponents.insert(nodeDir) }
+        if let npmDir = npmPath.map({ URL(fileURLWithPath: $0).deletingLastPathComponent().path }) { helperPathComponents.insert(npmDir) }
+        
+        // Add standard paths that might be missing in launchd environment
+        helperPathComponents.insert("/usr/local/bin")
+        helperPathComponents.insert("/usr/bin")
+        helperPathComponents.insert("/bin")
+        helperPathComponents.insert("/usr/sbin")
+        helperPathComponents.insert("/sbin")
+        
+        let constructedPath = helperPathComponents.joined(separator: ":")
+        pathsToSave["HELPER_PATH"] = constructedPath
+        print("[AppDelegate] Constructed HELPER_PATH: \(constructedPath)")
+        
+        sharedDefaults.set(pathsToSave, forKey: "helperPaths")
+        sharedDefaults.synchronize()
+        
+        print("[AppDelegate] Saved helper paths to app group: \(pathsToSave.keys.joined(separator: ", "))")
     }
     
     private func registerHelperItem() {

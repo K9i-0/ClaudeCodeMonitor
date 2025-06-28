@@ -41,8 +41,8 @@ fi
 
 # Sign with ad-hoc certificate for local testing
 echo "Signing with ad-hoc certificate..."
-# Helper Itemにエンタイトルメントを追加して署名
-codesign --force --sign - --entitlements ClaudeMonitorHelper.entitlements ClaudeCodeMonitor.app/Contents/Library/LoginItems/ClaudeMonitorHelper
+# Helper ItemはSandboxなしで署名（Login Helper ItemはSandbox外で動作する必要がある）
+codesign --force --sign - ClaudeCodeMonitor.app/Contents/Library/LoginItems/ClaudeMonitorHelper
 # メインアプリにエンタイトルメントを追加して署名
 codesign --force --sign - --entitlements ClaudeCodeMonitor.entitlements --deep ClaudeCodeMonitor.app
 

@@ -17,8 +17,8 @@ class HelperService {
                     }
             }
         
-        channel = try bootstrap.bind(host: "127.0.0.1", port: 3456).wait()
-        print("Helper server started on port 3456")
+        channel = try bootstrap.bind(host: "127.0.0.1", port: 8456).wait()
+        print("Helper server started on port 8456")
         
         // Keep running
         try channel!.closeFuture.wait()
@@ -86,8 +86,8 @@ class HTTPHandler: ChannelInboundHandler {
     
     private func handleBlocksRequest(context: ChannelHandlerContext) {
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        task.arguments = ["npx", "ccusage@latest", "blocks", "--active", "--json"]
+        task.executableURL = URL(fileURLWithPath: "/bin/bash")
+        task.arguments = ["-l", "-c", "npx ccusage@latest blocks --active --json"]
         
         // 共有された環境変数を使用
         var environment = ProcessInfo.processInfo.environment
@@ -105,7 +105,7 @@ class HTTPHandler: ChannelInboundHandler {
         
         task.environment = environment
         
-        print("[Helper] Executing npx with PATH: \(environment["PATH"] ?? "not set")")
+        print("[Helper] Executing ccusage via bash -l -c with PATH: \(environment["PATH"] ?? "not set")")
         
         let pipe = Pipe()
         let errorPipe = Pipe()
@@ -142,8 +142,8 @@ class HTTPHandler: ChannelInboundHandler {
     
     private func handleUsageRequest(context: ChannelHandlerContext) {
         let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        task.arguments = ["npx", "ccusage@latest", "--json"]
+        task.executableURL = URL(fileURLWithPath: "/bin/bash")
+        task.arguments = ["-l", "-c", "npx ccusage@latest --json"]
         
         // 共有された環境変数を使用
         var environment = ProcessInfo.processInfo.environment
@@ -161,7 +161,7 @@ class HTTPHandler: ChannelInboundHandler {
         
         task.environment = environment
         
-        print("[Helper] Executing npx with PATH: \(environment["PATH"] ?? "not set")")
+        print("[Helper] Executing ccusage via bash -l -c with PATH: \(environment["PATH"] ?? "not set")")
         
         let pipe = Pipe()
         let errorPipe = Pipe()

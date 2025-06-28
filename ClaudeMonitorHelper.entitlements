@@ -6,5 +6,7 @@
     <array>
         <string>group.com.k9i.claudecodemonitor</string>
     </array>
+    <key>com.apple.security.network.server</key>
+    <true/>
 </dict>
 </plist>
