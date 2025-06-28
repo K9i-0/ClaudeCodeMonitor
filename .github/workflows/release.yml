@@ -187,8 +187,17 @@ jobs:
         
         rm certificate.p12
     
-    # Download Node.js binaries for bundling
+    # Cache Node.js binaries
+    - name: Cache Node.js binaries
+      id: cache-node
+      uses: actions/cache@v4
+      with:
+        path: Resources/node
+        key: node-binaries-v20.18.2-universal
+    
+    # Download Node.js binaries for bundling (if not cached)
     - name: Download Node.js binaries
+      if: steps.cache-node.outputs.cache-hit != 'true'
       run: |
         echo "📦 Downloading Node.js binaries..."
         mkdir -p Resources/node
@@ -224,6 +233,14 @@ jobs:
         rm -rf node-*.tar.xz node-${NODE_VERSION}-*
         
         echo "✅ Node.js universal binary created"
+    
+    # Verify cached Node.js binary
+    - name: Verify Node.js binary
+      if: steps.cache-node.outputs.cache-hit == 'true'
+      run: |
+        echo "📦 Using cached Node.js binary"
+        file Resources/node/node
+        lipo -info Resources/node/node
     
     # Build the app
     - name: Create app bundle
