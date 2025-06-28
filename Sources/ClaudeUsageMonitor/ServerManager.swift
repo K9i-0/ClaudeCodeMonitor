@@ -101,8 +101,8 @@ class ServerManager: ObservableObject {
         }
         
         process.executableURL = URL(fileURLWithPath: node)
-        // Use server-fixed.js as specified in package.json
-        process.arguments = ["server-fixed.js"]
+        // Add --max-old-space-size to prevent memory issues in sandboxed environment
+        process.arguments = ["--max-old-space-size=128", "server.js"]
         process.currentDirectoryURL = URL(fileURLWithPath: validServerPath)
         
         // Set up environment

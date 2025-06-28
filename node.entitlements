@@ -6,11 +6,13 @@
     <true/>
     <key>com.apple.security.inherit</key>
     <true/>
-    <key>com.apple.security.cs.allow-jit</key>
-    <true/>
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
     <true/>
-    <key>com.apple.security.cs.disable-executable-page-protection</key>
+    <key>com.apple.security.files.user-selected.read-only</key>
     <true/>
+    <key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
+    <array>
+        <string>/.config/claude.ai/</string>
+    </array>
 </dict>
 </plist>

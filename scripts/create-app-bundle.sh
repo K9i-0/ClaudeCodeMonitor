@@ -1,11 +1,21 @@
 #!/bin/bash
 
 # Create macOS app bundle from Swift executable
-# Usage: ./scripts/create-app-bundle.sh <version>
+# Usage: ./scripts/create-app-bundle.sh [version] [--skip-signing]
 
 set -euo pipefail
 
 VERSION="${1:-0.0.0-dev}"
+SKIP_SIGNING=false
+
+# Parse arguments
+for arg in "$@"; do
+    case $arg in
+        --skip-signing)
+            SKIP_SIGNING=true
+            ;;
+    esac
+done
 
 echo "🔨 Creating macOS app bundle for version $VERSION"
 
@@ -132,8 +142,8 @@ echo ""
 echo "  Executable info:"
 file "$APP_PATH/Contents/MacOS/ClaudeCodeMonitor"
 
-# Sign Node.js binary if Developer ID is available
-if [ -f "$APP_PATH/Contents/Resources/node/node" ]; then
+# Sign Node.js binary if Developer ID is available and not skipping
+if [ -f "$APP_PATH/Contents/Resources/node/node" ] && [ "$SKIP_SIGNING" = false ]; then
     echo ""
     echo "Signing Node.js binary..."
     
