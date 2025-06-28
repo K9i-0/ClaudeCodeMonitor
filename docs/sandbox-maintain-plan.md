@@ -406,9 +406,21 @@ func startServer() async -> Bool {
   import ServiceManagement
   
   func applicationDidFinishLaunching(_ notification: Notification) {
-      // Helper Itemを登録
+      // Helper Itemを登録 (macOS 13+ では SMAppService を使用)
       let helperBundleIdentifier = "com.k9i.ClaudeMonitorHelper"
-      SMLoginItemSetEnabled(helperBundleIdentifier as CFString, true)
+      if #available(macOS 13.0, *) {
+          let loginItem = SMAppService.loginItem(identifier: helperBundleIdentifier)
+          do {
+              if !loginItem.status.rawValue.contains(SMAppService.Status.enabled.rawValue) {
+                  try loginItem.register()
+              }
+          } catch {
+              print("Failed to register login item: \(error)")
+          }
+      } else {
+          // macOS 12 以前の互換性
+          SMLoginItemSetEnabled(helperBundleIdentifier as CFString, true)
+      }
       
       // 少し待ってからデータ取得開始
       DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -538,6 +550,21 @@ func startServer() async -> Bool {
 
 ## 結論
 Login Helper Itemアプローチは、XPC Serviceの制限を回避し、確実にApp Sandboxの問題を解決できる唯一の実用的な方法です。Swift NIOを使用した軽量HTTPサーバーにより、Node.js依存も解消でき、全体的にシンプルで保守しやすいアーキテクチャになります。
+
+## App Store 審査と最新macOSへの対応
+
+### App Store 審査への適合性
+提案されているLogin Helper Itemアーキテクチャは、App Storeの審査基準に適合する可能性が高いです。権限分離とApple公式のフレームワーク（`SMAppService`）の使用は、Appleが推奨するセキュリティモデルに合致しています。
+
+**審査で注意すべき点と対策:**
+*   **ユーザーへの説明**: Helper Itemがなぜ必要なのか、バックグラウンドで何を行うのかを、アプリの初回起動時や設定画面などでユーザーに明確に説明する必要があります。透明性は審査において非常に重要です。
+*   **外部コマンドの実行**: Helper Itemが `npx ccusage` を実行する点について、審査官がその目的や安全性を問う可能性があります。「ユーザーのローカルにあるClaudeの利用状況ファイルにアクセスするためだけのコマンドであり、個人情報を外部に送信するものではない」という点を明確に説明できるようにしておく必要があります。
+*   **`ccusage` のバージョン固定**: `npx ccusage@latest` のように常に最新版を取得する仕様は、予期せぬアップデートによる動作不良のリスクや、セキュリティ上の懸念を指摘される可能性があります。審査の観点からは、**特定の安定したバージョンの `ccusage` を指定して実行する**方が好ましいでしょう。例えば、`npx ccusage@1.2.3` のようにバージョンを固定することを推奨します。
+
+### 最新macOSでの動作とAPIの検証
+
+*   **`SMLoginItemSetEnabled` の非推奨化**: macOS 13 Venturaで `SMLoginItemSetEnabled` は非推奨（Deprecated）になりました。最新のアプリでは後継の **`SMAppService` フレームワークを使用することが強く推奨**されます。本ドキュメントの「Login Helper Item 実装計画」の「Login Helper Itemの登録」セクションのコード例は、この変更を反映済みです。
+*   **macOS Ventura以降のユーザー体験**: macOS 13 Venturaから、アプリがログイン項目を追加すると、ユーザーにOSレベルの通知が表示されるようになりました。また、ユーザーは「システム設定」>「一般」>「ログイン項目」から、バックグラウンドで動作するすべての項目を簡単に確認し、無効化できます。これはアーキテクチャの有効性を損なうものではありませんが、ユーザーがHelperを無効にする可能性を考慮し、その場合にアプリがどのように振る舞うか（例: 機能制限を伝えるメッセージを表示する）を設計に含めるべきです。
 
 ## 現在のプロジェクト構成
 
