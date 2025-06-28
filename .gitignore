@@ -32,6 +32,9 @@ Temporary Items
 
 # Application specific
 ClaudeUsageMonitor.app/
+ClaudeCodeMonitor.app/
+*.dmg
+Resources/
 DerivedData/
 *.pbxuser
 !default.pbxuser
