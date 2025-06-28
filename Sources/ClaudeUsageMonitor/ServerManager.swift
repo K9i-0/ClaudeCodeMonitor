@@ -8,21 +8,20 @@ class ServerManager: ObservableObject {
     private let serverPort = 3456
     @Published var isServerRunning = false
     var claudePath: String?
+    private var serverMonitorTask: Task<Void, Never>?
     
     private init() {}
     
-    func checkAndStartServer() {
+    func checkAndStartServer() async -> Bool {
         // Check if server is already running
-        Task {
-            if await isServerResponding() {
-                print("[ServerManager] Server already running")
-                isServerRunning = true
-                return
-            }
-            
-            // Try to start the server
-            startServer()
+        if await isServerResponding() {
+            print("[ServerManager] Server already running")
+            isServerRunning = true
+            return true
         }
+        
+        // Try to start the server
+        return await startServer()
     }
     
     private func isServerResponding() async -> Bool {
@@ -43,7 +42,7 @@ class ServerManager: ObservableObject {
         return false
     }
     
-    private func startServer() {
+    private func startServer() async -> Bool {
         print("[ServerManager] Attempting to start server")
         
         // First, try to find server in the app bundle (production)
@@ -65,7 +64,7 @@ class ServerManager: ObservableObject {
         // Check if server directory exists
         guard let validServerPath = serverPath else {
             print("[ServerManager] Server directory not found")
-            return
+            return false
         }
         
         // Create process to start server
@@ -98,12 +97,12 @@ class ServerManager: ObservableObject {
         
         guard let node = nodePath else {
             print("[ServerManager] Node.js not found")
-            return
+            return false
         }
         
         process.executableURL = URL(fileURLWithPath: node)
         // Add --max-old-space-size to prevent memory issues in sandboxed environment
-        process.arguments = ["--max-old-space-size=128", "server.js"]
+        process.arguments = ["--max-old-space-size=\(Constants.Server.nodeMemoryLimit)", "server.js"]
         process.currentDirectoryURL = URL(fileURLWithPath: validServerPath)
         
         // Set up environment
@@ -136,25 +135,74 @@ class ServerManager: ObservableObject {
             try process.run()
             serverProcess = process
             
-            // Wait a bit for server to start
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                Task {
-                    if await self.isServerResponding() {
-                        print("[ServerManager] Server started successfully")
-                        self.isServerRunning = true
-                    } else {
-                        print("[ServerManager] Server failed to start")
-                    }
+            // Wait for server to start with multiple retry attempts
+            var retryCount = 0
+            let maxRetries = Constants.Server.serverStartupRetryCount
+            let retryDelay = UInt64(Constants.Timing.serverStartupRetryDelay * 1_000_000_000)
+            
+            while retryCount < maxRetries {
+                try? await Task.sleep(nanoseconds: retryDelay)
+                
+                if await isServerResponding() {
+                    print("[ServerManager] Server started successfully after \(retryCount + 1) attempt(s)")
+                    isServerRunning = true
+                    startServerMonitoring()
+                    return true
                 }
+                
+                retryCount += 1
+                print("[ServerManager] Server not responding yet, retry \(retryCount)/\(maxRetries)")
             }
+            
+            print("[ServerManager] Server failed to start after \(maxRetries) attempts")
+            stopServer() // Clean up the process
+            return false
+            
         } catch {
             print("[ServerManager] Failed to start server: \(error)")
+            return false
         }
     }
     
     func stopServer() {
+        serverMonitorTask?.cancel()
+        serverMonitorTask = nil
         serverProcess?.terminate()
         serverProcess = nil
         isServerRunning = false
+    }
+    
+    private func startServerMonitoring() {
+        serverMonitorTask?.cancel()
+        
+        serverMonitorTask = Task {
+            print("[ServerManager] Starting server health monitoring")
+            
+            while !Task.isCancelled {
+                // Check at configured interval
+                let checkInterval = UInt64(Constants.Timing.serverHealthCheckInterval * 1_000_000_000)
+                try? await Task.sleep(nanoseconds: checkInterval)
+                
+                if Task.isCancelled { break }
+                
+                // Check if server is still responding
+                let isResponding = await isServerResponding()
+                if !isResponding {
+                    print("[ServerManager] Server is not responding, attempting restart...")
+                    isServerRunning = false
+                    
+                    // Try to restart the server
+                    let restarted = await startServer()
+                    if restarted {
+                        print("[ServerManager] Server restarted successfully")
+                    } else {
+                        print("[ServerManager] Failed to restart server")
+                        // Could emit a notification here in the future
+                    }
+                }
+            }
+            
+            print("[ServerManager] Server monitoring stopped")
+        }
     }
 }

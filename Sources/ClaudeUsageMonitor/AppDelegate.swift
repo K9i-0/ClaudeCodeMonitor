@@ -20,7 +20,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             ServerManager.shared.claudePath = dataAccessManager.claudePath
             
             // Start the local server with path
-            ServerManager.shared.checkAndStartServer()
+            Task {
+                await ServerManager.shared.checkAndStartServer()
+            }
         } else {
             print("[AppDelegate] No data access yet, server will start after folder selection")
             // Don't start server yet - will start after user selects folder
@@ -98,7 +100,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     // Restart server if needed
                     if ServerManager.shared.isServerRunning {
                         ServerManager.shared.stopServer()
-                        ServerManager.shared.checkAndStartServer()
+                        Task {
+                            await ServerManager.shared.checkAndStartServer()
+                        }
                     }
                     
                     // Fetch data

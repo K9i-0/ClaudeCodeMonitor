@@ -4,6 +4,8 @@ struct DataAccessView: View {
     @EnvironmentObject var dataAccessManager: ClaudeDataAccessManager
     @EnvironmentObject var monitor: UsageMonitor
     @State private var isRequesting = false
+    @State private var errorMessage: String?
+    @State private var showingError = false
     
     var body: some View {
         VStack(spacing: 20) {
@@ -27,7 +29,6 @@ struct DataAccessView: View {
                 Task { @MainActor in
                     let success = await dataAccessManager.requestAccess()
                     print("[DataAccessView] Request completed with success: \(success)")
-                    isRequesting = false
                     
                     if success {
                         print("[DataAccessView] Access granted, updating server...")
@@ -43,14 +44,26 @@ struct DataAccessView: View {
                         
                         // Start server with new path
                         print("[DataAccessView] Starting server with new path...")
-                        ServerManager.shared.checkAndStartServer()
+                        let serverStarted = await ServerManager.shared.checkAndStartServer()
                         
-                        // Wait a bit for server to start before fetching data
-                        try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-                        
-                        print("[DataAccessView] Fetching usage data...")
-                        monitor.fetchUsageData()
+                        if serverStarted {
+                            // Wait a bit for server to stabilize
+                            let waitTime = UInt64(Constants.Timing.dataAccessWaitTime * 1_000_000_000)
+                            try? await Task.sleep(nanoseconds: waitTime)
+                            
+                            print("[DataAccessView] Fetching usage data...")
+                            monitor.fetchUsageData()
+                        } else {
+                            errorMessage = "Failed to start the monitoring server. Please try again."
+                            showingError = true
+                        }
+                    } else {
+                        // Access request was cancelled or failed
+                        errorMessage = "Access to Claude data folder was not granted."
+                        showingError = true
                     }
+                    
+                    isRequesting = false
                 }
             }) {
                 HStack {
@@ -74,5 +87,12 @@ struct DataAccessView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
+        .alert("Error", isPresented: $showingError) {
+            Button("OK") {
+                errorMessage = nil
+            }
+        } message: {
+            Text(errorMessage ?? "An unknown error occurred")
+        }
     }
 }

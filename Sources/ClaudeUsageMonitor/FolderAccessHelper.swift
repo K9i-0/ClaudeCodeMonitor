@@ -41,28 +41,30 @@ class FolderAccessHelper {
         openPanel.makeKeyAndOrderFront(nil)
         openPanel.level = .modalPanel
         
-        // Use runModal for synchronous operation and better control
-        let response = openPanel.runModal()
-        
-        if response == .OK, let selectedURL = openPanel.url {
-            print("[FolderAccessHelper] User selected: \(selectedURL.path)")
-            
-            // Double-check that user selected the correct folder
-            if selectedURL.lastPathComponent == ".claude" {
-                completion(selectedURL)
-            } else {
-                // If user selected a parent directory, try to find .claude within it
-                let claudeInSelected = selectedURL.appendingPathComponent(".claude")
-                if FileManager.default.fileExists(atPath: claudeInSelected.path) {
-                    print("[FolderAccessHelper] Adjusting selection to: \(claudeInSelected.path)")
-                    completion(claudeInSelected)
+        // Use async begin to avoid blocking the UI
+        openPanel.begin { response in
+            Task { @MainActor in
+                if response == .OK, let selectedURL = openPanel.url {
+                    print("[FolderAccessHelper] User selected: \(selectedURL.path)")
+                    
+                    // Double-check that user selected the correct folder
+                    if selectedURL.lastPathComponent == ".claude" {
+                        completion(selectedURL)
+                    } else {
+                        // If user selected a parent directory, try to find .claude within it
+                        let claudeInSelected = selectedURL.appendingPathComponent(".claude")
+                        if FileManager.default.fileExists(atPath: claudeInSelected.path) {
+                            print("[FolderAccessHelper] Adjusting selection to: \(claudeInSelected.path)")
+                            completion(claudeInSelected)
+                        } else {
+                            completion(selectedURL)
+                        }
+                    }
                 } else {
-                    completion(selectedURL)
+                    print("[FolderAccessHelper] User cancelled")
+                    completion(nil)
                 }
             }
-        } else {
-            print("[FolderAccessHelper] User cancelled")
-            completion(nil)
         }
     }
 }

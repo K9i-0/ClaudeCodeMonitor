@@ -206,6 +206,15 @@ struct Constants {
         static let refreshInterval: TimeInterval = 300 // 5分
         static let animationDuration: Double = 0.3
         static let longAnimationDuration: Double = 0.5
+        static let serverRestartDelay: TimeInterval = 2.0
+        static let serverHealthCheckInterval: TimeInterval = 30.0
+        static let serverStartupRetryDelay: TimeInterval = 1.0
+        static let dataAccessWaitTime: TimeInterval = 2.0
+    }
+    
+    struct Server {
+        static let serverStartupRetryCount = 5
+        static let nodeMemoryLimit = 128 // MB
     }
     
     struct UI {
