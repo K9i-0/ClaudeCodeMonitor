@@ -11,10 +11,10 @@ struct DataAccessView: View {
                 .font(.system(size: 50))
                 .foregroundStyle(.blue)
             
-            Text("Claude Data Access Required")
+            Text("Permission Required")
                 .font(.headline)
             
-            Text("To monitor your Claude usage, this app needs access to your Claude data folder.")
+            Text("Grant access to monitor your Claude usage")
                 .font(.caption)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
@@ -24,15 +24,7 @@ struct DataAccessView: View {
                 print("[DataAccessView] Button clicked")
                 isRequesting = true
                 
-                // Close popover temporarily to show file dialog
-                if let appDelegate = NSApp.delegate as? AppDelegate {
-                    appDelegate.closePopover()
-                }
-                
                 Task { @MainActor in
-                    // Small delay to ensure popover is closed
-                    try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
-                    
                     let success = await dataAccessManager.requestAccess()
                     print("[DataAccessView] Request completed with success: \(success)")
                     isRequesting = false
@@ -69,7 +61,7 @@ struct DataAccessView: View {
                     } else {
                         Image(systemName: "folder.fill")
                     }
-                    Text("Select Claude Data Folder")
+                    Text("Grant Access to Claude Data")
                 }
                 .frame(minWidth: 200)
             }

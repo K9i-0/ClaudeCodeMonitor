@@ -9,11 +9,33 @@ class ClaudeDataAccessManager: ObservableObject {
     private let bookmarkKey = "ClaudeDataFolderBookmark"
     
     init() {
+        print("[ClaudeDataAccess] Initializing...")
         checkExistingAccess()
+        print("[ClaudeDataAccess] Initial hasAccess: \(hasAccess), claudePath: \(claudePath ?? "nil")")
     }
     
-    /// Check if we have existing access via bookmark
+    /// Check if we have existing access via saved path or bookmark
     func checkExistingAccess() {
+        // First try to load saved path
+        if let savedPath = UserDefaults.standard.string(forKey: "claudeDataPath") {
+            print("[ClaudeDataAccess] Found saved path: \(savedPath)")
+            // Verify the path still exists and has projects subdirectory
+            let url = URL(fileURLWithPath: savedPath)
+            let projectsURL = url.appendingPathComponent("projects")
+            
+            if FileManager.default.fileExists(atPath: projectsURL.path) {
+                claudePath = savedPath
+                hasAccess = true
+                print("[ClaudeDataAccess] Path is valid, access restored")
+                return
+            } else {
+                print("[ClaudeDataAccess] Saved path no longer valid")
+                // Clear invalid path
+                UserDefaults.standard.removeObject(forKey: "claudeDataPath")
+            }
+        }
+        
+        // Legacy bookmark support
         guard let bookmarkData = UserDefaults.standard.data(forKey: bookmarkKey) else {
             print("[ClaudeDataAccess] No existing bookmark found")
             return
@@ -54,9 +76,28 @@ class ClaudeDataAccessManager: ObservableObject {
     func requestAccess() async -> Bool {
         print("[ClaudeDataAccess] Requesting folder access...")
         
+        // Pause event monitor to prevent popover from closing
+        await MainActor.run {
+            if let appDelegate = NSApp.delegate as? AppDelegate {
+                appDelegate.pauseEventMonitor()
+            }
+        }
+        
         return await withCheckedContinuation { continuation in
             FolderAccessHelper.requestFolderAccess { [weak self] url in
-                guard let self = self, let url = url else {
+                guard let self = self else {
+                    continuation.resume(returning: false)
+                    return
+                }
+                
+                // Resume event monitor after dialog is closed
+                Task { @MainActor in
+                    if let appDelegate = NSApp.delegate as? AppDelegate {
+                        appDelegate.resumeEventMonitor()
+                    }
+                }
+                
+                guard let url = url else {
                     print("[ClaudeDataAccess] User cancelled folder selection")
                     continuation.resume(returning: false)
                     return
@@ -81,44 +122,47 @@ class ClaudeDataAccessManager: ObservableObject {
         var isDirectory: ObjCBool = false
         guard fileManager.fileExists(atPath: projectsURL.path, isDirectory: &isDirectory),
               isDirectory.boolValue else {
-            print("[ClaudeDataAccess] Selected folder doesn't contain 'projects' subdirectory")
-            // Show error alert
-            await showError(message: L10n.invalidClaudeFolder)
+            print("[ClaudeDataAccess] Selected folder doesn't contain 'projects' subdirectory: \(url.path)")
+            print("[ClaudeDataAccess] Looking for: \(projectsURL.path)")
+            // Show error alert with more detail
+            let errorMessage = """
+            \(L10n.invalidClaudeFolder)
+            
+            Selected: \(url.path)
+            Expected: ~/.claude (with projects subdirectory)
+            """
+            await showError(message: errorMessage)
             return false
         }
         
         // Start accessing the resource BEFORE creating bookmark
+        // Note: startAccessingSecurityScopedResource returns false for non-security-scoped URLs,
+        // which is normal for user-selected folders via NSOpenPanel
         let startedAccess = url.startAccessingSecurityScopedResource()
         print("[ClaudeDataAccess] Started security-scoped access: \(startedAccess)")
+        print("[ClaudeDataAccess] URL: \(url.path)")
         
-        guard startedAccess else {
-            print("[ClaudeDataAccess] Failed to start accessing security-scoped resource")
-            await showError(message: L10n.failedToSaveAccess)
-            return false
+        // Don't fail if startAccessingSecurityScopedResource returns false
+        // as it's expected for regular file URLs from NSOpenPanel
+        
+        // For App Sandbox, we'll simply save the path and rely on the server
+        // to access the files with CLAUDE_CONFIG_DIR environment variable
+        claudePath = url.path
+        hasAccess = true
+        
+        // Save the path to UserDefaults (not as bookmark, just as string)
+        UserDefaults.standard.set(url.path, forKey: "claudeDataPath")
+        UserDefaults.standard.synchronize()
+        
+        print("[ClaudeDataAccess] Successfully saved path: \(url.path)")
+        print("[ClaudeDataAccess] hasAccess is now: \(hasAccess)")
+        
+        // Stop accessing if we started it
+        if startedAccess {
+            url.stopAccessingSecurityScopedResource()
         }
         
-        // Create security-scoped bookmark while access is active
-        do {
-            let bookmarkData = try url.bookmarkData(options: .withSecurityScope,
-                                                   includingResourceValuesForKeys: nil,
-                                                   relativeTo: nil)
-            
-            // Save bookmark to UserDefaults
-            UserDefaults.standard.set(bookmarkData, forKey: bookmarkKey)
-            UserDefaults.standard.synchronize() // Force save
-            
-            claudePath = url.path
-            hasAccess = true
-            print("[ClaudeDataAccess] Successfully saved access to: \(url.path)")
-            print("[ClaudeDataAccess] hasAccess is now: \(hasAccess)")
-            
-            // Don't stop accessing here - keep it active for the session
-            return true
-        } catch {
-            print("[ClaudeDataAccess] Error creating bookmark: \(error)")
-            await showError(message: L10n.failedToSaveAccess)
-            return false
-        }
+        return true
     }
     
     /// Show error alert
@@ -136,7 +180,11 @@ class ClaudeDataAccessManager: ObservableObject {
     
     /// Reset access (for testing or if user wants to change folder)
     func resetAccess() {
+        print("[ClaudeDataAccess] Resetting access...")
         UserDefaults.standard.removeObject(forKey: bookmarkKey)
+        UserDefaults.standard.removeObject(forKey: "claudeDataPath")
+        UserDefaults.standard.synchronize()
+        
         if let path = claudePath {
             URL(fileURLWithPath: path).stopAccessingSecurityScopedResource()
         }

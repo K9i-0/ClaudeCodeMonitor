@@ -209,7 +209,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @MainActor
-    private func showPopover() {
+    func showPopover() {
         if let button = statusItem.button {
             // Refresh data when opening popover
             usageMonitor.fetchUsageData()
@@ -221,6 +221,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func closePopover() {
         popover.performClose(nil)
         eventMonitor?.stop()
+    }
+    
+    func pauseEventMonitor() {
+        eventMonitor?.stop()
+    }
+    
+    func resumeEventMonitor() {
+        if popover.isShown {
+            eventMonitor?.start()
+        }
     }
     
     func applicationWillTerminate(_ notification: Notification) {

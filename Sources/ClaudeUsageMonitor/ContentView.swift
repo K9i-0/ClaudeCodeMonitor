@@ -537,13 +537,13 @@ struct UsageDetailView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.secondary)
                 
-                ForEach(modelBreakdowns.sorted(by: { $0.cost > $1.cost }), id: \.modelName) { breakdown in
+                ForEach(modelBreakdowns.sorted(by: { $0.actualCost > $1.actualCost }), id: \.modelName) { breakdown in
                     HStack {
                         Text(formatModelName(breakdown.modelName))
                             .font(.system(size: 12))
                         Spacer()
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text(monitor.formatCost(breakdown.cost))
+                            Text(monitor.formatCost(breakdown.actualCost))
                                 .font(.system(size: 12, weight: .medium))
                             Text("\(monitor.formatTokens(breakdown.inputTokens + breakdown.outputTokens)) tokens")
                                 .font(.system(size: 10))
