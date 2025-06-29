@@ -74,6 +74,12 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
                 var request = URLRequest(url: url)
                 request.timeoutInterval = 5.0 // 5 second timeout
                 
+                // Add authentication header
+                if let sharedDefaults = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor"),
+                   let authToken = sharedDefaults.string(forKey: "helperAuthToken") {
+                    request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+                }
+                
                 print("Attempting to fetch from server: \(url)")
                 let (data, response) = try await URLSession.shared.data(for: request)
                 
@@ -154,6 +160,12 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
                 
                 var request = URLRequest(url: url)
                 request.timeoutInterval = 2.0 // Quick timeout
+                
+                // Add authentication header
+                if let sharedDefaults = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor"),
+                   let authToken = sharedDefaults.string(forKey: "helperAuthToken") {
+                    request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+                }
                 
                 let (data, response) = try await URLSession.shared.data(for: request)
                 

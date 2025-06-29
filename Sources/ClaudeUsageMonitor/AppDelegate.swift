@@ -250,7 +250,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             // Check if helper is running by testing the health endpoint
             let url = URL(string: "http://127.0.0.1:8456/health")!
-            let request = URLRequest(url: url, timeoutInterval: 1.0)
+            var request = URLRequest(url: url, timeoutInterval: 1.0)
+            
+            // Add authentication header
+            if let sharedDefaults = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor"),
+               let authToken = sharedDefaults.string(forKey: "helperAuthToken") {
+                request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+            }
             
             URLSession.shared.dataTask(with: request) { data, response, error in
                 DispatchQueue.main.async {

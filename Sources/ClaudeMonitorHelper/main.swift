@@ -5,6 +5,24 @@ import NIOHTTP1
 class HelperService {
     private let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     private var channel: Channel?
+    private let authToken: String
+    
+    init() {
+        // Generate or retrieve auth token
+        if let sharedDefaults = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor"),
+           let existingToken = sharedDefaults.string(forKey: "helperAuthToken") {
+            self.authToken = existingToken
+        } else {
+            // Generate new token
+            self.authToken = UUID().uuidString
+            // Save to app group
+            if let sharedDefaults = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor") {
+                sharedDefaults.set(authToken, forKey: "helperAuthToken")
+                sharedDefaults.synchronize()
+            }
+        }
+        print("[Helper] Using auth token: \(authToken)")
+    }
     
     func start() throws {
         let bootstrap = ServerBootstrap(group: group)
@@ -13,7 +31,7 @@ class HelperService {
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true)
                     .flatMap {
-                        channel.pipeline.addHandler(HTTPHandler())
+                        channel.pipeline.addHandler(HTTPHandler(authToken: self.authToken))
                     }
             }
         
@@ -35,9 +53,10 @@ class HTTPHandler: ChannelInboundHandler {
     typealias OutboundOut = HTTPServerResponsePart
     
     private var accumulated = Data()
+    private let authToken: String
     
-    init() {
-        // 初期化時には何もしない
+    init(authToken: String) {
+        self.authToken = authToken
     }
     
     private func getSharedEnvironment() -> [String: String] {
@@ -65,6 +84,13 @@ class HTTPHandler: ChannelInboundHandler {
         switch reqPart {
         case .head(let header):
             accumulated = Data()
+            
+            // Check authorization header
+            let authHeader = header.headers["Authorization"].first
+            if authHeader != "Bearer \(authToken)" {
+                sendResponse(context: context, status: .unauthorized, body: "{\"error\":\"Unauthorized\"}")
+                return
+            }
             
             if header.uri == "/blocks/active" {
                 handleBlocksRequest(context: context)
