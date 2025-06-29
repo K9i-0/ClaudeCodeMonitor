@@ -282,7 +282,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func startHelperManually() {
         // In development, start the helper directly
-        let helperPath = Bundle.main.path(forResource: "ClaudeMonitorHelper", ofType: nil, inDirectory: "Library/LaunchServices")
+        var helperPath = Bundle.main.path(forResource: "ClaudeMonitorHelper", ofType: nil, inDirectory: "Library/LaunchServices")
+        
+        // Fallback for development builds (Xcode or swift build)
+        if helperPath == nil {
+            // Try to find helper in the same directory as the main executable
+            let mainExecutablePath = Bundle.main.executablePath ?? ""
+            let mainDirectory = URL(fileURLWithPath: mainExecutablePath).deletingLastPathComponent()
+            let possibleHelperPath = mainDirectory.appendingPathComponent("ClaudeMonitorHelper").path
+            
+            if FileManager.default.fileExists(atPath: possibleHelperPath) {
+                helperPath = possibleHelperPath
+                print("[AppDelegate] Found helper in development location: \(possibleHelperPath)")
+            }
+        }
         
         if let helperPath = helperPath {
             let task = Process()
