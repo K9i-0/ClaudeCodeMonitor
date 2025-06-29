@@ -35,8 +35,38 @@ class HelperService {
                     }
             }
         
-        channel = try bootstrap.bind(host: "127.0.0.1", port: 8456).wait()
-        print("Helper server started on port 8456")
+        // Try preferred port first, then find available port
+        let preferredPort = 8456
+        var actualPort = preferredPort
+        
+        do {
+            channel = try bootstrap.bind(host: "127.0.0.1", port: preferredPort).wait()
+            actualPort = preferredPort
+        } catch {
+            // Port is in use, find an available port
+            print("Port \(preferredPort) is in use, finding available port...")
+            for port in 8457...8470 {
+                do {
+                    channel = try bootstrap.bind(host: "127.0.0.1", port: port).wait()
+                    actualPort = port
+                    break
+                } catch {
+                    continue
+                }
+            }
+            
+            if channel == nil {
+                throw error
+            }
+        }
+        
+        // Save the actual port to app group
+        if let sharedDefaults = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor") {
+            sharedDefaults.set(actualPort, forKey: "helperPort")
+            sharedDefaults.synchronize()
+        }
+        
+        print("Helper server started on port \(actualPort)")
         
         // Keep running
         try channel!.closeFuture.wait()

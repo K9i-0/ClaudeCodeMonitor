@@ -69,8 +69,11 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         error = nil
         
         do {
+            // Get the actual port from app group
+            let port = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor")?.integer(forKey: "helperPort") ?? 8456
+            
             // Try local server first
-            if let url = URL(string: "http://127.0.0.1:8456/usage") {
+            if let url = URL(string: "http://127.0.0.1:\(port)/usage") {
                 var request = URLRequest(url: url)
                 request.timeoutInterval = 5.0 // 5 second timeout
                 
@@ -154,8 +157,11 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         print("[DEBUG] PATH: \(ProcessInfo.processInfo.environment["PATH"] ?? "not set")")
         
         do {
+            // Get the actual port from app group
+            let port = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor")?.integer(forKey: "helperPort") ?? 8456
+            
             // Try local server first for session data
-            if let url = URL(string: "http://127.0.0.1:8456/blocks/active") {
+            if let url = URL(string: "http://127.0.0.1:\(port)/blocks/active") {
                 print("[DEBUG] Attempting server connection to \(url)")
                 
                 var request = URLRequest(url: url)

@@ -248,8 +248,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func checkAndStartHelper() {
         // Wait a bit for the helper to start
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            // Get the actual port from app group
+            let port = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor")?.integer(forKey: "helperPort") ?? 8456
+            
             // Check if helper is running by testing the health endpoint
-            let url = URL(string: "http://127.0.0.1:8456/health")!
+            let url = URL(string: "http://127.0.0.1:\(port)/health")!
             var request = URLRequest(url: url, timeoutInterval: 1.0)
             
             // Add authentication header
