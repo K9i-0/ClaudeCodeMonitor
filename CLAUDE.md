@@ -12,65 +12,39 @@ ClaudeCodeMonitor is a macOS menubar application that monitors Claude Code API u
 # Run tests
 swift test
 
-# Build debug version
-swift build
+# Development build and run
+./scripts/build-local.sh  # Builds debug version with helper
+./scripts/run-local.sh    # Starts helper and main app
 
 # Build release version
-swift build -c release
-
-# Create app bundle (required after CLI build)
-mkdir -p ClaudeCodeMonitor.app/Contents/MacOS
-mkdir -p ClaudeCodeMonitor.app/Contents/Resources
-cp .build/arm64-apple-macosx/debug/ClaudeCodeMonitor ClaudeCodeMonitor.app/Contents/MacOS/
-cp Info.plist ClaudeCodeMonitor.app/Contents/
-open ClaudeCodeMonitor.app
-
-# Build release with code signing (requires Developer ID)
-./scripts/build-release.sh
-
-# Run local server (REQUIRED for App Sandbox mode)
-cd server
-npm install
-npm start  # Runs on http://127.0.0.1:3456
+./scripts/build-release.sh  # Requires Developer ID for distribution
 
 # Open in Xcode (recommended for development)
 open Package.swift
 # Then Build (⌘B) and Run (⌘R) in Xcode
 
-# Local testing with Node.js bundled (App Sandbox mode)
-./scripts/test-local-with-node.sh
-# This script:
-# 1. Downloads Node.js binaries (if not already present)
-# 2. Creates universal binary
-# 3. Builds the app with --skip-signing flag
-# 4. Signs Node.js with entitlements
-# 5. Signs the app with ad-hoc certificate
-# Then run: open ClaudeCodeMonitor.app
+# Manual build steps (if needed)
+swift build -c debug --product ClaudeCodeMonitor
+swift build -c debug --product ClaudeMonitorHelper
 
 # Clean up processes if needed
-killall ClaudeCodeMonitor 2>/dev/null || true
-ps aux | grep -E "node.*server" | grep -v grep | awk '{print $2}' | xargs kill 2>/dev/null || true
+killall ClaudeCodeMonitor ClaudeMonitorHelper 2>/dev/null || true
 ```
 
 ## Architecture
 
 ### Data Flow
-1. **ccusage Integration**: Fetches usage data via local server (required when App Sandbox is enabled)
+1. **ccusage Integration**: Fetches usage data via ClaudeMonitorHelper service
 2. **Session-Based Monitoring**: Claude Code uses 5-hour session blocks with token limits
 3. **Real-Time Updates**: 5-minute auto-refresh with manual refresh option
 4. **MainActor Isolation**: SwiftUI views and UsageMonitor are @MainActor isolated
 
-### App Sandbox Support
-- **App Sandbox is enabled** for App Store distribution
-- When App Sandbox is enabled, the local server (http://127.0.0.1:3456) is **required**
-- Direct command execution (npx) is not possible with App Sandbox
-- Network entitlements allow localhost connections only
-
-### Data Access (App Sandbox)
-- Uses NSOpenPanel for user to grant access to ~/.claude directory
-- Security-scoped bookmarks persist access across app launches
-- No temporary-exception entitlements (App Store compliant)
-- ClaudeDataAccessManager handles folder selection and bookmark management
+### ClaudeMonitorHelper Architecture
+- **Separate executable** that runs as a non-sandboxed service
+- **Communicates via HTTP** on port 8456 (http://127.0.0.1:8456)
+- **Executes ccusage** commands directly without sandbox restrictions
+- **Registered as Login Item** for production, manually started in development
+- **App Group sharing** for environment variables and paths
 
 ### Key Components
 
@@ -105,11 +79,12 @@ ps aux | grep -E "node.*server" | grep -v grep | awk '{print $2}' | xargs kill 2
 - Handles Xcode debug build limitations with bundle checks
 - Implements UNUserNotificationCenterDelegate
 
-**ServerManager.swift**
-- Manages local Express server lifecycle
-- Auto-starts server when app launches
-- Handles server health checks and restarts
-- Logs server output for debugging
+**ClaudeMonitorHelper (main.swift)**
+- Separate non-sandboxed executable for ccusage execution
+- Built with SwiftNIO for HTTP server on port 8456
+- Reads environment variables from App Group
+- Executes ccusage via bash -l -c for proper shell environment
+- Handles /blocks/active, /usage, and /health endpoints
 
 ### Testing Strategy
 - Unit tests with mocks for UsageMonitor and network services
@@ -143,9 +118,12 @@ When Apple Developer Program is available:
 
 ## Technical Decisions
 
-### ccusage Execution Strategy
-1. App Sandbox enabled: Server-only mode (required)
-2. App Sandbox disabled: Try server first, then fall back to direct npx
+### Helper Service Strategy
+1. Main app (ClaudeCodeMonitor) runs with App Sandbox enabled
+2. Helper service (ClaudeMonitorHelper) runs without sandbox
+3. Communication via HTTP localhost (allowed by sandbox)
+4. In development: Helper started automatically via AppDelegate
+5. In production: Helper registered as Login Item via SMAppService
 
 ### Module Name Mismatch
 - Package name: `ClaudeCodeMonitor`
@@ -168,6 +146,6 @@ When Apple Developer Program is available:
 
 - macOS 13.0+
 - Swift 5.9+
-- Node.js 18+ (for ccusage CLI and local server)
+- Node.js 18+ (for ccusage CLI)
 - Xcode 15+ (for development)
 - App runs as LSUIElement (menubar only, no Dock icon)

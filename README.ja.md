@@ -35,7 +35,8 @@ macOSのメニューバーに常駐し、Claude Codeの使用状況をリアル�
 - 🔄 5分ごとの自動更新
 - 🔄 手動更新ボタン
 - ⚙️ プラン設定（Pro/Max5/Max20）
-- 🌐 ローカルサーバーモードでの安定動作
+- 🌍 多言語対応（英語/日本語）
+- 🚀 SwiftUIによるネイティブパフォーマンス
 
 ## 🚀 インストール
 
@@ -53,7 +54,7 @@ macOSのメニューバーに常駐し、Claude Codeの使用状況をリアル�
 
 - macOS 13.0以上
 - Swift 5.9以上
-- Node.js 18以上（ccusage CLIツールの実行に必要）
+- Node.js 18以上（ccusage CLI用）
 - Xcode 15以上（開発時）
 
 ## 🛠️ セットアップ
@@ -65,21 +66,19 @@ git clone https://github.com/K9i-0/ClaudeCodeMonitor.git
 cd ClaudeCodeMonitor
 ```
 
-### 2. Node.jsサーバーのセットアップ（推奨）
+### 2. ビルドと実行
 
-ローカルサーバーを使用することで、より安定した動作を実現できます：
+#### 開発用
 
 ```bash
-cd server
-npm install
-npm start
+# ビルドとアプリバンドルの作成
+./scripts/build-local.sh
+
+# ヘルパーサービスと一緒に実行
+./scripts/run-local.sh
 ```
 
-サーバーは`http://127.0.0.1:3456`で起動します。
-
-### 3. ビルド方法
-
-#### 方法1: Xcodeを使用（推奨）
+#### Xcodeを使用（推奨）
 
 ```bash
 open Package.swift
@@ -89,11 +88,11 @@ Xcodeで:
 - **ビルド**: Product > Build（⌘B）
 - **実行**: Product > Run（⌘R）
 
-#### 方法2: コマンドラインでビルド
+#### リリースビルド
 
 ```bash
-# ビルドとアプリバンドルの作成
-./scripts/create-app-bundle.sh
+# リリースビルドの作成（配布にはDeveloper IDが必要）
+./scripts/build-release.sh
 ```
 
 

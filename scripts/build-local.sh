@@ -18,37 +18,50 @@ else
   echo "Development build: $VERSION"
 fi
 
-# Build the app
-echo "Building Swift package..."
-swift build -c release
+# Build the app and helper
+echo "Building Swift packages..."
+swift build -c debug --product ClaudeCodeMonitor
+swift build -c debug --product ClaudeMonitorHelper
 
-# Find the executable
-EXECUTABLE_PATH=$(find .build -name ClaudeCodeMonitor -type f -perm +111 | grep -v '.dSYM' | grep release | head -1)
+# Find the executables
+EXECUTABLE_PATH=$(find .build -name ClaudeCodeMonitor -type f -perm +111 | grep -v '.dSYM' | grep debug | head -1)
+HELPER_PATH=$(find .build -name ClaudeMonitorHelper -type f -perm +111 | grep -v '.dSYM' | grep debug | head -1)
 
 if [ ! -f "$EXECUTABLE_PATH" ]; then
-  echo "❌ Failed to find executable"
+  echo "❌ Failed to find main executable"
   exit 1
 fi
 
-echo "✅ Binary built at: $EXECUTABLE_PATH"
+if [ ! -f "$HELPER_PATH" ]; then
+  echo "❌ Failed to find helper executable"
+  exit 1
+fi
+
+echo "✅ Main binary built at: $EXECUTABLE_PATH"
+echo "✅ Helper binary built at: $HELPER_PATH"
 
 # Create app bundle
 echo "Creating app bundle..."
 rm -rf ClaudeCodeMonitor.app
 mkdir -p "ClaudeCodeMonitor.app/Contents/MacOS"
 mkdir -p "ClaudeCodeMonitor.app/Contents/Resources"
+mkdir -p "ClaudeCodeMonitor.app/Contents/Library/LaunchServices"
 
-# Copy executable
+# Copy executables
 cp "$EXECUTABLE_PATH" "ClaudeCodeMonitor.app/Contents/MacOS/"
+cp "$HELPER_PATH" "ClaudeCodeMonitor.app/Contents/Library/LaunchServices/"
 
-# Copy and update Info.plist
+# Copy and update Info.plist files
 cp Info.plist "ClaudeCodeMonitor.app/Contents/"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "ClaudeCodeMonitor.app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "ClaudeCodeMonitor.app/Contents/Info.plist"
 
+# Copy helper Info.plist
+cp ClaudeMonitorHelper-Info.plist "ClaudeCodeMonitor.app/Contents/Library/LaunchServices/Info.plist"
+
 # Copy resource bundles
 echo "Looking for resource bundles..."
-find .build -name "*.bundle" -type d | grep release | while read bundle; do
+find .build -name "*.bundle" -type d | grep debug | while read bundle; do
   echo "Found bundle: $bundle"
   cp -R "$bundle" "ClaudeCodeMonitor.app/Contents/Resources/"
 done
@@ -63,3 +76,7 @@ echo "To run the app:"
 echo "  open ClaudeCodeMonitor.app"
 echo ""
 echo "Version: $VERSION"
+echo ""
+echo "Note: In development mode, the helper will start automatically."
+echo "If you encounter issues, you can manually start the helper:"
+echo "  ./ClaudeCodeMonitor.app/Contents/Library/LaunchServices/ClaudeMonitorHelper &"

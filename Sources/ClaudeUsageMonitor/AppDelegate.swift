@@ -9,7 +9,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var popover: NSPopover!
     private var eventMonitor: EventMonitor?
     private var usageMonitor: UsageMonitor!
-    private var dataAccessManager: ClaudeDataAccessManager!
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Save environment variables and npx path to App Group before starting Helper Item
@@ -19,16 +18,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Register Helper Item first
         registerHelperItem()
         
-        // Initialize data access manager
-        dataAccessManager = ClaudeDataAccessManager()
+        // Initialize usage monitor
+        usageMonitor = UsageMonitor()
         
         // Helper Item will provide the server, so we don't need ServerManager anymore
-        // Just wait a bit for the helper to start
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
-            self?.usageMonitor.fetchUsageData()
-        }
-        
-        usageMonitor = UsageMonitor()
+        // Check if helper is running, if not in development, start it manually
+        checkAndStartHelper()
         
         // 通知機能は初回リリースでは無効化
         /*
@@ -67,7 +62,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentViewController = NSHostingController(
             rootView: ContentView()
                 .environmentObject(usageMonitor)
-                .environmentObject(dataAccessManager)
         )
         
         // Monitor for clicks outside the popover
@@ -85,18 +79,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.updateStatusBarTitle()
-            }
-            .store(in: &cancellables)
-        
-        // Observe data access changes
-        dataAccessManager.$hasAccess
-            .receive(on: DispatchQueue.main)
-            .dropFirst() // Skip initial value
-            .sink { [weak self] hasAccess in
-                if hasAccess {
-                    // Helper Item is already running, just fetch data
-                    self?.usageMonitor.fetchUsageData()
-                }
             }
             .store(in: &cancellables)
     }
@@ -260,6 +242,56 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Use legacy SMLoginItemSetEnabled for macOS 12 and earlier
             let success = SMLoginItemSetEnabled(helperBundleIdentifier as CFString, true)
             print("[AppDelegate] Helper item registration (legacy): \(success ? "success" : "failed")")
+        }
+    }
+    
+    private func checkAndStartHelper() {
+        // Wait a bit for the helper to start
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            // Check if helper is running by testing the health endpoint
+            let url = URL(string: "http://127.0.0.1:8456/health")!
+            let request = URLRequest(url: url, timeoutInterval: 1.0)
+            
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                DispatchQueue.main.async {
+                    if error != nil || (response as? HTTPURLResponse)?.statusCode != 200 {
+                        // Helper is not running, start it manually in development
+                        #if DEBUG
+                        print("[AppDelegate] Helper not running, starting manually in development")
+                        self?.startHelperManually()
+                        #else
+                        print("[AppDelegate] Helper not running in production - user may need to grant permission")
+                        #endif
+                    } else {
+                        print("[AppDelegate] Helper is running, fetching data")
+                        self?.usageMonitor.fetchUsageData()
+                    }
+                }
+            }.resume()
+        }
+    }
+    
+    private func startHelperManually() {
+        // In development, start the helper directly
+        let helperPath = Bundle.main.path(forResource: "ClaudeMonitorHelper", ofType: nil, inDirectory: "Library/LaunchServices")
+        
+        if let helperPath = helperPath {
+            let task = Process()
+            task.executableURL = URL(fileURLWithPath: helperPath)
+            
+            do {
+                try task.run()
+                print("[AppDelegate] Helper started manually at: \(helperPath)")
+                
+                // Wait for helper to start and then fetch data
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+                    self?.usageMonitor.fetchUsageData()
+                }
+            } catch {
+                print("[AppDelegate] Failed to start helper manually: \(error)")
+            }
+        } else {
+            print("[AppDelegate] Helper executable not found in bundle")
         }
     }
     

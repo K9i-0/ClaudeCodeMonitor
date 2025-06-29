@@ -35,7 +35,8 @@ This app wraps the [ccusage](https://github.com/ryoppippi/ccusage) CLI tool to p
 - 🔄 Auto-refresh every 5 minutes
 - 🔄 Manual refresh button
 - ⚙️ Plan settings (Pro/Max5/Max20)
-- 🌐 Stable operation with local server mode
+- 🌍 Multi-language support (English/Japanese)
+- 🚀 Native performance with SwiftUI
 
 ## 🚀 Installation
 
@@ -53,7 +54,7 @@ Download the latest release from [GitHub Releases](https://github.com/K9i-0/Clau
 
 - macOS 13.0 or later
 - Swift 5.9 or later
-- Node.js 18 or later (required for ccusage CLI tool)
+- Node.js 18 or later (for ccusage CLI)
 - Xcode 15 or later (for development)
 
 ## 🛠️ Setup
@@ -65,21 +66,19 @@ git clone https://github.com/K9i-0/ClaudeCodeMonitor.git
 cd ClaudeCodeMonitor
 ```
 
-### 2. Node.js Server Setup (Recommended)
+### 2. Build and Run
 
-Using a local server provides more stable operation:
+#### For Development
 
 ```bash
-cd server
-npm install
-npm start
+# Build and create app bundle
+./scripts/build-local.sh
+
+# Run with helper service
+./scripts/run-local.sh
 ```
 
-The server will start at `http://127.0.0.1:3456`.
-
-### 3. Build Instructions
-
-#### Method 1: Using Xcode (Recommended)
+#### Using Xcode (Recommended)
 
 ```bash
 open Package.swift
@@ -89,11 +88,11 @@ In Xcode:
 - **Build**: Product > Build (⌘B)
 - **Run**: Product > Run (⌘R)
 
-#### Method 2: Command Line Build
+#### Release Build
 
 ```bash
-# Build and create app bundle
-./scripts/create-app-bundle.sh
+# Create release build (requires Developer ID for distribution)
+./scripts/build-release.sh
 ```
 
 
