@@ -26,6 +26,9 @@ let package = Package(
             path: "Sources/ClaudeUsageMonitor",
             resources: [
                 .process("Resources")
+            ],
+            swiftSettings: [
+                .define("DEBUG", .when(configuration: .debug))
             ]
         ),
         .executableTarget(

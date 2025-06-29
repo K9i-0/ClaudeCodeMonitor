@@ -31,11 +31,11 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         // ユーザーが手動選択したプランを優先的に読み込む
         if let userPlan = userDefaults.string(forKey: userPlanKey) {
             usageData.detectedPlanType = userPlan
-            print("Loaded user selected plan: \(userPlan)")
+            Logger.info("Loaded user selected plan: \(userPlan)")
         } else if let savedPlan = userDefaults.string(forKey: detectedPlanKey) {
             // 自動検出されたプランを読み込む（後方互換性）
             usageData.detectedPlanType = savedPlan
-            print("Loaded auto-detected plan: \(savedPlan)")
+            Logger.info("Loaded auto-detected plan: \(savedPlan)")
         }
         startMonitoring()
     }
@@ -56,7 +56,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
     }
     
     func fetchUsageData() {
-        print("Fetching usage data at \(Date())")
+        Logger.debug("Fetching usage data at \(Date())")
         Task {
             await fetchSessionData()
             await fetchDailyUsage()
@@ -83,7 +83,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
                     request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
                 }
                 
-                print("Attempting to fetch from server: \(url)")
+                Logger.debug("Attempting to fetch from server: \(url)")
                 let (data, response) = try await URLSession.shared.data(for: request)
                 
                 if let httpResponse = response as? HTTPURLResponse {
