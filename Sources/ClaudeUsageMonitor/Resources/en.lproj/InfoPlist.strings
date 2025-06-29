@@ -1,0 +1,7 @@
+/* InfoPlist.strings - English */
+
+/* Display name */
+"CFBundleDisplayName" = "Claude Code Monitor";
+
+/* Login item description - This appears in System Settings > General > Login Items */
+"SMLoginItemDescription" = "Monitors Claude API usage and displays statistics in the menu bar";

@@ -29,5 +29,9 @@
         <key>com.k9i.ClaudeMonitorHelper</key>
         <string>identifier "com.k9i.ClaudeMonitorHelper" and anchor apple generic</string>
     </dict>
+    <key>SMAuthorizedClients</key>
+    <array>
+        <string>identifier "com.k9i.claude-code-monitor" and anchor apple generic</string>
+    </array>
 </dict>
 </plist>
