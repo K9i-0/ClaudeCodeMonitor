@@ -75,7 +75,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
             // Try local server first
             if let url = URL(string: "http://127.0.0.1:\(port)/usage") {
                 var request = URLRequest(url: url)
-                request.timeoutInterval = 5.0 // 5 second timeout
+                request.timeoutInterval = 10.0 // Longer timeout for usage fetch which may take time
                 
                 // Add authentication header
                 if let sharedDefaults = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor"),
@@ -165,7 +165,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
                 print("[DEBUG] Attempting server connection to \(url)")
                 
                 var request = URLRequest(url: url)
-                request.timeoutInterval = 2.0 // Quick timeout
+                request.timeoutInterval = 5.0 // Reasonable timeout for active session fetch
                 
                 // Add authentication header
                 if let sharedDefaults = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor"),

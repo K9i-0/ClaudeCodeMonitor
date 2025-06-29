@@ -253,7 +253,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             // Check if helper is running by testing the health endpoint
             let url = URL(string: "http://127.0.0.1:\(port)/health")!
-            var request = URLRequest(url: url, timeoutInterval: 1.0)
+            var request = URLRequest(url: url, timeoutInterval: 3.0)
             
             // Add authentication header
             if let sharedDefaults = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor"),
