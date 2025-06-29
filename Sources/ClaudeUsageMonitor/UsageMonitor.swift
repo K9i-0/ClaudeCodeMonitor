@@ -232,7 +232,24 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
             }
         } catch {
             print("[DEBUG] Server connection failed: \(error.localizedDescription)")
-            self.error = ClaudeMonitorError.networkError(L10n.Error.serverNotRunning)
+            
+            // Provide more specific error messages based on error type
+            if let urlError = error as? URLError {
+                switch urlError.code {
+                case .notConnectedToInternet:
+                    self.error = ClaudeMonitorError.networkError("インターネット接続がありません")
+                case .timedOut:
+                    self.error = ClaudeMonitorError.networkError("サーバーへの接続がタイムアウトしました")
+                case .cannotConnectToHost:
+                    self.error = ClaudeMonitorError.networkError(L10n.Error.serverNotRunning)
+                default:
+                    self.error = ClaudeMonitorError.networkError("ネットワークエラー: \(urlError.localizedDescription)")
+                }
+            } else if error is DecodingError {
+                self.error = ClaudeMonitorError.parsingError("サーバーからの応答を解析できませんでした")
+            } else {
+                self.error = ClaudeMonitorError.networkError(L10n.Error.serverNotRunning)
+            }
         }
     }
     

@@ -292,15 +292,49 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 try task.run()
                 print("[AppDelegate] Helper started manually at: \(helperPath)")
                 
-                // Wait for helper to start and then fetch data
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-                    self?.usageMonitor.fetchUsageData()
+                // Wait for helper to start and verify it's running
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+                    self?.verifyHelperStarted()
                 }
             } catch {
                 print("[AppDelegate] Failed to start helper manually: \(error)")
+                showHelperStartupError()
             }
         } else {
             print("[AppDelegate] Helper executable not found in bundle")
+            showHelperStartupError()
+        }
+    }
+    
+    private func verifyHelperStarted() {
+        let port = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor")?.integer(forKey: "helperPort") ?? 8456
+        let url = URL(string: "http://127.0.0.1:\(port)/health")!
+        var request = URLRequest(url: url, timeoutInterval: 3.0)
+        
+        // Add authentication header
+        if let sharedDefaults = UserDefaults(suiteName: "group.com.k9i.claudecodemonitor"),
+           let authToken = sharedDefaults.string(forKey: "helperAuthToken") {
+            request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            DispatchQueue.main.async {
+                if error == nil && (response as? HTTPURLResponse)?.statusCode == 200 {
+                    print("[AppDelegate] Helper verified running successfully")
+                    self?.usageMonitor.fetchUsageData()
+                } else {
+                    print("[AppDelegate] Helper verification failed after manual start")
+                    self?.showHelperStartupError()
+                }
+            }
+        }.resume()
+    }
+    
+    private func showHelperStartupError() {
+        DispatchQueue.main.async { [weak self] in
+            self?.usageMonitor.error = ClaudeMonitorError.commandExecutionError(
+                "ヘルパーサービスの起動に失敗しました。アプリを再起動してください。"
+            )
         }
     }
     

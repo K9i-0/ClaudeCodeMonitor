@@ -32,11 +32,20 @@ if ! kill -0 $HELPER_PID 2>/dev/null; then
   exit 1
 fi
 
+# Get auth token from app group (if available)
+AUTH_TOKEN=$(defaults read ~/Library/Group\ Containers/group.com.k9i.claudecodemonitor.plist helperAuthToken 2>/dev/null || echo "")
+
 # Check helper health
-if curl -s http://127.0.0.1:8456/health | grep -q "ok"; then
+if [ -n "$AUTH_TOKEN" ]; then
+  HEALTH_CHECK=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" http://127.0.0.1:8456/health 2>/dev/null || echo "")
+else
+  HEALTH_CHECK=$(curl -s http://127.0.0.1:8456/health 2>/dev/null || echo "")
+fi
+
+if echo "$HEALTH_CHECK" | grep -q "ok"; then
   echo "✅ Helper service is running"
 else
-  echo "⚠️  Helper service started but not responding"
+  echo "⚠️  Helper service started (authentication may be required)"
 fi
 
 # Start the main app

@@ -236,9 +236,22 @@ class HTTPHandler: ChannelInboundHandler {
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                     .replacingOccurrences(of: "\n", with: " ")
                     .replacingOccurrences(of: "\"", with: "\\\"") ?? "Unknown error"
+                
+                // Provide more specific error messages
+                let errorMessage: String
+                if errorString.contains("command not found") || errorString.contains("not found") {
+                    errorMessage = "ccusage command not found. Please ensure Node.js and ccusage are installed."
+                } else if errorString.contains("ECONNREFUSED") {
+                    errorMessage = "Cannot connect to Claude API. Please check your internet connection."
+                } else if errorString.contains("401") || errorString.contains("unauthorized") {
+                    errorMessage = "Authentication failed. Please check your Claude API credentials."
+                } else {
+                    errorMessage = "ccusage failed: \(errorString)"
+                }
+                
                 print("ccusage error: \(errorString)")
                 sendResponse(context: context, status: .internalServerError, 
-                           body: "{\"error\":\"ccusage failed: \(errorString)\"}")
+                           body: "{\"error\":\"\(errorMessage)\"}")
                 return
             }
             
