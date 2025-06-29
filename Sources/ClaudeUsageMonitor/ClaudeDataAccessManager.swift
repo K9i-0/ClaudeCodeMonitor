@@ -6,16 +6,13 @@ class ClaudeDataAccessManager: ObservableObject {
     @Published var hasAccess = false
     @Published var claudePath: String?
     
-    private let bookmarkKey = "ClaudeDataFolderBookmark"
-    private var securityScopedResourceURL: URL?
-    
     init() {
         print("[ClaudeDataAccess] Initializing...")
         checkExistingAccess()
         print("[ClaudeDataAccess] Initial hasAccess: \(hasAccess), claudePath: \(claudePath ?? "nil")")
     }
     
-    /// Check if we have existing access via saved path or bookmark
+    /// Check if we have existing access via saved path or auto-detect
     func checkExistingAccess() {
         // First try to load saved path
         if let savedPath = UserDefaults.standard.string(forKey: "claudeDataPath") {
@@ -36,42 +33,19 @@ class ClaudeDataAccessManager: ObservableObject {
             }
         }
         
-        // Legacy bookmark support
-        guard let bookmarkData = UserDefaults.standard.data(forKey: bookmarkKey) else {
-            print("[ClaudeDataAccess] No existing bookmark found")
-            return
-        }
+        // Auto-detect ~/.claude path
+        let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
+        let defaultClaudePath = homeDirectory.appendingPathComponent(".claude")
+        let projectsURL = defaultClaudePath.appendingPathComponent("projects")
         
-        do {
-            var isStale = false
-            let url = try URL(resolvingBookmarkData: bookmarkData,
-                            options: .withSecurityScope,
-                            relativeTo: nil,
-                            bookmarkDataIsStale: &isStale)
-            
-            if isStale {
-                print("[ClaudeDataAccess] Bookmark is stale, need to request access again")
-                hasAccess = false
-                return
-            }
-            
-            // Start accessing the security-scoped resource
-            if url.startAccessingSecurityScopedResource() {
-                // Stop any previous access
-                stopAccessingSecurityScopedResource()
-                
-                // Track the new resource
-                securityScopedResourceURL = url
-                claudePath = url.path
-                hasAccess = true
-                print("[ClaudeDataAccess] Successfully accessed Claude data at: \(url.path)")
-            } else {
-                print("[ClaudeDataAccess] Failed to access security-scoped resource")
-                hasAccess = false
-            }
-        } catch {
-            print("[ClaudeDataAccess] Error resolving bookmark: \(error)")
-            hasAccess = false
+        if FileManager.default.fileExists(atPath: projectsURL.path) {
+            claudePath = defaultClaudePath.path
+            hasAccess = true
+            // Save the auto-detected path
+            UserDefaults.standard.set(defaultClaudePath.path, forKey: "claudeDataPath")
+            print("[ClaudeDataAccess] Auto-detected Claude data at: \(defaultClaudePath.path)")
+        } else {
+            print("[ClaudeDataAccess] Claude data not found at default location: \(defaultClaudePath.path)")
         }
     }
     
@@ -87,57 +61,47 @@ class ClaudeDataAccessManager: ObservableObject {
         }
         
         return await withCheckedContinuation { continuation in
-            FolderAccessHelper.requestFolderAccess { [weak self] url in
-                guard let self = self else {
-                    continuation.resume(returning: false)
-                    return
-                }
+            DispatchQueue.main.async {
+                let panel = NSOpenPanel()
+                panel.canChooseFiles = false
+                panel.canChooseDirectories = true
+                panel.allowsMultipleSelection = false
+                panel.message = L10n.selectClaudeDataFolder
+                panel.prompt = L10n.select
                 
-                // Resume event monitor after dialog is closed
-                Task { @MainActor in
-                    if let appDelegate = NSApp.delegate as? AppDelegate {
-                        appDelegate.resumeEventMonitor()
+                // Default to home directory
+                panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
+                
+                panel.begin { [weak self] response in
+                    // Resume event monitor after dialog is closed
+                    Task { @MainActor in
+                        if let appDelegate = NSApp.delegate as? AppDelegate {
+                            appDelegate.resumeEventMonitor()
+                        }
                     }
-                }
-                
-                guard let url = url else {
-                    print("[ClaudeDataAccess] User cancelled folder selection")
-                    continuation.resume(returning: false)
-                    return
-                }
-                
-                print("[ClaudeDataAccess] User selected: \(url.path)")
-                
-                Task {
-                    let success = await self.processSelectedFolder(url)
-                    continuation.resume(returning: success)
+                    
+                    guard response == .OK, let url = panel.url else {
+                        print("[ClaudeDataAccess] User cancelled folder selection")
+                        continuation.resume(returning: false)
+                        return
+                    }
+                    
+                    print("[ClaudeDataAccess] User selected: \(url.path)")
+                    
+                    Task {
+                        let success = await self?.processSelectedFolder(url) ?? false
+                        continuation.resume(returning: success)
+                    }
                 }
             }
         }
     }
     
     private func processSelectedFolder(_ url: URL) async -> Bool {
-        
         // Resolve any symbolic links to get the real path
         let resolvedURL = url.resolvingSymlinksInPath()
         print("[ClaudeDataAccess] Original path: \(url.path)")
         print("[ClaudeDataAccess] Resolved path: \(resolvedURL.path)")
-        
-        // Security check: Ensure the resolved path is within the user's home directory
-        let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
-        if !resolvedURL.path.hasPrefix(homeDirectory.path) {
-            print("[ClaudeDataAccess] Security warning: Selected path is outside home directory")
-            let errorMessage = """
-            Security Error: The selected folder is outside your home directory.
-            
-            Selected: \(url.path)
-            Resolved to: \(resolvedURL.path)
-            
-            Please select a folder within your home directory.
-            """
-            await showError(message: errorMessage)
-            return false
-        }
         
         // Verify this is a Claude data folder by checking for projects subdirectory
         let projectsURL = resolvedURL.appendingPathComponent("projects")
@@ -159,33 +123,16 @@ class ClaudeDataAccessManager: ObservableObject {
             return false
         }
         
-        // Start accessing the resource BEFORE creating bookmark
-        // Note: startAccessingSecurityScopedResource returns false for non-security-scoped URLs,
-        // which is normal for user-selected folders via NSOpenPanel
-        let startedAccess = resolvedURL.startAccessingSecurityScopedResource()
-        print("[ClaudeDataAccess] Started security-scoped access: \(startedAccess)")
-        print("[ClaudeDataAccess] URL: \(resolvedURL.path)")
-        
-        // Don't fail if startAccessingSecurityScopedResource returns false
-        // as it's expected for regular file URLs from NSOpenPanel
-        
-        // For App Sandbox, we'll simply save the path and rely on the server
-        // to access the files with CLAUDE_CONFIG_DIR environment variable
+        // Save the path
         claudePath = resolvedURL.path
         hasAccess = true
         
-        // Save the resolved path to UserDefaults (not as bookmark, just as string)
+        // Save the resolved path to UserDefaults
         UserDefaults.standard.set(resolvedURL.path, forKey: "claudeDataPath")
         UserDefaults.standard.synchronize()
         
         print("[ClaudeDataAccess] Successfully saved path: \(resolvedURL.path)")
         print("[ClaudeDataAccess] hasAccess is now: \(hasAccess)")
-        
-        // We don't need to keep the security-scoped resource access active
-        // since we're using the path via environment variable
-        if startedAccess {
-            resolvedURL.stopAccessingSecurityScopedResource()
-        }
         
         return true
     }
@@ -206,28 +153,10 @@ class ClaudeDataAccessManager: ObservableObject {
     /// Reset access (for testing or if user wants to change folder)
     func resetAccess() {
         print("[ClaudeDataAccess] Resetting access...")
-        UserDefaults.standard.removeObject(forKey: bookmarkKey)
         UserDefaults.standard.removeObject(forKey: "claudeDataPath")
         UserDefaults.standard.synchronize()
         
-        stopAccessingSecurityScopedResource()
         claudePath = nil
         hasAccess = false
-    }
-    
-    /// Stop accessing any security-scoped resource
-    private func stopAccessingSecurityScopedResource() {
-        if let url = securityScopedResourceURL {
-            url.stopAccessingSecurityScopedResource()
-            securityScopedResourceURL = nil
-            print("[ClaudeDataAccess] Stopped accessing security-scoped resource")
-        }
-    }
-    
-    deinit {
-        // Ensure we release any security-scoped resources on deallocation
-        if let url = securityScopedResourceURL {
-            url.stopAccessingSecurityScopedResource()
-        }
     }
 }

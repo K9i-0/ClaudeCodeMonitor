@@ -83,29 +83,21 @@ class ServerManager: ObservableObject {
         // Create process to start server
         let process = Process()
         
-        // Find Node.js
+        // Find system Node.js
         var nodePath: String?
+        let systemNodePaths = [
+            "/Users/\(NSUserName())/.local/share/mise/shims/node",
+            "/opt/homebrew/bin/node",
+            "/usr/local/bin/node",
+            "/usr/bin/node"
+        ]
         
-        // First, try to use bundled Node.js (production)
-        if let bundledNodePath = Bundle.main.path(forResource: "node/node", ofType: nil) {
-            nodePath = bundledNodePath
-            print("[ServerManager] Using bundled Node.js at: \(bundledNodePath)")
-            NSLog("[ServerManager] Using bundled Node.js at: %@", bundledNodePath)
-        } else {
-            // Fallback to system Node.js (development)
-            let systemNodePaths = [
-                "/Users/\(NSUserName())/.local/share/mise/shims/node",
-                "/opt/homebrew/bin/node",
-                "/usr/local/bin/node"
-            ]
-            
-            for path in systemNodePaths {
-                let expandedPath = (path as NSString).expandingTildeInPath
-                if FileManager.default.fileExists(atPath: expandedPath) {
-                    nodePath = expandedPath
-                    print("[ServerManager] Using system Node.js at: \(expandedPath)")
-                    break
-                }
+        for path in systemNodePaths {
+            let expandedPath = (path as NSString).expandingTildeInPath
+            if FileManager.default.fileExists(atPath: expandedPath) {
+                nodePath = expandedPath
+                print("[ServerManager] Using system Node.js at: \(expandedPath)")
+                break
             }
         }
         
@@ -115,8 +107,7 @@ class ServerManager: ObservableObject {
         }
         
         process.executableURL = URL(fileURLWithPath: node)
-        // Add --max-old-space-size to prevent memory issues in sandboxed environment
-        process.arguments = ["--max-old-space-size=\(Constants.Server.nodeMemoryLimit)", "server.js"]
+        process.arguments = ["server.js"]
         process.currentDirectoryURL = URL(fileURLWithPath: validServerPath)
         
         // Set up environment

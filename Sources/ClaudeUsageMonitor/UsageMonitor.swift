@@ -125,13 +125,41 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
             error = ClaudeMonitorError.parsingError(decodingError.localizedDescription)
             print("Decoding error: \(decodingError)")
         } catch {
-            // Server not running or request failed
+            // Server not running or request failed, try direct npx execution
             print("Local server not available: \(error.localizedDescription)")
-            print("Error type: \(type(of: error))")
-            print("Full error: \(error)")
-            self.error = ClaudeMonitorError.networkError(L10n.Error.serverNotRunning)
-            isLoading = false
-            return
+            print("Attempting direct npx execution...")
+            
+            do {
+                let result = try await executeNpxCommand("npx", arguments: ["ccusage@latest", "--json"])
+                let data = Data(result.utf8)
+                let ccusageResponse = try JSONDecoder().decode(CcusageResponse.self, from: data)
+                
+                // Get today's date in YYYY-MM-DD format
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd"
+                let today = formatter.string(from: Date())
+                
+                // Find today's usage from the array
+                if let todayData = ccusageResponse.daily.first(where: { $0.date == today }) {
+                    print("Found today's data via npx: cost=$\(todayData.totalCost)")
+                    usageData.todayUsage = todayData
+                } else {
+                    print("No data found for today via npx")
+                    usageData.todayUsage = nil
+                }
+                
+                // Store monthly total
+                usageData.monthlyTotal = ccusageResponse.totals
+                usageData.lastUpdated = Date()
+                
+                isLoading = false
+                return
+            } catch {
+                print("Direct npx execution failed: \(error.localizedDescription)")
+                self.error = ClaudeMonitorError.commandExecutionError(error.localizedDescription)
+                isLoading = false
+                return
+            }
         }
         
         isLoading = false
@@ -214,7 +242,59 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
             }
         } catch {
             print("[DEBUG] Server connection failed: \(error.localizedDescription)")
-            self.error = ClaudeMonitorError.networkError(L10n.Error.serverNotRunning)
+            print("[DEBUG] Attempting direct npx execution for session data...")
+            
+            do {
+                let result = try await executeNpxCommand("npx", arguments: ["ccusage@latest", "blocks", "--json"])
+                let data = Data(result.utf8)
+                let blocksResponse = try JSONDecoder().decode(BlocksResponse.self, from: data)
+                
+                // Get the active block
+                print("Blocks response via npx: \(blocksResponse.blocks.count) blocks")
+                
+                // 過去のセッションから最大トークン使用量を検出
+                var maxTokens = 0
+                for block in blocksResponse.blocks {
+                    if !block.isGap && block.totalTokens > maxTokens {
+                        maxTokens = block.totalTokens
+                    }
+                }
+                usageData.historicalMaxTokens = maxTokens
+                
+                // プランタイプを自動判定して保存
+                if maxTokens > UsageData.max5SessionTokenLimit {
+                    updateDetectedPlan("Max20")
+                } else if maxTokens > UsageData.proSessionTokenLimit {
+                    updateDetectedPlan("Max5")
+                } else {
+                    // 保存されたプランタイプがない場合のみProに設定
+                    if usageData.detectedPlanType == nil {
+                        updateDetectedPlan("Pro")
+                    }
+                }
+                
+                if let activeBlock = blocksResponse.blocks.first(where: { $0.isActive }) {
+                    usageData.activeSession = activeBlock
+                    print("Active session via npx: \(activeBlock.totalTokens) tokens")
+                    
+                    // セッションが変わったかチェック
+                    checkSessionChange(activeBlock)
+                    
+                    // 通知チェック
+                    let burnRateValue = Double(usageData.sessionBurnRate) ?? 0
+                    notificationManager?.checkAndSendNotification(
+                        for: usageData.sessionUsagePercentage,
+                        burnRate: burnRateValue,
+                        remainingTime: usageData.sessionRemainingTime
+                    )
+                } else {
+                    print("No active session found via npx")
+                    usageData.activeSession = nil
+                }
+            } catch {
+                print("[DEBUG] Direct npx execution failed: \(error.localizedDescription)")
+                self.error = ClaudeMonitorError.commandExecutionError(error.localizedDescription)
+            }
         }
     }
     
@@ -263,5 +343,35 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         }
         
         lastSessionId = sessionId
+    }
+    
+    private func executeNpxCommand(_ command: String, arguments: [String]) async throws -> String {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        task.arguments = [command] + arguments
+        
+        // Add npm/node to PATH
+        var environment = ProcessInfo.processInfo.environment
+        let existingPath = environment["PATH"] ?? ""
+        environment["PATH"] = "/usr/local/bin:/opt/homebrew/bin:\(existingPath)"
+        task.environment = environment
+        
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = pipe
+        
+        try task.run()
+        task.waitUntilExit()
+        
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let output = String(data: data, encoding: .utf8) else {
+            throw ClaudeMonitorError.commandExecutionError("Failed to decode command output")
+        }
+        
+        if task.terminationStatus != 0 {
+            throw ClaudeMonitorError.commandExecutionError("Command failed with status \(task.terminationStatus): \(output)")
+        }
+        
+        return output
     }
 }
