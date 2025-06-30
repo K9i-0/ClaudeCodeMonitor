@@ -51,31 +51,51 @@ class ServerManager: ObservableObject {
         print("[ServerManager] Bundle.main.bundlePath: \(Bundle.main.bundlePath)")
         print("[ServerManager] Bundle.main.resourcePath: \(Bundle.main.resourcePath ?? "nil")")
         
-        if let bundledServerPath = Bundle.main.path(forResource: "server", ofType: nil) {
-            serverPath = bundledServerPath
-            print("[ServerManager] Using bundled server at: \(bundledServerPath)")
-            
-            // Verify server.js exists
-            let serverJsPath = (bundledServerPath as NSString).appendingPathComponent("server.js")
-            if FileManager.default.fileExists(atPath: serverJsPath) {
-                print("[ServerManager] server.js found at: \(serverJsPath)")
-            } else {
-                print("[ServerManager] ERROR: server.js not found at: \(serverJsPath)")
+        // Check for server directory in Resources
+        if let resourcePath = Bundle.main.resourcePath {
+            let bundledServerPath = (resourcePath as NSString).appendingPathComponent("server")
+            if FileManager.default.fileExists(atPath: bundledServerPath) {
+                serverPath = bundledServerPath
+                print("[ServerManager] Using bundled server at: \(bundledServerPath)")
+                
+                // Verify server.js exists
+                let serverJsPath = (bundledServerPath as NSString).appendingPathComponent("server.js")
+                if FileManager.default.fileExists(atPath: serverJsPath) {
+                    print("[ServerManager] server.js found at: \(serverJsPath)")
+                } else {
+                    print("[ServerManager] ERROR: server.js not found at: \(serverJsPath)")
+                }
             }
-        } else {
-            // Fallback to development location
-            let appPath = Bundle.main.bundlePath
-            let devServerPath = (appPath as NSString).deletingLastPathComponent
-                .appending("/server")
-            if FileManager.default.fileExists(atPath: devServerPath) {
-                serverPath = devServerPath
-                print("[ServerManager] Using development server at: \(devServerPath)")
+        }
+        
+        // Fallback to development location if not found in bundle
+        if serverPath == nil {
+            // Try multiple possible locations
+            let possiblePaths = [
+                // Development location (when running from Xcode)
+                (Bundle.main.bundlePath as NSString).deletingLastPathComponent.appending("/server"),
+                // Project root location
+                "/Users/kotahayashi/Workspace/ClaudeCodeMonitor/server",
+                // Alternative development location
+                ((Bundle.main.bundlePath as NSString).deletingLastPathComponent as NSString)
+                    .deletingLastPathComponent
+                    .replacingOccurrences(of: "/Build/Products/Debug", with: "")
+                    .appending("/server")
+            ]
+            
+            for path in possiblePaths {
+                if FileManager.default.fileExists(atPath: path) {
+                    serverPath = path
+                    print("[ServerManager] Using development server at: \(path)")
+                    break
+                }
             }
         }
         
         // Check if server directory exists
         guard let validServerPath = serverPath else {
-            print("[ServerManager] Server directory not found")
+            print("[ServerManager] Server directory not found - server will not start")
+            print("[ServerManager] This is expected in development mode. npx will be used directly.")
             NSLog("[ServerManager] Server directory not found")
             return false
         }
@@ -87,6 +107,7 @@ class ServerManager: ObservableObject {
         var nodePath: String?
         let systemNodePaths = [
             "/Users/\(NSUserName())/.local/share/mise/shims/node",
+            "/Users/\(NSUserName())/.local/share/mise/installs/node/22.16.0/bin/node",
             "/opt/homebrew/bin/node",
             "/usr/local/bin/node",
             "/usr/bin/node"

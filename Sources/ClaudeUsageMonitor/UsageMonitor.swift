@@ -353,7 +353,17 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         // Add npm/node to PATH
         var environment = ProcessInfo.processInfo.environment
         let existingPath = environment["PATH"] ?? ""
-        environment["PATH"] = "/usr/local/bin:/opt/homebrew/bin:\(existingPath)"
+        // Add common Node.js installation paths
+        let nodePaths = [
+            "/usr/local/bin",
+            "/opt/homebrew/bin",
+            "/Users/\(NSUserName())/.local/share/mise/shims",
+            "/Users/\(NSUserName())/.local/share/mise/installs/node/22.16.0/bin",
+            "/Users/\(NSUserName())/.nvm/versions/node/v20.11.0/bin",
+            "/Users/\(NSUserName())/.nvm/versions/node/v20.18.2/bin",
+            "/usr/bin"
+        ].joined(separator: ":")
+        environment["PATH"] = "\(nodePaths):\(existingPath)"
         task.environment = environment
         
         let pipe = Pipe()
