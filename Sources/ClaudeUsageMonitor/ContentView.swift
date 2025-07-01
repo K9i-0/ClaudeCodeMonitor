@@ -201,14 +201,16 @@ struct ContentView: View {
                         CurrentSessionView(session: session, monitor: monitor)
                             .padding()
                             .frame(width: 380)
-                            .background(Color(NSColor.windowBackgroundColor))
+                            .background(colorScheme == .dark ? Color.black : Color.white)
+                            .environment(\.colorScheme, colorScheme)
                     )
                 } else {
                     contentToCapture = AnyView(
                         EmptyStateView(message: L10n.Session.noActiveSession)
                             .padding()
                             .frame(width: 380, height: 400)
-                            .background(Color(NSColor.windowBackgroundColor))
+                            .background(colorScheme == .dark ? Color.black : Color.white)
+                            .environment(\.colorScheme, colorScheme)
                     )
                 }
             case 1:
@@ -217,7 +219,8 @@ struct ContentView: View {
                     HistoryView(monitor: monitor)
                         .padding()
                         .frame(width: 380)
-                        .background(Color(NSColor.windowBackgroundColor))
+                        .background(colorScheme == .dark ? Color.black : Color.white)
+                        .environment(\.colorScheme, colorScheme)
                 )
             default:
                 return
