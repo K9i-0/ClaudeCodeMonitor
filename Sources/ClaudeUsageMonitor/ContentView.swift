@@ -5,7 +5,8 @@ struct ContentView: View {
     @EnvironmentObject var dataAccessManager: ClaudeDataAccessManager
     @State private var selectedTab = 0
     @State private var isRefreshing = false
-    @Environment(\.colorScheme) var colorScheme
+    @Environment(\.colorScheme)
+    var colorScheme
 
     var body: some View {
         if !dataAccessManager.hasAccess {
@@ -173,7 +174,8 @@ struct ContentView: View {
 struct CurrentSessionView: View {
     let session: SessionBlock
     let monitor: UsageMonitor
-    @Environment(\.colorScheme) var colorScheme
+    @Environment(\.colorScheme)
+    var colorScheme
 
     var body: some View {
         VStack(spacing: 16) {

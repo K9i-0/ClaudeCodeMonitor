@@ -237,7 +237,8 @@ struct Constants {
 struct CardStyle: ViewModifier {
     let cornerRadius: CGFloat
     let padding: CGFloat
-    @Environment(\.colorScheme) var colorScheme
+    @Environment(\.colorScheme)
+    var colorScheme
 
     init(cornerRadius: CGFloat = Constants.UI.cornerRadius, padding: CGFloat = Constants.UI.padding) {
         self.cornerRadius = cornerRadius

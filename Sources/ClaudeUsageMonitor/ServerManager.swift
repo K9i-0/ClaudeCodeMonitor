@@ -42,12 +42,8 @@ class ServerManager: ObservableObject {
         return false
     }
 
-    private func startServer() async -> Bool {
-        print("[ServerManager] Attempting to start server")
-        NSLog("[ServerManager] Attempting to start server")
-
+    private func findServerPath() -> String? {
         // First, try to find server in the app bundle (production)
-        var serverPath: String?
         print("[ServerManager] Bundle.main.bundlePath: \(Bundle.main.bundlePath)")
         print("[ServerManager] Bundle.main.resourcePath: \(Bundle.main.resourcePath ?? "nil")")
 
@@ -55,7 +51,6 @@ class ServerManager: ObservableObject {
         if let resourcePath = Bundle.main.resourcePath {
             let bundledServerPath = (resourcePath as NSString).appendingPathComponent("server")
             if FileManager.default.fileExists(atPath: bundledServerPath) {
-                serverPath = bundledServerPath
                 print("[ServerManager] Using bundled server at: \(bundledServerPath)")
 
                 // Verify server.js exists
@@ -65,46 +60,34 @@ class ServerManager: ObservableObject {
                 } else {
                     print("[ServerManager] ERROR: server.js not found at: \(serverJsPath)")
                 }
+                return bundledServerPath
             }
         }
 
         // Fallback to development location if not found in bundle
-        if serverPath == nil {
-            // Try multiple possible locations
-            let possiblePaths = [
-                // Development location (when running from Xcode)
-                (Bundle.main.bundlePath as NSString).deletingLastPathComponent.appending("/server"),
-                // Project root location
-                "/Users/kotahayashi/Workspace/ClaudeCodeMonitor/server",
-                // Alternative development location
-                ((Bundle.main.bundlePath as NSString).deletingLastPathComponent as NSString)
-                    .deletingLastPathComponent
-                    .replacingOccurrences(of: "/Build/Products/Debug", with: "")
-                    .appending("/server")
-            ]
+        let possiblePaths = [
+            // Development location (when running from Xcode)
+            (Bundle.main.bundlePath as NSString).deletingLastPathComponent.appending("/server"),
+            // Project root location
+            "/Users/kotahayashi/Workspace/ClaudeCodeMonitor/server",
+            // Alternative development location
+            ((Bundle.main.bundlePath as NSString).deletingLastPathComponent as NSString)
+                .deletingLastPathComponent
+                .replacingOccurrences(of: "/Build/Products/Debug", with: "")
+                .appending("/server")
+        ]
 
-            for path in possiblePaths {
-                if FileManager.default.fileExists(atPath: path) {
-                    serverPath = path
-                    print("[ServerManager] Using development server at: \(path)")
-                    break
-                }
+        for path in possiblePaths {
+            if FileManager.default.fileExists(atPath: path) {
+                print("[ServerManager] Using development server at: \(path)")
+                return path
             }
         }
-
-        // Check if server directory exists
-        guard let validServerPath = serverPath else {
-            print("[ServerManager] Server directory not found - server will not start")
-            print("[ServerManager] This is expected in development mode. npx will be used directly.")
-            NSLog("[ServerManager] Server directory not found")
-            return false
-        }
-
-        // Create process to start server
-        let process = Process()
-
-        // Find system Node.js
-        var nodePath: String?
+        
+        return nil
+    }
+    
+    private func findNodePath() -> String? {
         let systemNodePaths = [
             "/Users/\(NSUserName())/.local/share/mise/shims/node",
             "/Users/\(NSUserName())/.local/share/mise/installs/node/22.16.0/bin/node",
@@ -116,25 +99,24 @@ class ServerManager: ObservableObject {
         for path in systemNodePaths {
             let expandedPath = (path as NSString).expandingTildeInPath
             if FileManager.default.fileExists(atPath: expandedPath) {
-                nodePath = expandedPath
                 print("[ServerManager] Using system Node.js at: \(expandedPath)")
-                break
+                return expandedPath
             }
         }
-
-        guard let node = nodePath else {
-            print("[ServerManager] Node.js not found")
-            return false
-        }
-
+        
+        return nil
+    }
+    
+    private func configureServerProcess(node: String, serverPath: String) -> Process {
+        let process = Process()
         process.executableURL = URL(fileURLWithPath: node)
         process.arguments = ["server.js"]
-        process.currentDirectoryURL = URL(fileURLWithPath: validServerPath)
-
+        process.currentDirectoryURL = URL(fileURLWithPath: serverPath)
+        
         // Set up environment
         var environment = ProcessInfo.processInfo.environment
         environment["PORT"] = "\(serverPort)"
-
+        
         // Set CLAUDE_CONFIG_DIR if we have access to Claude data
         if let claudePath = claudePath {
             environment["CLAUDE_CONFIG_DIR"] = claudePath
@@ -142,14 +124,14 @@ class ServerManager: ObservableObject {
         } else {
             print("[ServerManager] WARNING: No claudePath set, server may not find data")
         }
-
+        
         process.environment = environment
-
+        
         // Redirect output
         let outputPipe = Pipe()
         process.standardOutput = outputPipe
         process.standardError = outputPipe
-
+        
         outputPipe.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
             if !data.isEmpty {
@@ -158,19 +140,43 @@ class ServerManager: ObservableObject {
                 }
             }
         }
-
+        
         // Monitor process termination
         process.terminationHandler = { proc in
             print("[ServerManager] Process terminated with status: \(proc.terminationStatus)")
             print("[ServerManager] Termination reason: \(proc.terminationReason)")
         }
+        
+        return process
+    }
+
+    private func startServer() async -> Bool {
+        print("[ServerManager] Attempting to start server")
+        NSLog("[ServerManager] Attempting to start server")
+
+        // Find server path
+        guard let serverPath = findServerPath() else {
+            print("[ServerManager] Server directory not found - server will not start")
+            print("[ServerManager] This is expected in development mode. npx will be used directly.")
+            NSLog("[ServerManager] Server directory not found")
+            return false
+        }
+
+        // Find Node.js
+        guard let node = findNodePath() else {
+            print("[ServerManager] Node.js not found")
+            return false
+        }
+
+        // Configure and run process
+        let process = configureServerProcess(node: node, serverPath: serverPath)
 
         do {
             print("[ServerManager] About to run process with:")
             print("[ServerManager]   Executable: \(node)")
             print("[ServerManager]   Arguments: \(process.arguments ?? [])")
-            print("[ServerManager]   Directory: \(validServerPath)")
-            print("[ServerManager]   Environment CLAUDE_CONFIG_DIR: \(environment["CLAUDE_CONFIG_DIR"] ?? "not set")")
+            print("[ServerManager]   Directory: \(serverPath)")
+            print("[ServerManager]   Environment CLAUDE_CONFIG_DIR: \(process.environment?["CLAUDE_CONFIG_DIR"] ?? "not set")")
 
             try process.run()
             serverProcess = process
