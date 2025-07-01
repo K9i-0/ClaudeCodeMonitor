@@ -23,6 +23,7 @@
 "session.waitingForData" = "Waiting for data...";
 "session.highUsageWarning" = "High usage rate";
 "session.used" = "%@ Used";
+"session.tokensConsumed" = "%@ tokens consumed";
 "session.resetTime" = "Reset: %@";
 "session.sessionDetails" = "Session Details (5-hour session)";
 "session.plan" = "Plan:";

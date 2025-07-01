@@ -347,9 +347,17 @@ struct CurrentSessionView: View {
                 .accessibilityAddTraits(.updatesFrequently)
 
                 HStack {
-                    Text(L10n.Session.used(percentage: monitor.usageData.formattedSessionPercentage))
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Text(L10n.Session.used(percentage: monitor.usageData.formattedSessionPercentage))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                        Text("•")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                        Text(L10n.Session.tokensConsumed(tokens: monitor.formatTokens(session.totalTokens)))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
                     Spacer()
                     if monitor.usageData.sessionUsagePercentage > 90 {
                         Label(L10n.Session.highUsageWarning, systemImage: "exclamationmark.triangle.fill")

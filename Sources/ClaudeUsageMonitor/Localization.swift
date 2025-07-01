@@ -99,6 +99,9 @@ struct L10n {
         static func used(percentage: String) -> String {
             return "session.used".localized(with: percentage)
         }
+        static func tokensConsumed(tokens: String) -> String {
+            return "session.tokensConsumed".localized(with: tokens)
+        }
         static func resetTime(time: String) -> String {
             return "session.resetTime".localized(with: time)
         }

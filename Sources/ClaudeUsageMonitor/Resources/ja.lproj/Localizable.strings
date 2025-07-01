@@ -23,6 +23,7 @@
 "session.waitingForData" = "データを取得中...";
 "session.highUsageWarning" = "使用率が高い";
 "session.used" = "%@ 使用済み";
+"session.tokensConsumed" = "%@トークン消費";
 "session.resetTime" = "リセット: %@";
 "session.sessionDetails" = "Session Details (5時間セッション)";
 "session.plan" = "プラン:";
