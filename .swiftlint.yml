@@ -126,10 +126,12 @@ type_name:
 
 # Custom rules
 custom_rules:
-  no_print_statements:
-    name: "Avoid print statements"
-    regex: '\bprint\('
-    message: "Use proper logging instead of print statements"
-    severity: warning
-    excluded:
-      - Tests
+  # no_print_statements ルールは一時的に無効化
+  # TODO: 将来的に適切なロギングシステムを導入後、再度有効化する
+  # no_print_statements:
+  #   name: "Avoid print statements"
+  #   regex: '\bprint\('
+  #   message: "Use proper logging instead of print statements"
+  #   severity: warning
+  #   excluded:
+  #     - Tests

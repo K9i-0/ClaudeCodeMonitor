@@ -4,13 +4,13 @@ import Charts
 struct HistoryView: View {
     let monitor: UsageMonitor
     @Environment(\.colorScheme) var colorScheme
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // ヘッダー
             Text(L10n.History.usageSummary)
                 .font(.system(size: 16, weight: .semibold))
-            
+
             // 現在のセッション情報（カード風デザイン）
             if let session = monitor.usageData.activeSession {
                 VStack(alignment: .leading, spacing: 12) {
@@ -27,9 +27,12 @@ struct HistoryView: View {
                             .font(.system(size: 16, weight: .bold, design: .rounded))
                             .foregroundStyle(.primary)
                     }
-                    
+
                     HStack {
-                        Label(L10n.History.tokensFormat(tokens: monitor.formatTokens(session.totalTokens)), systemImage: "number.circle")
+                        Label(
+                            L10n.History.tokensFormat(tokens: monitor.formatTokens(session.totalTokens)),
+                            systemImage: "number.circle"
+                        )
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                         Spacer()
@@ -43,18 +46,21 @@ struct HistoryView: View {
                             )
                             .foregroundStyle(progressForegroundColor)
                     }
-                    
+
                     // ミニプログレスバー
                     GeometryReader { geometry in
                         ZStack(alignment: .leading) {
                             Capsule()
                                 .fill(Color(NSColor.separatorColor).opacity(0.2))
                                 .frame(height: 4)
-                            
+
                             Capsule()
                                 .fill(progressGradient)
                                 .frame(
-                                    width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)),
+                                    width: min(
+                                        geometry.size.width,
+                                        geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)
+                                    ),
                                     height: 4
                                 )
                         }
@@ -68,7 +74,7 @@ struct HistoryView: View {
                         .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
                 )
             }
-            
+
             // 今日と今月の統計（横並び）- アクティブセッションに関係なく表示
             HStack(spacing: 12) {
                 // 今日の使用量
@@ -76,63 +82,67 @@ struct HistoryView: View {
                     icon: "calendar",
                     title: L10n.Usage.today,
                     cost: monitor.formatCost(monitor.usageData.todayUsage?.totalCost ?? 0),
-                    tokens: monitor.formatTokens((monitor.usageData.todayUsage?.inputTokens ?? 0) + (monitor.usageData.todayUsage?.outputTokens ?? 0)),
+                    tokens: monitor.formatTokens(
+                        (monitor.usageData.todayUsage?.inputTokens ?? 0) + (monitor.usageData.todayUsage?.outputTokens ?? 0)
+                    ),
                     accentColor: .green
                 )
-                
+
                 // 今月の使用量
                 StatCard(
                     icon: "calendar.badge.clock",
                     title: L10n.Usage.thisMonth,
                     cost: monitor.formatCost(monitor.usageData.monthlyTotal?.totalCost ?? 0),
-                    tokens: monitor.formatTokens((monitor.usageData.monthlyTotal?.inputTokens ?? 0) + (monitor.usageData.monthlyTotal?.outputTokens ?? 0)),
+                    tokens: monitor.formatTokens(
+                        (monitor.usageData.monthlyTotal?.inputTokens ?? 0) + (monitor.usageData.monthlyTotal?.outputTokens ?? 0)
+                    ),
                     accentColor: .purple
                 )
             }
-            
+
             Text(L10n.History.referenceNote)
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .padding(.top, 4)
         }
     }
-    
+
     // 計算プロパティ
     @MainActor
     private var progressGradient: LinearGradient {
         return Color.usageGradient(for: monitor.usageData.sessionUsagePercentage)
     }
-    
+
     @MainActor
     private var progressBackgroundColor: Color {
         return Color.usageColor(for: monitor.usageData.sessionUsagePercentage).opacity(0.15)
     }
-    
+
     @MainActor
     private var progressForegroundColor: Color {
         return Color.usageColor(for: monitor.usageData.sessionUsagePercentage)
     }
-    
+
     // チャートデータ生成（仮実装）
     private func generateTodayChartData(session: SessionBlock?) -> [ChartData] {
         // 実際のデータ構造に合わせて実装が必要
         guard let session = session else { return [] }
-        
+
         // 仮のデータ生成
         let formatter = ISO8601DateFormatter()
         guard let startDate = formatter.date(from: session.startTime) else { return [] }
-        
+
         var data: [ChartData] = []
         let now = Date()
         let elapsed = now.timeIntervalSince(startDate)
         let intervals = min(Int(elapsed / 300), 12) // 5分間隔、最大12ポイント
-        
+
         for i in 0...intervals {
             let time = startDate.addingTimeInterval(Double(i) * 300)
             let tokens = Int(Double(session.totalTokens) * Double(i) / Double(intervals))
             data.append(ChartData(time: time, value: Double(tokens)))
         }
-        
+
         return data
     }
 }
@@ -151,7 +161,7 @@ struct StatCard: View {
     let cost: String
     let tokens: String
     let accentColor: Color
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -162,11 +172,11 @@ struct StatCard: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.primary)
             }
-            
+
             Text(cost)
                 .font(.system(size: 18, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
-            
+
             Text(L10n.History.tokensFormat(tokens: tokens))
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
@@ -189,13 +199,13 @@ struct UsageChartView: View {
     let title: String
     let data: [ChartData]
     @Environment(\.colorScheme) var colorScheme
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.secondary)
-            
+
             if !data.isEmpty {
                 Chart(data) { item in
                     LineMark(
@@ -204,7 +214,7 @@ struct UsageChartView: View {
                     )
                     .foregroundStyle(.blue)
                     .lineStyle(StrokeStyle(lineWidth: 2))
-                    
+
                     AreaMark(
                         x: .value(L10n.History.time, item.time),
                         y: .value(L10n.History.tokens, item.value)
@@ -249,7 +259,7 @@ struct UsageChartView: View {
                 .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
         )
     }
-    
+
     private func formatAxisValue(_ value: Double) -> String {
         return NumberFormatters.formatAxisValue(value)
     }

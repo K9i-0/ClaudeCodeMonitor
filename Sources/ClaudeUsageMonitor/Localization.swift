@@ -5,30 +5,30 @@ import SwiftUI
 private struct ResourceBundle {
     static let current: Bundle = {
         let bundleName = "ClaudeCodeMonitor_ClaudeCodeMonitor.bundle"
-        
+
         // Try different possible locations in order of preference
         let candidates = [
             // 1. macOS app bundle structure (production)
             Bundle.main.bundleURL
                 .appendingPathComponent("Contents/Resources/\(bundleName)"),
-            
+
             // 2. Same directory as executable (SwiftPM default behavior)
             Bundle.main.bundleURL
                 .appendingPathComponent(bundleName),
-            
+
             // 3. Parent directory (some development scenarios)
             Bundle.main.bundleURL
                 .deletingLastPathComponent()
                 .appendingPathComponent(bundleName)
         ]
-        
+
         // Try each candidate path
         for candidate in candidates {
             if let bundle = Bundle(url: candidate) {
                 return bundle
             }
         }
-        
+
         // Fallback: use the auto-generated Bundle.module
         return Bundle.module
     }()
@@ -41,35 +41,35 @@ extension String {
         guard ProcessInfo.processInfo.environment["CI"] == nil else {
             return self
         }
-        
+
         let languageCode = LanguageSettings.shared.effectiveLanguageCode()
         let resourceBundle = ResourceBundle.current
-        
+
         // Try to get the bundle for the specific language
         if let path = resourceBundle.path(forResource: languageCode, ofType: "lproj"),
            let bundle = Bundle(path: path) {
             return NSLocalizedString(self, bundle: bundle, comment: "")
         }
-        
+
         // Fallback to module bundle
         return NSLocalizedString(self, bundle: resourceBundle, comment: "")
     }
-    
+
     func localized(with arguments: CVarArg...) -> String {
         // In CI environment, return formatted string with key to avoid Bundle.module issues
         guard ProcessInfo.processInfo.environment["CI"] == nil else {
             return String(format: self, arguments: arguments)
         }
-        
+
         let languageCode = LanguageSettings.shared.effectiveLanguageCode()
         let resourceBundle = ResourceBundle.current
-        
+
         // Try to get the bundle for the specific language
         if let path = resourceBundle.path(forResource: languageCode, ofType: "lproj"),
            let bundle = Bundle(path: path) {
             return String(format: NSLocalizedString(self, bundle: bundle, comment: ""), arguments: arguments)
         }
-        
+
         // Fallback to module bundle
         return String(format: NSLocalizedString(self, bundle: resourceBundle, comment: ""), arguments: arguments)
     }
@@ -82,7 +82,7 @@ struct L10n {
         static var current: String { "tab.current".localized }
         static var history: String { "tab.history".localized }
     }
-    
+
     struct Session {
         static var remaining: String { "session.remaining".localized }
         static var remainingTokens: String { "session.remainingTokens".localized }
@@ -109,7 +109,7 @@ struct L10n {
         static var elapsedTime: String { "session.elapsedTime".localized }
         static var startWorkingMessage: String { "session.startWorkingMessage".localized }
     }
-    
+
     struct History {
         static var usageSummary: String { "history.usageSummary".localized }
         static var currentSession: String { "history.currentSession".localized }
@@ -126,14 +126,14 @@ struct L10n {
         static var tokens: String { "history.tokens".localized }
         static var noData: String { "history.noData".localized }
     }
-    
+
     struct Plan {
         static var title: String { "plan.title".localized }
         static var pro: String { "plan.pro".localized }
         static var max5: String { "plan.max5".localized }
         static var max20: String { "plan.max20".localized }
     }
-    
+
     struct Usage {
         static var today: String { "usage.today".localized }
         static var thisMonth: String { "usage.thisMonth".localized }
@@ -142,7 +142,7 @@ struct L10n {
             return "usage.percentage".localized(with: percent)
         }
     }
-    
+
     struct Action {
         static var refresh: String { "action.refresh".localized }
         static var settings: String { "action.settings".localized }
@@ -150,7 +150,7 @@ struct L10n {
         static var close: String { "action.close".localized }
         static var quitApp: String { "action.quitApp".localized }
     }
-    
+
     struct Error {
         static var loadingData: String { "error.loadingData".localized }
         static var dataFetchFailed: String { "error.dataFetchFailed".localized }
@@ -158,7 +158,7 @@ struct L10n {
         static var unknown: String { "error.unknown".localized }
         static var serverNotRunning: String { "error.serverNotRunning".localized }
     }
-    
+
     struct Settings {
         static var planSelection: String { "settings.planSelection".localized }
         static var notificationSettings: String { "settings.notificationSettings".localized }
@@ -168,13 +168,13 @@ struct L10n {
         static var useSystemLanguage: String { "settings.useSystemLanguage".localized }
         static var selectLanguage: String { "settings.selectLanguage".localized }
     }
-    
+
     struct Language {
         static var system: String { "language.system".localized }
         static var english: String { "language.english".localized }
         static var japanese: String { "language.japanese".localized }
     }
-    
+
     struct Notification {
         static var highUsageTitle: String { "notification.highUsage.title".localized }
         static func highUsageBody(percentage: Int, burnRate: Double) -> String {
@@ -198,7 +198,7 @@ struct L10n {
             return "notification.sessionResetError".localized(with: error)
         }
     }
-    
+
     struct Time {
         static func hoursMinutes(hours: Int, minutes: Int) -> String {
             return "time.hoursMinutes".localized(with: hours, minutes)
@@ -207,7 +207,7 @@ struct L10n {
             return "time.minutes".localized(with: minutes)
         }
     }
-    
+
     struct Status {
         static func lastUpdated(time: String) -> String {
             return "status.lastUpdated".localized(with: time)
@@ -218,12 +218,12 @@ struct L10n {
             return "status.usageFormat".localized(with: usage, cost, burnRate, timeRemaining)
         }
     }
-    
+
     // General
     static var ok: String { "ok".localized }
     static var error: String { "error".localized }
     static var select: String { "select".localized }
-    
+
     // Claude Data Access
     static var selectClaudeDataFolder: String { "selectClaudeDataFolder".localized }
     static var claudeDataFolderMessage: String { "claudeDataFolderMessage".localized }

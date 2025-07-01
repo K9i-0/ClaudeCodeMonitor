@@ -42,7 +42,7 @@ struct ModelBreakdown: Codable {
     let totalTokens: Int?
     let totalCost: Double?
     let cost: Double?
-    
+
     // Provide cost accessor for compatibility
     var actualCost: Double {
         return cost ?? totalCost ?? 0.0
@@ -70,7 +70,7 @@ struct TokenCounts: Codable {
     let outputTokens: Int
     let cacheCreationInputTokens: Int
     let cacheReadInputTokens: Int
-    
+
     /// Billable tokens (input + output only)
     var billableTokens: Int {
         return inputTokens + outputTokens
@@ -94,7 +94,7 @@ extension UsageData {
     static let proSessionTokenLimit: Int = 7_000
     static let max5SessionTokenLimit: Int = 35_000
     static let max20SessionTokenLimit: Int = 140_000
-    
+
     var sessionTokenLimit: Int {
         // 保存されたプランタイプがあればそれを使用
         if let planType = detectedPlanType {
@@ -107,14 +107,14 @@ extension UsageData {
                 return Self.proSessionTokenLimit
             }
         }
-        
+
         // 過去の最大使用量から判定
         if historicalMaxTokens > Self.max5SessionTokenLimit {
             return Self.max20SessionTokenLimit
         } else if historicalMaxTokens > Self.proSessionTokenLimit {
             return Self.max5SessionTokenLimit
         }
-        
+
         // 現在のセッション使用量からも判定（フォールバック）
         if let session = activeSession {
             if session.totalTokens > Self.max5SessionTokenLimit {
@@ -123,23 +123,23 @@ extension UsageData {
                 return Self.max5SessionTokenLimit
             }
         }
-        
+
         return Self.proSessionTokenLimit
     }
-    
+
     var detectedPlan: String {
         // 保存されたプランタイプがあればそれを使用
         if let planType = detectedPlanType {
             return planType
         }
-        
+
         // 過去の最大使用量から判定
         if historicalMaxTokens > Self.max5SessionTokenLimit {
             return "Max20"
         } else if historicalMaxTokens > Self.proSessionTokenLimit {
             return "Max5"
         }
-        
+
         // 現在のセッション使用量からも判定（フォールバック）
         if let session = activeSession {
             if session.totalTokens > Self.max5SessionTokenLimit {
@@ -148,11 +148,11 @@ extension UsageData {
                 return "Max5"
             }
         }
-        
+
         // デフォルトはPro
         return "Pro"
     }
-    
+
     var planDescription: String {
         switch detectedPlan {
         case "Max20":
@@ -163,50 +163,50 @@ extension UsageData {
             return "Pro (7K tokens/session)"
         }
     }
-    
+
     var formattedSessionPercentage: String {
         return String(format: "%.1f%%", sessionUsagePercentage)
     }
-    
+
     var sessionRemainingTime: String {
         guard let session = activeSession,
               let projection = session.projection else { return "N/A" }
-        
+
         let hours = projection.remainingMinutes / 60
         let minutes = projection.remainingMinutes % 60
-        
+
         if hours > 0 {
             return "\(hours)h \(minutes)m"
         } else {
             return "\(minutes)m"
         }
     }
-    
+
     var sessionBurnRate: String {
         guard let session = activeSession,
               let burnRate = session.burnRate else { return "0" }
-        
+
         return String(format: "%.1f", burnRate.tokensPerMinute)
     }
-    
+
     var sessionCostPerHour: String {
         guard let session = activeSession,
               let burnRate = session.burnRate else { return "$0.00" }
-        
+
         return String(format: "$%.2f", burnRate.costPerHour)
     }
-    
+
     var isOverLimit: Bool {
         guard let session = activeSession else { return false }
         return session.totalTokens > sessionTokenLimit
     }
-    
+
     /// Session usage percentage
     var sessionUsagePercentage: Double {
         guard let session = activeSession else { return 0 }
         return (Double(session.totalTokens) / Double(sessionTokenLimit)) * 100
     }
-    
+
     /// Remaining session tokens
     var remainingSessionTokens: Int {
         guard let session = activeSession else { return sessionTokenLimit }

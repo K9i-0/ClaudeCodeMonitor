@@ -5,13 +5,13 @@ import AppKit
 class ClaudeDataAccessManager: ObservableObject {
     @Published var hasAccess = false
     @Published var claudePath: String?
-    
+
     init() {
         print("[ClaudeDataAccess] Initializing...")
         checkExistingAccess()
         print("[ClaudeDataAccess] Initial hasAccess: \(hasAccess), claudePath: \(claudePath ?? "nil")")
     }
-    
+
     /// Check if we have existing access via saved path or auto-detect
     func checkExistingAccess() {
         // First try to load saved path
@@ -20,7 +20,7 @@ class ClaudeDataAccessManager: ObservableObject {
             // Verify the path still exists and has projects subdirectory
             let url = URL(fileURLWithPath: savedPath)
             let projectsURL = url.appendingPathComponent("projects")
-            
+
             if FileManager.default.fileExists(atPath: projectsURL.path) {
                 claudePath = savedPath
                 hasAccess = true
@@ -32,12 +32,12 @@ class ClaudeDataAccessManager: ObservableObject {
                 UserDefaults.standard.removeObject(forKey: "claudeDataPath")
             }
         }
-        
+
         // Auto-detect ~/.claude path
         let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
         let defaultClaudePath = homeDirectory.appendingPathComponent(".claude")
         let projectsURL = defaultClaudePath.appendingPathComponent("projects")
-        
+
         if FileManager.default.fileExists(atPath: projectsURL.path) {
             claudePath = defaultClaudePath.path
             hasAccess = true
@@ -48,18 +48,18 @@ class ClaudeDataAccessManager: ObservableObject {
             print("[ClaudeDataAccess] Claude data not found at default location: \(defaultClaudePath.path)")
         }
     }
-    
+
     /// Request access to Claude data folder
     func requestAccess() async -> Bool {
         print("[ClaudeDataAccess] Requesting folder access...")
-        
+
         // Pause event monitor to prevent popover from closing
         await MainActor.run {
             if let appDelegate = NSApp.delegate as? AppDelegate {
                 appDelegate.pauseEventMonitor()
             }
         }
-        
+
         return await withCheckedContinuation { continuation in
             DispatchQueue.main.async {
                 let panel = NSOpenPanel()
@@ -68,10 +68,10 @@ class ClaudeDataAccessManager: ObservableObject {
                 panel.allowsMultipleSelection = false
                 panel.message = L10n.selectClaudeDataFolder
                 panel.prompt = L10n.select
-                
+
                 // Default to home directory
                 panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
-                
+
                 panel.begin { [weak self] response in
                     // Resume event monitor after dialog is closed
                     Task { @MainActor in
@@ -79,15 +79,15 @@ class ClaudeDataAccessManager: ObservableObject {
                             appDelegate.resumeEventMonitor()
                         }
                     }
-                    
+
                     guard response == .OK, let url = panel.url else {
                         print("[ClaudeDataAccess] User cancelled folder selection")
                         continuation.resume(returning: false)
                         return
                     }
-                    
+
                     print("[ClaudeDataAccess] User selected: \(url.path)")
-                    
+
                     Task {
                         let success = await self?.processSelectedFolder(url) ?? false
                         continuation.resume(returning: success)
@@ -96,17 +96,17 @@ class ClaudeDataAccessManager: ObservableObject {
             }
         }
     }
-    
+
     private func processSelectedFolder(_ url: URL) async -> Bool {
         // Resolve any symbolic links to get the real path
         let resolvedURL = url.resolvingSymlinksInPath()
         print("[ClaudeDataAccess] Original path: \(url.path)")
         print("[ClaudeDataAccess] Resolved path: \(resolvedURL.path)")
-        
+
         // Verify this is a Claude data folder by checking for projects subdirectory
         let projectsURL = resolvedURL.appendingPathComponent("projects")
         let fileManager = FileManager.default
-        
+
         var isDirectory: ObjCBool = false
         guard fileManager.fileExists(atPath: projectsURL.path, isDirectory: &isDirectory),
               isDirectory.boolValue else {
@@ -115,28 +115,28 @@ class ClaudeDataAccessManager: ObservableObject {
             // Show error alert with more detail
             let errorMessage = """
             \(L10n.invalidClaudeFolder)
-            
+
             Selected: \(resolvedURL.path)
             Expected: ~/.claude (with projects subdirectory)
             """
             await showError(message: errorMessage)
             return false
         }
-        
+
         // Save the path
         claudePath = resolvedURL.path
         hasAccess = true
-        
+
         // Save the resolved path to UserDefaults
         UserDefaults.standard.set(resolvedURL.path, forKey: "claudeDataPath")
         UserDefaults.standard.synchronize()
-        
+
         print("[ClaudeDataAccess] Successfully saved path: \(resolvedURL.path)")
         print("[ClaudeDataAccess] hasAccess is now: \(hasAccess)")
-        
+
         return true
     }
-    
+
     /// Show error alert
     private func showError(message: String) async {
         await MainActor.run {
@@ -145,17 +145,17 @@ class ClaudeDataAccessManager: ObservableObject {
             alert.informativeText = message
             alert.alertStyle = .warning
             alert.addButton(withTitle: L10n.ok)
-            
+
             alert.runModal()
         }
     }
-    
+
     /// Reset access (for testing or if user wants to change folder)
     func resetAccess() {
         print("[ClaudeDataAccess] Resetting access...")
         UserDefaults.standard.removeObject(forKey: "claudeDataPath")
         UserDefaults.standard.synchronize()
-        
+
         claudePath = nil
         hasAccess = false
     }

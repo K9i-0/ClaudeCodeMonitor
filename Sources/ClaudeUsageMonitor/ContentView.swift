@@ -5,8 +5,9 @@ struct ContentView: View {
     @EnvironmentObject var dataAccessManager: ClaudeDataAccessManager
     @State private var selectedTab = 0
     @State private var isRefreshing = false
-    @Environment(\.colorScheme) var colorScheme
-    
+    @Environment(\.colorScheme)
+    var colorScheme
+
     var body: some View {
         if !dataAccessManager.hasAccess {
             DataAccessView()
@@ -15,19 +16,19 @@ struct ContentView: View {
             mainContent
         }
     }
-    
+
     var mainContent: some View {
         ZStack {
             // Background with visual effect
             VisualEffectBlur(material: .popover, blendingMode: .behindWindow)
                 .ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
                 // Header with material background
                 ZStack {
                     VisualEffectBlur(material: .headerView, blendingMode: .withinWindow)
                         .frame(height: 44)
-                    
+
                     HStack {
                         HStack(spacing: 4) {
                             Image(systemName: "chart.line.uptrend.xyaxis.circle.fill")
@@ -36,9 +37,9 @@ struct ContentView: View {
                             Text("Claude Code Monitor")
                                 .font(.system(size: 14, weight: .semibold))
                         }
-                        
+
                         Spacer()
-                        
+
                         HStack(spacing: 8) {
                             Button(action: {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -55,7 +56,12 @@ struct ContentView: View {
                                     .font(.system(size: 13))
                                     .foregroundStyle(isRefreshing ? .blue : .secondary)
                                     .rotationEffect(.degrees(isRefreshing ? 360 : 0))
-                                    .animation(isRefreshing ? .linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isRefreshing)
+                                    .animation(
+                                        isRefreshing
+                                            ? .linear(duration: 1).repeatForever(autoreverses: false)
+                                            : .default,
+                                        value: isRefreshing
+                                    )
                             }
                             .buttonStyle(PlainButtonStyle())
                             .help(L10n.Action.refresh)
@@ -67,9 +73,9 @@ struct ContentView: View {
                     }
                     .padding(.horizontal)
                 }
-                
+
                 Divider().opacity(0.5)
-            
+
                 // Tab selector with modern style
                 Picker("", selection: $selectedTab) {
                     Label(L10n.Tab.current, systemImage: "chart.line.uptrend.xyaxis")
@@ -82,7 +88,7 @@ struct ContentView: View {
                 .pickerStyle(SegmentedPickerStyle())
                 .padding(.horizontal)
                 .padding(.vertical, 8)
-                
+
                 // Content with transition - all tabs are scrollable
                 Group {
                     switch selectedTab {
@@ -127,14 +133,14 @@ struct ContentView: View {
                     }
                 }
                 .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selectedTab)
-                
+
                 Divider().opacity(0.5)
-                
+
                 // Footer with material background
                 ZStack {
                     VisualEffectBlur(material: .menu, blendingMode: .withinWindow)
                         .frame(height: 36)
-                    
+
                     HStack {
                         HStack(spacing: 4) {
                             Circle()
@@ -144,9 +150,9 @@ struct ContentView: View {
                                 .font(.system(size: 11))
                                 .foregroundStyle(.secondary)
                         }
-                        
+
                         Spacer()
-                        
+
                         Button(action: {
                             NSApplication.shared.terminate(nil)
                         }) {
@@ -168,8 +174,9 @@ struct ContentView: View {
 struct CurrentSessionView: View {
     let session: SessionBlock
     let monitor: UsageMonitor
-    @Environment(\.colorScheme) var colorScheme
-    
+    @Environment(\.colorScheme)
+    var colorScheme
+
     var body: some View {
         VStack(spacing: 16) {
             // 残りトークン数を大きく表示（カード風デザイン）
@@ -177,18 +184,22 @@ struct CurrentSessionView: View {
                 Text(L10n.Session.remainingTokens)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.secondary)
-                
+
                 HStack(alignment: .lastTextBaseline, spacing: 4) {
                     Text("\(monitor.formatTokens(monitor.usageData.sessionTokenLimit - session.totalTokens))")
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundStyle(progressGradient)
-                        .accessibilityLabel("\(L10n.Session.remaining) \(monitor.formatTokens(monitor.usageData.sessionTokenLimit - session.totalTokens)) \(L10n.Session.tokens)")
+                        .accessibilityLabel(
+                            "\(L10n.Session.remaining) " +
+                            "\(monitor.formatTokens(monitor.usageData.sessionTokenLimit - session.totalTokens)) " +
+                            "\(L10n.Session.tokens)"
+                        )
                     Text(L10n.Session.tokens)
                         .font(.system(size: 14))
                         .foregroundStyle(.secondary)
                         .accessibilityHidden(true)
                 }
-                
+
                 // プログレスバー（改善版）
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
@@ -196,18 +207,33 @@ struct CurrentSessionView: View {
                         Capsule()
                             .fill(Color(NSColor.separatorColor).opacity(0.3))
                             .frame(height: 10)
-                        
+
                         // Progress
                         Capsule()
                             .fill(progressGradient)
-                            .frame(width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)), height: 10)
-                            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: monitor.usageData.sessionUsagePercentage)
-                        
+                            .frame(
+                                width: min(
+                                    geometry.size.width,
+                                    geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)
+                                ),
+                                height: 10
+                            )
+                            .animation(
+                                .spring(response: 0.5, dampingFraction: 0.8),
+                                value: monitor.usageData.sessionUsagePercentage
+                            )
+
                         // Glow effect for high usage
                         if monitor.usageData.sessionUsagePercentage > 80 {
                             Capsule()
                                 .fill(Color.red.opacity(0.3))
-                                .frame(width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)), height: 10)
+                                .frame(
+                                    width: min(
+                                        geometry.size.width,
+                                        geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)
+                                    ),
+                                    height: 10
+                                )
                                 .blur(radius: 8)
                         }
                     }
@@ -217,7 +243,7 @@ struct CurrentSessionView: View {
                 .accessibilityLabel(L10n.Usage.usage)
                 .accessibilityValue(L10n.Usage.percentage(percent: Int(monitor.usageData.sessionUsagePercentage)))
                 .accessibilityAddTraits(.updatesFrequently)
-                
+
                 HStack {
                     Text(L10n.Session.used(percentage: monitor.usageData.formattedSessionPercentage))
                         .font(.system(size: 12, weight: .medium))
@@ -236,7 +262,7 @@ struct CurrentSessionView: View {
                     .fill(Color(NSColor.controlBackgroundColor))
                     .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
             )
-            
+
             // メトリクスカード
             HStack(spacing: 12) {
                 // リセットまでの時間
@@ -257,7 +283,7 @@ struct CurrentSessionView: View {
                     RoundedRectangle(cornerRadius: 10)
                         .fill(Color.blue.opacity(0.1))
                 )
-                
+
                 // 消費速度
                 VStack(spacing: 6) {
                     Image(systemName: "flame.fill")
@@ -277,7 +303,7 @@ struct CurrentSessionView: View {
                         .fill(Color.orange.opacity(0.1))
                 )
             }
-            
+
             // セッションコスト（改善版）
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
@@ -293,9 +319,9 @@ struct CurrentSessionView: View {
                             .foregroundStyle(.primary)
                     }
                 }
-                
+
                 Spacer()
-                
+
                 // プラン情報
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(monitor.usageData.planDescription)
@@ -319,16 +345,16 @@ struct CurrentSessionView: View {
             )
         }
     }
-    
+
     @MainActor
     private var progressGradient: LinearGradient {
         return Color.usageGradient(for: monitor.usageData.sessionUsagePercentage)
     }
-    
+
     private func formatTime(_ timeString: String) -> String {
         return Date.formatTime(from: timeString)
     }
-    
+
     private func getElapsedTime(from startTimeString: String) -> String {
         return Date.getElapsedTime(from: startTimeString)
     }
@@ -337,7 +363,7 @@ struct CurrentSessionView: View {
 struct SessionDetailView: View {
     let session: SessionBlock
     let monitor: UsageMonitor
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Token usage with progress bar
@@ -348,33 +374,45 @@ struct SessionDetailView: View {
                     Spacer()
                     Text(monitor.usageData.formattedSessionPercentage)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(monitor.usageData.sessionUsagePercentage > 90 ? .red : (monitor.usageData.sessionUsagePercentage > 70 ? .orange : .green))
+                        .foregroundColor(
+                            monitor.usageData.sessionUsagePercentage > 90 ? .red :
+                            (monitor.usageData.sessionUsagePercentage > 70 ? .orange : .green)
+                        )
                 }
-                
+
                 // Progress bar
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 4)
                             .fill(Color.gray.opacity(0.2))
                             .frame(height: 8)
-                        
+
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(monitor.usageData.sessionUsagePercentage > 90 ? Color.red : (monitor.usageData.sessionUsagePercentage > 70 ? Color.orange : Color.green))
-                            .frame(width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)), height: 8)
+                            .fill(
+                                monitor.usageData.sessionUsagePercentage > 90 ? Color.red :
+                                (monitor.usageData.sessionUsagePercentage > 70 ? Color.orange : Color.green)
+                            )
+                            .frame(
+                                width: min(
+                                    geometry.size.width,
+                                    geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)
+                                ),
+                                height: 8
+                            )
                             .animation(.easeInOut(duration: 0.3), value: monitor.usageData.sessionUsagePercentage)
                     }
                 }
                 .frame(height: 8)
-                
+
                 if monitor.usageData.isOverLimit {
                     Text("⚠️ Token limit exceeded!")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.red)
                 }
             }
-            
+
             Divider()
-            
+
             // Session info
             HStack {
                 Label("Tokens Used", systemImage: "number.circle.fill")
@@ -383,7 +421,7 @@ struct SessionDetailView: View {
                 Text("\(monitor.formatTokens(session.totalTokens)) / \(monitor.formatTokens(monitor.usageData.sessionTokenLimit))")
                     .font(.system(size: 14))
             }
-            
+
             HStack {
                 Label("Burn Rate", systemImage: "flame.fill")
                     .font(.system(size: 14, weight: .medium))
@@ -392,7 +430,7 @@ struct SessionDetailView: View {
                     .font(.system(size: 14))
                     .foregroundColor(.orange)
             }
-            
+
             HStack {
                 Label("Cost/Hour", systemImage: "dollarsign.circle.fill")
                     .font(.system(size: 14, weight: .medium))
@@ -401,7 +439,7 @@ struct SessionDetailView: View {
                     .font(.system(size: 14))
                     .foregroundColor(.accentColor)
             }
-            
+
             HStack {
                 Label("Time Left", systemImage: "clock.fill")
                     .font(.system(size: 14, weight: .medium))
@@ -410,15 +448,15 @@ struct SessionDetailView: View {
                     .font(.system(size: 14))
                     .foregroundColor(.blue)
             }
-            
+
             Divider()
-            
+
             // Session details
             VStack(alignment: .leading, spacing: 4) {
                 Text(L10n.Session.sessionDetails)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.secondary)
-                
+
                 HStack {
                     Text(L10n.Session.plan)
                         .font(.system(size: 11))
@@ -427,7 +465,7 @@ struct SessionDetailView: View {
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.blue)
                 }
-                
+
                 HStack {
                     Text(L10n.Session.startTime)
                         .font(.system(size: 11))
@@ -435,7 +473,7 @@ struct SessionDetailView: View {
                     Text(formatTimeWithDate(session.startTime))
                         .font(.system(size: 11))
                 }
-                
+
                 HStack {
                     Text(L10n.Session.endTime)
                         .font(.system(size: 11))
@@ -443,7 +481,7 @@ struct SessionDetailView: View {
                     Text(formatTimeWithDate(session.endTime))
                         .font(.system(size: 11))
                 }
-                
+
                 HStack {
                     Text(L10n.Session.elapsedTime)
                         .font(.system(size: 11))
@@ -455,15 +493,15 @@ struct SessionDetailView: View {
             }
         }
     }
-    
+
     private func formatTime(_ timeString: String) -> String {
         return Date.formatTime(from: timeString)
     }
-    
+
     private func formatTimeWithDate(_ timeString: String) -> String {
         return Date.formatTime(from: timeString, format: "MM/dd HH:mm")
     }
-    
+
     private func getElapsedTime(from startTimeString: String) -> String {
         return Date.getElapsedTime(from: startTimeString)
     }
@@ -477,7 +515,7 @@ struct UsageDetailView: View {
     let monitor: UsageMonitor
     let usagePercentage: Double
     let formattedPercentage: String
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Usage percentage with progress bar
@@ -490,25 +528,31 @@ struct UsageDetailView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(usagePercentage > 80 ? .red : (usagePercentage > 60 ? .orange : .green))
                 }
-                
+
                 // Progress bar
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 4)
                             .fill(Color.gray.opacity(0.2))
                             .frame(height: 8)
-                        
+
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(usagePercentage > 80 ? Color.red : (usagePercentage > 60 ? Color.orange : Color.green))
-                            .frame(width: min(geometry.size.width, geometry.size.width * (usagePercentage / 100)), height: 8)
+                            .fill(
+                                usagePercentage > 80 ? Color.red :
+                                (usagePercentage > 60 ? Color.orange : Color.green)
+                            )
+                            .frame(
+                                width: min(geometry.size.width, geometry.size.width * (usagePercentage / 100)),
+                                height: 8
+                            )
                             .animation(.easeInOut(duration: 0.3), value: usagePercentage)
                     }
                 }
                 .frame(height: 8)
             }
-            
+
             Divider()
-            
+
             // Total cost
             HStack {
                 Label("Total Cost", systemImage: "dollarsign.circle.fill")
@@ -518,7 +562,7 @@ struct UsageDetailView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.accentColor)
             }
-            
+
             // Total tokens
             HStack {
                 Label("Total Tokens", systemImage: "number.circle.fill")
@@ -528,15 +572,15 @@ struct UsageDetailView: View {
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
             }
-            
+
             if !modelBreakdowns.isEmpty {
                 Divider()
-                
+
                 // Model breakdown
                 Text("Model Breakdown")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.secondary)
-                
+
                 ForEach(modelBreakdowns.sorted(by: { $0.actualCost > $1.actualCost }), id: \.modelName) { breakdown in
                     HStack {
                         Text(formatModelName(breakdown.modelName))
@@ -554,7 +598,7 @@ struct UsageDetailView: View {
             }
         }
     }
-    
+
     private func formatModelName(_ name: String) -> String {
         // Format model names for better readability
         return name
@@ -566,26 +610,26 @@ struct UsageDetailView: View {
 
 struct EmptyStateView: View {
     let message: String
-    
+
     var body: some View {
         VStack(spacing: 16) {
             ZStack {
                 Circle()
                     .fill(Color(NSColor.controlBackgroundColor))
                     .frame(width: 64, height: 64)
-                
+
                 Image(systemName: "moon.zzz.fill")
                     .font(.system(size: 28))
                     .foregroundStyle(
                         LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing)
                     )
             }
-            
+
             VStack(spacing: 4) {
                 Text(message)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.primary)
-                
+
                 Text(L10n.Session.startWorkingMessage)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)

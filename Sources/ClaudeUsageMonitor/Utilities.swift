@@ -9,31 +9,31 @@ extension Date {
         guard let date = formatter.date(from: isoString) else {
             return isoString
         }
-        
+
         let displayFormatter = DateFormatter()
         displayFormatter.dateFormat = format
         displayFormatter.timeZone = TimeZone.current
         return displayFormatter.string(from: date)
     }
-    
+
     /// 経過時間を取得
     static func getElapsedTime(from startTimeString: String) -> String {
         let formatter = ISO8601DateFormatter()
         guard let startDate = formatter.date(from: startTimeString) else {
             return "N/A"
         }
-        
+
         let elapsed = Date().timeIntervalSince(startDate)
-        let hours = Int(elapsed) / 3600
-        let minutes = (Int(elapsed) % 3600) / 60
-        
+        let hours = Int(elapsed) / 3_600
+        let minutes = (Int(elapsed) % 3_600) / 60
+
         if hours > 0 {
             return L10n.Time.hoursMinutes(hours: hours, minutes: minutes)
         } else {
             return L10n.Time.minutes(minutes: minutes)
         }
     }
-    
+
     /// フォーマット済み時刻文字列を返す
     func formattedTime() -> String {
         let formatter = DateFormatter()
@@ -58,7 +58,7 @@ extension Color {
             return .blue
         }
     }
-    
+
     /// 使用率に基づいたグラデーションを返す
     static func usageGradient(for percentage: Double) -> LinearGradient {
         if percentage > 90 {
@@ -71,7 +71,7 @@ extension Color {
             return LinearGradient(colors: [.green, .mint], startPoint: .leading, endPoint: .trailing)
         }
     }
-    
+
     /// プログレスバー用のグラデーション
     static func progressGradient(for percentage: Double) -> LinearGradient {
         return usageGradient(for: percentage)
@@ -104,7 +104,7 @@ struct NumberFormatters {
         formatter.groupingSize = 3
         return formatter
     }()
-    
+
     /// 通貨フォーマッター
     static let currencyFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -115,7 +115,7 @@ struct NumberFormatters {
         formatter.minimumFractionDigits = 2
         return formatter
     }()
-    
+
     /// パーセントフォーマッター
     static let percentFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -124,7 +124,7 @@ struct NumberFormatters {
         formatter.minimumFractionDigits = 0
         return formatter
     }()
-    
+
     /// コンパクト数値フォーマッター
     static let compactNumberFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -135,7 +135,7 @@ struct NumberFormatters {
         // Manual K/M formatting since compactDecimal is not available in all locales
         return formatter
     }()
-    
+
     /// トークン数をフォーマット（K/M表記）
     static func formatTokens(_ tokens: Int) -> String {
         if tokens >= 1_000_000 {
@@ -146,16 +146,16 @@ struct NumberFormatters {
             return "\(tokens)"
         }
     }
-    
+
     /// コストをフォーマット（ドル記号付き）
     static func formatCost(_ cost: Double) -> String {
         return String(format: "$%.2f", cost)
     }
-    
+
     /// 軸ラベル用の値フォーマット
     static func formatAxisValue(_ value: Double) -> String {
-        if value >= 1000 {
-            return String(format: "%.0fK", value / 1000)
+        if value >= 1_000 {
+            return String(format: "%.0fK", value / 1_000)
         }
         return String(format: "%.0f", value)
     }
@@ -168,7 +168,7 @@ enum ClaudeMonitorError: LocalizedError {
     case commandExecutionError(String)
     case fileNotFound(String)
     case unknownError(String)
-    
+
     var errorDescription: String? {
         switch self {
         case .networkError(let message):
@@ -183,7 +183,7 @@ enum ClaudeMonitorError: LocalizedError {
             return "不明なエラー: \(message)"
         }
     }
-    
+
     var recoverySuggestion: String? {
         switch self {
         case .networkError:
@@ -211,12 +211,12 @@ struct Constants {
         static let serverStartupRetryDelay: TimeInterval = 1.0
         static let dataAccessWaitTime: TimeInterval = 2.0
     }
-    
+
     struct Server {
         static let serverStartupRetryCount = 5
         static let nodeMemoryLimit = 128 // MB
     }
-    
+
     struct UI {
         static let cornerRadius: CGFloat = 12
         static let smallCornerRadius: CGFloat = 10
@@ -225,7 +225,7 @@ struct Constants {
         static let shadowRadius: CGFloat = 3
         static let shadowOpacity: Double = 0.1
     }
-    
+
     struct TokenLimits {
         static let pro = 7_000
         static let max5 = 35_000
@@ -237,13 +237,14 @@ struct Constants {
 struct CardStyle: ViewModifier {
     let cornerRadius: CGFloat
     let padding: CGFloat
-    @Environment(\.colorScheme) var colorScheme
-    
+    @Environment(\.colorScheme)
+    var colorScheme
+
     init(cornerRadius: CGFloat = Constants.UI.cornerRadius, padding: CGFloat = Constants.UI.padding) {
         self.cornerRadius = cornerRadius
         self.padding = padding
     }
-    
+
     func body(content: Content) -> some View {
         content
             .padding(padding)

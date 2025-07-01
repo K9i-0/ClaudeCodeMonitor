@@ -5,20 +5,20 @@ struct SettingsTabView: View {
     @EnvironmentObject var dataAccessManager: ClaudeDataAccessManager
     @StateObject private var languageSettings = LanguageSettings.shared
     // @State private var notificationEnabled = Bundle.main.bundleIdentifier != nil ? NotificationManager.shared.isNotificationEnabled : false
-    
+
     let plans = [
         ("Pro", "7,000 tokens/session", L10n.Plan.pro),
         ("Max5", "35,000 tokens/session", L10n.Plan.max5),
         ("Max20", "140,000 tokens/session", L10n.Plan.max20)
     ]
-    
+
     var body: some View {
         VStack(spacing: 20) {
             // Plan selection section
             VStack(alignment: .leading, spacing: 12) {
                 Text(L10n.Settings.planSelection)
                     .font(.system(size: 16, weight: .semibold))
-                
+
                 VStack(spacing: 8) {
                     ForEach(plans, id: \.0) { plan in
                         Button(action: {
@@ -28,7 +28,7 @@ struct SettingsTabView: View {
                                 Image(systemName: monitor.getUserPlan() == plan.0 ? "checkmark.circle.fill" : "circle")
                                     .foregroundColor(monitor.getUserPlan() == plan.0 ? .accentColor : .secondary)
                                     .frame(width: 20)
-                                
+
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(plan.2)
                                         .font(.system(size: 14, weight: .medium))
@@ -36,7 +36,7 @@ struct SettingsTabView: View {
                                         .font(.system(size: 12))
                                         .foregroundColor(.secondary)
                                 }
-                                
+
                                 Spacer()
                             }
                             .padding(.horizontal, 12)
@@ -48,39 +48,42 @@ struct SettingsTabView: View {
                     }
                 }
             }
-            
+
             Divider()
-            
+
             // Language settings section
             VStack(alignment: .leading, spacing: 12) {
                 Text(L10n.Settings.languageSettings)
                     .font(.system(size: 16, weight: .semibold))
-                
+
                 VStack(spacing: 8) {
                     ForEach(AppLanguage.allCases, id: \.self) { language in
                         Button(action: {
                             languageSettings.currentLanguage = language
                         }) {
                             HStack {
-                                Image(systemName: languageSettings.currentLanguage == language ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(languageSettings.currentLanguage == language ? .accentColor : .secondary)
+                                Image(systemName: languageSettings.currentLanguage == language
+                                    ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(languageSettings.currentLanguage == language
+                                        ? .accentColor : .secondary)
                                     .frame(width: 20)
-                                
+
                                 Text(language.displayName)
                                     .font(.system(size: 14))
-                                
+
                                 Spacer()
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
-                            .background(languageSettings.currentLanguage == language ? Color.accentColor.opacity(0.1) : Color.clear)
+                            .background(languageSettings.currentLanguage == language
+                                ? Color.accentColor.opacity(0.1) : Color.clear)
                             .cornerRadius(6)
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
             }
-            
+
             // 通知機能は初回リリースでは無効化
             /*
             Divider()
@@ -117,14 +120,14 @@ struct SettingsTabView: View {
                 }
             }
             */
-            
+
             Divider()
-            
+
             // Data Access section
             VStack(alignment: .leading, spacing: 12) {
                 Text("Data Access")
                     .font(.system(size: 16, weight: .semibold))
-                
+
                 HStack {
                     Button(action: {
                         dataAccessManager.resetAccess()
@@ -138,15 +141,15 @@ struct SettingsTabView: View {
                         .foregroundStyle(.orange)
                     }
                     .buttonStyle(.plain)
-                    
+
                     Spacer()
                 }
-                
+
                 Text("Reset access permissions if you're having issues with data loading.")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
-            
+
             Spacer()
         }
     }
