@@ -206,6 +206,8 @@ struct L10n {
         static func minutes(minutes: Int) -> String {
             return "time.minutes".localized(with: minutes)
         }
+        static var today: String { "time.today".localized }
+        static var tomorrow: String { "time.tomorrow".localized }
     }
 
     struct Status {

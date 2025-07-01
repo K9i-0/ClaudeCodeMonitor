@@ -72,6 +72,8 @@
 // Time format
 "time.hoursMinutes" = "%d hours %d minutes";
 "time.minutes" = "%d minutes";
+"time.today" = "Today";
+"time.tomorrow" = "Tomorrow";
 
 // Settings
 "settings.planSelection" = "Select Plan";

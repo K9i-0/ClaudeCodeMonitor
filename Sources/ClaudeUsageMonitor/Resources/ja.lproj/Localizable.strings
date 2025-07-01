@@ -72,6 +72,8 @@
 // Time format
 "time.hoursMinutes" = "%d時間%d分";
 "time.minutes" = "%d分";
+"time.today" = "今日";
+"time.tomorrow" = "明日";
 
 // Settings
 "settings.planSelection" = "プラン選択";

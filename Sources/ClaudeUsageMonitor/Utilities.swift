@@ -41,6 +41,71 @@ extension Date {
         formatter.timeZone = TimeZone.current
         return formatter.string(from: self)
     }
+    
+    /// ユーザーフレンドリーな日時表示（今日、明日、曜日など）
+    static func formatUserFriendlyDateTime(from isoString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        // Try multiple formats
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = formatter.date(from: isoString)
+        
+        if date == nil {
+            formatter.formatOptions = [.withInternetDateTime]
+            date = formatter.date(from: isoString)
+        }
+        
+        if date == nil {
+            // Try with basic format
+            formatter.formatOptions = [.withFullDate, .withFullTime, .withTimeZone, .withColonSeparatorInTimeZone]
+            date = formatter.date(from: isoString)
+        }
+        
+        guard let date = date else {
+            print("Failed to parse date: \(isoString)")
+            return formatTime(from: isoString, format: "MM/dd HH:mm")
+        }
+        
+        let displayFormatter = DateFormatter()
+        displayFormatter.timeZone = TimeZone.current
+        displayFormatter.locale = Locale.current
+        
+        let calendar = Calendar.current
+        let now = Date()
+        
+        if calendar.isDateInToday(date) {
+            // Use localized "Today"
+            displayFormatter.doesRelativeDateFormatting = true
+            displayFormatter.dateStyle = .short
+            displayFormatter.timeStyle = .short
+            let result = displayFormatter.string(from: date)
+            // Extract time part and prepend "Today"
+            if let timeRange = result.range(of: " ") {
+                let timePart = String(result[timeRange.upperBound...])
+                return "\(L10n.Time.today) \(timePart)"
+            }
+            return result
+        } else if calendar.isDateInTomorrow(date) {
+            // Use localized "Tomorrow"
+            displayFormatter.dateFormat = "HH:mm"
+            let time = displayFormatter.string(from: date)
+            return "\(L10n.Time.tomorrow) \(time)"
+        } else {
+            // Check if within next 7 days
+            let daysDiff = calendar.dateComponents([.day], from: now, to: date).day ?? 0
+            
+            if daysDiff > 0 && daysDiff <= 7 {
+                // Show weekday name
+                displayFormatter.dateFormat = "E HH:mm"
+            } else {
+                // Show date
+                displayFormatter.dateFormat = "MM/dd HH:mm"
+            }
+            
+            return displayFormatter.string(from: date)
+        }
+    }
 }
 
 // MARK: - Color Extensions
