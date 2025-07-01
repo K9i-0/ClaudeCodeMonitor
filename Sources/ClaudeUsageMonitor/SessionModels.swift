@@ -181,6 +181,34 @@ extension UsageData {
             return "\(minutes)m"
         }
     }
+    
+    // Share text用のシンプルな残り時間表示
+    var sessionRemainingTimeForShare: String {
+        guard let session = activeSession,
+              let projection = session.projection else { return "N/A" }
+
+        let totalMinutes = projection.remainingMinutes
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        
+        // 英語環境かどうかを判定
+        let isEnglish = LanguageSettings.shared.effectiveLanguageCode() == "en"
+
+        if hours > 0 {
+            if minutes == 0 {
+                return isEnglish ? "\(hours)h" : "\(hours)時間"
+            } else {
+                return isEnglish ? "\(hours)h \(minutes)m" : "\(hours)時間\(minutes)分"
+            }
+        } else if minutes > 1 {
+            return isEnglish ? "\(minutes)m" : "\(minutes)分"
+        } else if minutes == 1 {
+            // 1分以下の場合は秒で表示
+            return isEnglish ? "60s" : "60秒"
+        } else {
+            return isEnglish ? "Soon" : "まもなく"
+        }
+    }
 
     var sessionBurnRate: String {
         guard let session = activeSession,

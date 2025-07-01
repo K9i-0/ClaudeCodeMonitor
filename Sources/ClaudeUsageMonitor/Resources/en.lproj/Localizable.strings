@@ -23,6 +23,7 @@
 "session.waitingForData" = "Waiting for data...";
 "session.highUsageWarning" = "High usage rate";
 "session.used" = "%@ Used";
+"session.tokensConsumed" = "%@ tokens consumed";
 "session.resetTime" = "Reset: %@";
 "session.sessionDetails" = "Session Details (5-hour session)";
 "session.plan" = "Plan:";
@@ -118,3 +119,12 @@
 "claudeDataFolderMessage" = "This app needs access to your Claude data folder.\n\nThe folder should already be selected (~/.claude).\nJust click 'Grant Access' to continue.";
 "invalidClaudeFolder" = "The selected folder doesn't appear to be a valid Claude data folder. Please make sure it contains a 'projects' subdirectory.";
 "failedToSaveAccess" = "Failed to save folder access. Please try again.";
+
+// Share Text
+"share.currentSession.consuming" = "Currently consuming %@ tokens ($%@) 🔥";
+"share.currentSession.resetIn" = "Reset in %@ ⏰";
+"share.currentSession.noSession" = "No active Claude Code session";
+"share.history.title" = "Claude Code Usage 📊";
+"share.history.today" = "Today: %@ tokens ($%@)";
+"share.history.month" = "Month: %@ tokens ($%@)";
+"share.hashtags" = "#ClaudeCodeMonitor";

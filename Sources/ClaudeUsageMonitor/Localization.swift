@@ -99,6 +99,9 @@ struct L10n {
         static func used(percentage: String) -> String {
             return "session.used".localized(with: percentage)
         }
+        static func tokensConsumed(tokens: String) -> String {
+            return "session.tokensConsumed".localized(with: tokens)
+        }
         static func resetTime(time: String) -> String {
             return "session.resetTime".localized(with: time)
         }
@@ -231,4 +234,21 @@ struct L10n {
     static var claudeDataFolderMessage: String { "claudeDataFolderMessage".localized }
     static var invalidClaudeFolder: String { "invalidClaudeFolder".localized }
     static var failedToSaveAccess: String { "failedToSaveAccess".localized }
+    
+    // Share Text
+    struct Share {
+        static var hashtags: String { "share.hashtags".localized }
+        
+        struct CurrentSession {
+            static var consuming: String { "share.currentSession.consuming".localized }
+            static var resetIn: String { "share.currentSession.resetIn".localized }
+            static var noSession: String { "share.currentSession.noSession".localized }
+        }
+        
+        struct History {
+            static var title: String { "share.history.title".localized }
+            static var today: String { "share.history.today".localized }
+            static var month: String { "share.history.month".localized }
+        }
+    }
 }

@@ -5,6 +5,8 @@ struct ContentView: View {
     @EnvironmentObject var dataAccessManager: ClaudeDataAccessManager
     @State private var selectedTab = 0
     @State private var isRefreshing = false
+    @State private var showCopiedFeedback = false
+    
     @Environment(\.colorScheme)
     var colorScheme
 
@@ -40,7 +42,23 @@ struct ContentView: View {
 
                         Spacer()
 
-                        HStack(spacing: 8) {
+                        HStack(spacing: 12) {
+                            // Share button - only show on Current or History tabs
+                            if selectedTab == 0 || selectedTab == 1 {
+                                Button(action: {
+                                    shareScreenshot()
+                                }) {
+                                    Image(systemName: showCopiedFeedback ? "checkmark" : "square.and.arrow.up")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(showCopiedFeedback ? .green : .secondary)
+                                        .animation(.easeInOut(duration: 0.2), value: showCopiedFeedback)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .help("クリップボードにコピー")
+                                .keyboardShortcut("s", modifiers: .command)
+                                .accessibilityLabel("クリップボードにコピー")
+                            }
+                            
                             Button(action: {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                     isRefreshing = true
@@ -169,6 +187,90 @@ struct ContentView: View {
         }
         .frame(width: 380, height: 480)
     }
+    
+    private func shareScreenshot() {
+        Task { @MainActor in
+            // Create the content view to capture based on selected tab
+            let contentToCapture: AnyView
+            
+            switch selectedTab {
+            case 0:
+                // Current session tab content
+                if let session = monitor.usageData.activeSession {
+                    contentToCapture = AnyView(
+                        CurrentSessionView(session: session, monitor: monitor)
+                            .padding()
+                            .frame(width: 380)
+                            .background(colorScheme == .dark ? Color.black : Color.white)
+                            .environment(\.colorScheme, colorScheme)
+                    )
+                } else {
+                    contentToCapture = AnyView(
+                        EmptyStateView(message: L10n.Session.noActiveSession)
+                            .padding()
+                            .frame(width: 380, height: 400)
+                            .background(colorScheme == .dark ? Color.black : Color.white)
+                            .environment(\.colorScheme, colorScheme)
+                    )
+                }
+            case 1:
+                // History tab content
+                contentToCapture = AnyView(
+                    HistoryView(monitor: monitor)
+                        .padding()
+                        .frame(width: 380)
+                        .background(colorScheme == .dark ? Color.black : Color.white)
+                        .environment(\.colorScheme, colorScheme)
+                )
+            default:
+                return
+            }
+            
+            // Generate text content based on selected tab
+            let textContent: String
+            switch selectedTab {
+            case 0:
+                if let session = monitor.usageData.activeSession {
+                    let tokens = monitor.formatTokens(session.totalTokens)
+                    let cost = String(format: "%.2f", session.costUSD)
+                    let remainingTime = monitor.usageData.sessionRemainingTimeForShare
+                    textContent = """
+                    \(String(format: L10n.Share.CurrentSession.consuming, tokens, cost))
+                    \(String(format: L10n.Share.CurrentSession.resetIn, remainingTime))
+                    
+                    \(L10n.Share.hashtags)
+                    """
+                } else {
+                    textContent = "\(L10n.Share.CurrentSession.noSession)\n\n\(L10n.Share.hashtags)"
+                }
+            case 1:
+                let todayTokens = monitor.formatTokens(monitor.usageData.todayBillableTokens)
+                let todayCost = String(format: "%.2f", monitor.usageData.todayUsage?.totalCost ?? 0.0)
+                let monthTokens = monitor.formatTokens(monitor.usageData.monthlyBillableTokens)
+                let monthCost = String(format: "%.2f", monitor.usageData.monthlyTotal?.totalCost ?? 0.0)
+                
+                textContent = """
+                \(L10n.Share.History.title)
+                \(String(format: L10n.Share.History.today, todayTokens, todayCost))
+                \(String(format: L10n.Share.History.month, monthTokens, monthCost))
+                
+                \(L10n.Share.hashtags)
+                """
+            default:
+                textContent = ""
+            }
+            
+            let success = await ScreenshotManager.shared.captureViewContent(contentToCapture, withText: textContent)
+            if success {
+                // Show visual feedback
+                showCopiedFeedback = true
+                
+                // Reset after delay
+                try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+                showCopiedFeedback = false
+            }
+        }
+    }
 }
 
 struct CurrentSessionView: View {
@@ -245,9 +347,17 @@ struct CurrentSessionView: View {
                 .accessibilityAddTraits(.updatesFrequently)
 
                 HStack {
-                    Text(L10n.Session.used(percentage: monitor.usageData.formattedSessionPercentage))
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Text(L10n.Session.used(percentage: monitor.usageData.formattedSessionPercentage))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                        Text("•")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                        Text(L10n.Session.tokensConsumed(tokens: monitor.formatTokens(session.totalTokens)))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
                     Spacer()
                     if monitor.usageData.sessionUsagePercentage > 90 {
                         Label(L10n.Session.highUsageWarning, systemImage: "exclamationmark.triangle.fill")
@@ -292,7 +402,7 @@ struct CurrentSessionView: View {
                     Text(L10n.Session.burnRate)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
-                    Text("\(monitor.usageData.sessionBurnRate)/分")
+                    Text("\(monitor.usageData.sessionBurnRate) \(L10n.Session.tokensPerMin)")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.orange)
                 }
