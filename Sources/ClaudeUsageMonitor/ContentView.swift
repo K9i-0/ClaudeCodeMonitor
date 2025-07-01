@@ -42,7 +42,7 @@ struct ContentView: View {
 
                         Spacer()
 
-                        HStack(spacing: 8) {
+                        HStack(spacing: 12) {
                             // Share button - only show on Current or History tabs
                             if selectedTab == 0 || selectedTab == 1 {
                                 Button(action: {
@@ -357,7 +357,7 @@ struct CurrentSessionView: View {
                     Text(L10n.Session.burnRate)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
-                    Text("\(monitor.usageData.sessionBurnRate)/分")
+                    Text("\(monitor.usageData.sessionBurnRate) \(L10n.Session.tokensPerMin)")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.orange)
                 }
