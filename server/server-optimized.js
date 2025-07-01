@@ -25,7 +25,12 @@ app.get('/usage', async (req, res) => {
       return;
     }
 
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    // Use local timezone for date calculation to match ccusage behavior
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const today = `${year}${month}${day}`;
     
     // Get today's usage data
     const todayData = await loadDailyUsageData({

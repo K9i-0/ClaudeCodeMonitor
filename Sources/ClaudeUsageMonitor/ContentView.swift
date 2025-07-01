@@ -333,7 +333,7 @@ struct CurrentSessionView: View {
                             Capsule()
                                 .fill(Color.blue.opacity(0.15))
                         )
-                    Text(L10n.Session.resetTime(time: formatTime(session.endTime)))
+                    Text(L10n.Session.resetTime(time: formatSessionEndTime(session.endTime)))
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                 }
@@ -353,6 +353,10 @@ struct CurrentSessionView: View {
 
     private func formatTime(_ timeString: String) -> String {
         return Date.formatTime(from: timeString)
+    }
+    
+    private func formatSessionEndTime(_ timeString: String) -> String {
+        return Date.formatUserFriendlyDateTime(from: timeString)
     }
 
     private func getElapsedTime(from startTimeString: String) -> String {

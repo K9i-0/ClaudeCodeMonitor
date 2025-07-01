@@ -8,17 +8,26 @@ const PORT = 3456;
 
 app.get('/usage', async (req, res) => {
   try {
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    // Use local timezone for date calculation to match ccusage behavior
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const today = `${year}${month}${day}`;
     
     // Get today's usage data
     const todayData = await loadDailyUsageData({
       since: today,
+      until: today,
     });
     
-    // Get current month's data
+    // Get current month's data with explicit date range
     const currentMonth = today.slice(0, 6);
+    const lastDayOfMonth = new Date(year, now.getMonth() + 1, 0).getDate();
+    const monthEnd = `${currentMonth}${String(lastDayOfMonth).padStart(2, '0')}`;
     const monthData = await loadDailyUsageData({
       since: currentMonth + '01',
+      until: monthEnd,
     });
     
     // Calculate today's totals
