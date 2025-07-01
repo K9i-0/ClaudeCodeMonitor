@@ -233,8 +233,10 @@ struct ContentView: View {
                 if let session = monitor.usageData.activeSession {
                     let tokens = monitor.formatTokens(session.totalTokens)
                     let cost = String(format: "%.2f", session.costUSD)
+                    let remainingTime = monitor.usageData.sessionRemainingTimeForShare
                     textContent = """
                     \(String(format: L10n.Share.CurrentSession.consuming, tokens, cost))
+                    \(String(format: L10n.Share.CurrentSession.resetIn, remainingTime))
                     
                     \(L10n.Share.hashtags)
                     """

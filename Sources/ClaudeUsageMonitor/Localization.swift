@@ -238,6 +238,7 @@ struct L10n {
         
         struct CurrentSession {
             static var consuming: String { "share.currentSession.consuming".localized }
+            static var resetIn: String { "share.currentSession.resetIn".localized }
             static var noSession: String { "share.currentSession.noSession".localized }
         }
         

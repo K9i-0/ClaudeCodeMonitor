@@ -121,6 +121,7 @@
 
 // Share Text
 "share.currentSession.consuming" = "現在%@トークン($%@)を消費中🔥";
+"share.currentSession.resetIn" = "リセットまで残り%@ ⏰";
 "share.currentSession.noSession" = "アクティブなClaude Codeセッションがありません";
 "share.history.title" = "Claude Code使用状況 📊";
 "share.history.today" = "今日: %@トークン ($%@)";
