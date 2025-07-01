@@ -9,17 +9,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var eventMonitor: EventMonitor?
     private var usageMonitor: UsageMonitor!
     private var dataAccessManager: ClaudeDataAccessManager!
-    
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize data access manager
         dataAccessManager = ClaudeDataAccessManager()
-        
+
         // Pass claude path to server manager if available
         if dataAccessManager.hasAccess {
             print("[AppDelegate] Data access already available, path: \(dataAccessManager.claudePath ?? "nil")")
             NSLog("[AppDelegate] Data access already available, path: %@", dataAccessManager.claudePath ?? "nil")
             ServerManager.shared.claudePath = dataAccessManager.claudePath
-            
+
             // Start the local server with path
             Task {
                 await ServerManager.shared.checkAndStartServer()
@@ -28,9 +28,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             print("[AppDelegate] No data access yet, server will start after folder selection")
             // Don't start server yet - will start after user selects folder
         }
-        
+
         usageMonitor = UsageMonitor()
-        
+
         // 通知機能は初回リリースでは無効化
         /*
         // Setup notification center delegate
@@ -38,15 +38,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             UNUserNotificationCenter.current().delegate = NotificationManager.shared
         }
         */
-        
+
         // Hide all windows for menubar-only app
         NSApp.windows.forEach { window in
             window.close()
         }
-        
+
         // Create status bar item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        
+
         if let button = statusItem.button {
             // SF Symbolsを使用した初期アイコン
             if let image = NSImage(systemSymbolName: "hourglass", accessibilityDescription: "Claude Code Monitor") {
@@ -59,7 +59,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.action = #selector(togglePopover)
             button.target = self
         }
-        
+
         // Create popover
         popover = NSPopover()
         popover.contentSize = NSSize(width: 380, height: 480)
@@ -70,17 +70,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 .environmentObject(usageMonitor)
                 .environmentObject(dataAccessManager)
         )
-        
+
         // Monitor for clicks outside the popover
-        eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+        eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             if let self = self, self.popover.isShown {
                 self.closePopover()
             }
         }
-        
+
         // Update status bar title when usage data changes
         updateStatusBarTitle()
-        
+
         // Observe usage data changes
         usageMonitor.$usageData
             .receive(on: DispatchQueue.main)
@@ -88,7 +88,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.updateStatusBarTitle()
             }
             .store(in: &cancellables)
-        
+
         // Observe data access changes
         dataAccessManager.$hasAccess
             .receive(on: DispatchQueue.main)
@@ -97,7 +97,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 if hasAccess {
                     // Update server with claude path
                     ServerManager.shared.claudePath = self?.dataAccessManager.claudePath
-                    
+
                     // Restart server if needed
                     if ServerManager.shared.isServerRunning {
                         ServerManager.shared.stopServer()
@@ -105,20 +105,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                             await ServerManager.shared.checkAndStartServer()
                         }
                     }
-                    
+
                     // Fetch data
                     self?.usageMonitor.fetchUsageData()
                 }
             }
             .store(in: &cancellables)
     }
-    
+
     private var cancellables = Set<AnyCancellable>()
-    
+
     @MainActor
     private func updateStatusBarTitle() {
         guard let button = statusItem.button else { return }
-        
+
         if usageMonitor.isLoading && usageMonitor.usageData.activeSession == nil {
             // ローディング中
             if let image = NSImage(systemSymbolName: "hourglass", accessibilityDescription: "Loading") {
@@ -131,17 +131,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // アクティブセッション
             let percentage = usageMonitor.usageData.sessionUsagePercentage
             let cost = session.costUSD
-            
+
             // SF Symbolを使用したアイコン表示
             let symbolName = getStatusSymbol(percentage: percentage)
             let tintColor = getStatusColor(percentage: percentage)
-            
+
             if let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Usage Status") {
                 let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
                     .applying(.init(paletteColors: [tintColor]))
                 button.image = image.withSymbolConfiguration(config)
             }
-            
+
             // パーセンテージのみ表示（HIGに準拠した簡潔な表示）
             button.title = String(format: "%.0f%%", percentage)
             button.attributedTitle = NSAttributedString(
@@ -151,12 +151,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     .foregroundColor: tintColor
                 ]
             )
-            
+
             // 詳細情報はツールチップで表示
             let burnRateString = usageMonitor.usageData.sessionBurnRate
             let burnRate = Double(burnRateString) ?? 0.0
             let remaining = usageMonitor.usageData.sessionRemainingTime
-            button.toolTip = L10n.Status.usageFormat(usage: percentage, cost: cost, burnRate: burnRate, timeRemaining: remaining)
+            button.toolTip = L10n.Status.usageFormat(
+                usage: percentage,
+                cost: cost,
+                burnRate: burnRate,
+                timeRemaining: remaining
+            )
         } else {
             // 非アクティブ
             if let image = NSImage(systemSymbolName: "moon.zzz", accessibilityDescription: "Inactive") {
@@ -167,7 +172,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
-    
+
     @MainActor
     private func getStatusSymbol(percentage: Double) -> String {
         switch percentage {
@@ -185,7 +190,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return "circle.fill"  // 最小使用率
         }
     }
-    
+
     @MainActor
     private func getStatusColor(percentage: Double) -> NSColor {
         switch percentage {
@@ -201,8 +206,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return NSColor.systemGreen  // 良好
         }
     }
-    
-    
+
     @objc private func togglePopover() {
         if popover.isShown {
             closePopover()
@@ -212,7 +216,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
-    
+
     @MainActor
     func showPopover() {
         if let button = statusItem.button {
@@ -222,22 +226,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             eventMonitor?.start()
         }
     }
-    
+
     func closePopover() {
         popover.performClose(nil)
         eventMonitor?.stop()
     }
-    
+
     func pauseEventMonitor() {
         eventMonitor?.stop()
     }
-    
+
     func resumeEventMonitor() {
         if popover.isShown {
             eventMonitor?.start()
         }
     }
-    
+
     func applicationWillTerminate(_ notification: Notification) {
         usageMonitor.stopMonitoring()
     }
@@ -247,20 +251,20 @@ class EventMonitor {
     private var monitor: Any?
     private let mask: NSEvent.EventTypeMask
     private let handler: (NSEvent?) -> Void
-    
+
     init(mask: NSEvent.EventTypeMask, handler: @escaping (NSEvent?) -> Void) {
         self.mask = mask
         self.handler = handler
     }
-    
+
     deinit {
         stop()
     }
-    
+
     func start() {
         monitor = NSEvent.addGlobalMonitorForEvents(matching: mask, handler: handler)
     }
-    
+
     func stop() {
         if let monitor = monitor {
             NSEvent.removeMonitor(monitor)

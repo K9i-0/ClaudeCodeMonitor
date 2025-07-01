@@ -9,12 +9,12 @@ struct ClaudePathHelper {
             homeURL.appendingPathComponent(".config/claude")
         ]
     }
-    
+
     /// Find the first existing Claude data path
     static func findExistingClaudePath() -> URL? {
         let paths = getExpectedPaths()
         let fileManager = FileManager.default
-        
+
         for path in paths {
             let projectsPath = path.appendingPathComponent("projects")
             var isDirectory: ObjCBool = false
@@ -23,7 +23,7 @@ struct ClaudePathHelper {
                 return path
             }
         }
-        
+
         return nil
     }
 }
