@@ -121,35 +121,6 @@ struct SettingsTabView: View {
             }
             */
 
-            Divider()
-
-            // Data Access section
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Data Access")
-                    .font(.system(size: 16, weight: .semibold))
-
-                HStack {
-                    Button(action: {
-                        dataAccessManager.resetAccess()
-                    }) {
-                        HStack {
-                            Image(systemName: "arrow.counterclockwise")
-                                .font(.system(size: 14))
-                            Text("Reset Data Access")
-                                .font(.system(size: 14))
-                        }
-                        .foregroundStyle(.orange)
-                    }
-                    .buttonStyle(.plain)
-
-                    Spacer()
-                }
-
-                Text("Reset access permissions if you're having issues with data loading.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-            }
-
             Spacer()
         }
     }
