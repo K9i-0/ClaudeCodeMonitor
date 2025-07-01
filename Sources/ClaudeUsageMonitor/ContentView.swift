@@ -226,7 +226,39 @@ struct ContentView: View {
                 return
             }
             
-            let success = await ScreenshotManager.shared.captureViewContent(contentToCapture)
+            // Generate text content based on selected tab
+            let textContent: String
+            switch selectedTab {
+            case 0:
+                if let session = monitor.usageData.activeSession {
+                    let usage = monitor.usageData.sessionUsagePercentage
+                    textContent = """
+                    Claude Code Monitor - Usage Report
+                    
+                    📊 Usage: \(String(format: "%.1f", usage))%
+                    💰 Cost: $\(String(format: "%.2f", session.costUSD))
+                    🔥 Burn Rate: \(monitor.usageData.sessionBurnRate) tokens/min
+                    ⏱️ Time Until Reset: \(monitor.usageData.sessionRemainingTime)
+                    
+                    #ClaudeCode #AIProductivity #DeveloperTools
+                    """
+                } else {
+                    textContent = "Claude Code Monitor - No active session\n\n#ClaudeCode #AIProductivity"
+                }
+            case 1:
+                let totalCost = monitor.usageData.monthlyTotal?.totalCost ?? 0.0
+                textContent = """
+                Claude Code Monitor - History
+                
+                💸 Monthly Total Cost: $\(String(format: "%.2f", totalCost))
+                
+                #ClaudeCode #AIProductivity #DeveloperTools
+                """
+            default:
+                textContent = ""
+            }
+            
+            let success = await ScreenshotManager.shared.captureViewContent(contentToCapture, withText: textContent)
             if success {
                 // Show visual feedback
                 showCopiedFeedback = true

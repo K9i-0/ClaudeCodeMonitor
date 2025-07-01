@@ -7,7 +7,7 @@ class ScreenshotManager {
     
     private init() {}
     
-    func captureViewContent(_ view: AnyView) async -> Bool {
+    func captureViewContent(_ view: AnyView, withText text: String? = nil) async -> Bool {
         // Use ImageRenderer to capture the specific view content
         let renderer = ImageRenderer(content: view)
         
@@ -24,10 +24,11 @@ class ScreenshotManager {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         
-        // Add both PNG and TIFF representations for better compatibility
+        // Create pasteboard items
         var items: [NSPasteboardItem] = []
         let item = NSPasteboardItem()
         
+        // Add image data
         if let tiffData = nsImage.tiffRepresentation {
             item.setData(tiffData, forType: .tiff)
         }
@@ -36,6 +37,11 @@ class ScreenshotManager {
            let bitmapRep = NSBitmapImageRep(data: tiffData),
            let pngData = bitmapRep.representation(using: .png, properties: [:]) {
             item.setData(pngData, forType: .png)
+        }
+        
+        // Add text if provided
+        if let text = text {
+            item.setString(text, forType: .string)
         }
         
         items.append(item)
