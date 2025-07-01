@@ -5,6 +5,8 @@ struct ContentView: View {
     @EnvironmentObject var dataAccessManager: ClaudeDataAccessManager
     @State private var selectedTab = 0
     @State private var isRefreshing = false
+    @State private var showCopiedFeedback = false
+    
     @Environment(\.colorScheme)
     var colorScheme
 
@@ -41,6 +43,22 @@ struct ContentView: View {
                         Spacer()
 
                         HStack(spacing: 8) {
+                            // Share button - only show on Current or History tabs
+                            if selectedTab == 0 || selectedTab == 1 {
+                                Button(action: {
+                                    shareScreenshot()
+                                }) {
+                                    Image(systemName: showCopiedFeedback ? "checkmark" : "square.and.arrow.up")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(showCopiedFeedback ? .green : .secondary)
+                                        .animation(.easeInOut(duration: 0.2), value: showCopiedFeedback)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .help("クリップボードにコピー")
+                                .keyboardShortcut("s", modifiers: .command)
+                                .accessibilityLabel("クリップボードにコピー")
+                            }
+                            
                             Button(action: {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                     isRefreshing = true
@@ -168,6 +186,53 @@ struct ContentView: View {
             }
         }
         .frame(width: 380, height: 480)
+    }
+    
+    private func shareScreenshot() {
+        Task { @MainActor in
+            // Create the content view to capture based on selected tab
+            let contentToCapture: AnyView
+            
+            switch selectedTab {
+            case 0:
+                // Current session tab content
+                if let session = monitor.usageData.activeSession {
+                    contentToCapture = AnyView(
+                        CurrentSessionView(session: session, monitor: monitor)
+                            .padding()
+                            .frame(width: 380)
+                            .background(Color(NSColor.windowBackgroundColor))
+                    )
+                } else {
+                    contentToCapture = AnyView(
+                        EmptyStateView(message: L10n.Session.noActiveSession)
+                            .padding()
+                            .frame(width: 380, height: 400)
+                            .background(Color(NSColor.windowBackgroundColor))
+                    )
+                }
+            case 1:
+                // History tab content
+                contentToCapture = AnyView(
+                    HistoryView(monitor: monitor)
+                        .padding()
+                        .frame(width: 380)
+                        .background(Color(NSColor.windowBackgroundColor))
+                )
+            default:
+                return
+            }
+            
+            let success = await ScreenshotManager.shared.captureViewContent(contentToCapture)
+            if success {
+                // Show visual feedback
+                showCopiedFeedback = true
+                
+                // Reset after delay
+                try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+                showCopiedFeedback = false
+            }
+        }
     }
 }
 
