@@ -114,10 +114,9 @@ class ProcessCommandExecutor: CommandExecuting {
                     continuation.resume(returning: data)
                 } else {
                     let errorOutput = String(data: data, encoding: .utf8) ?? "Unknown error"
-                    continuation.resume(throwing:
-                        ClaudeMonitorError.commandExecutionError(
-                            "Exit code: \(process.terminationStatus), Output: \(errorOutput)"
-                        )
+                    let message = "Exit code: \(process.terminationStatus), Output: \(errorOutput)"
+                    continuation.resume(
+                        throwing: ClaudeMonitorError.commandExecutionError(message)
                     )
                 }
             }

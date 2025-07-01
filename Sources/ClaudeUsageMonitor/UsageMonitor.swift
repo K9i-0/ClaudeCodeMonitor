@@ -172,9 +172,8 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
 
     private func fetchSessionData() async {
         // Print environment info for debugging
-        print(
-            "[DEBUG] Running from Xcode: \(ProcessInfo.processInfo.environment["__XCODE_BUILT_PRODUCTS_DIR_PATHS"] != nil)"
-        )
+        let runningFromXcode = ProcessInfo.processInfo.environment["__XCODE_BUILT_PRODUCTS_DIR_PATHS"] != nil
+        print("[DEBUG] Running from Xcode: \(runningFromXcode)")
         print("[DEBUG] PATH: \(ProcessInfo.processInfo.environment["PATH"] ?? "not set")")
 
         do {
@@ -219,9 +218,8 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
 
                         if let activeBlock = blocksResponse.blocks.first(where: { $0.isActive }) {
                             usageData.activeSession = activeBlock
-                            print(
-                                "Active session: \(activeBlock.totalTokens) tokens, \(activeBlock.isActive ? "active" : "inactive")"
-                            )
+                            let status = activeBlock.isActive ? "active" : "inactive"
+                            print("Active session: \(activeBlock.totalTokens) tokens, \(status)")
                             print("Historical max tokens: \(maxTokens)")
                             print("Session percentage: \(usageData.sessionUsagePercentage)%")
                             print("Detected plan: \(usageData.detectedPlan)")

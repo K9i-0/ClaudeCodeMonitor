@@ -56,7 +56,9 @@ struct ContentView: View {
                                     .foregroundStyle(isRefreshing ? .blue : .secondary)
                                     .rotationEffect(.degrees(isRefreshing ? 360 : 0))
                                     .animation(
-                                        isRefreshing ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
+                                        isRefreshing
+                                            ? .linear(duration: 1).repeatForever(autoreverses: false)
+                                            : .default,
                                         value: isRefreshing
                                     )
                             }
@@ -186,7 +188,9 @@ struct CurrentSessionView: View {
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundStyle(progressGradient)
                         .accessibilityLabel(
-                            "\(L10n.Session.remaining) \(monitor.formatTokens(monitor.usageData.sessionTokenLimit - session.totalTokens)) \(L10n.Session.tokens)"
+                            "\(L10n.Session.remaining) " +
+                            "\(monitor.formatTokens(monitor.usageData.sessionTokenLimit - session.totalTokens)) " +
+                            "\(L10n.Session.tokens)"
                         )
                     Text(L10n.Session.tokens)
                         .font(.system(size: 14))
@@ -206,7 +210,10 @@ struct CurrentSessionView: View {
                         Capsule()
                             .fill(progressGradient)
                             .frame(
-                                width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)),
+                                width: min(
+                                    geometry.size.width,
+                                    geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)
+                                ),
                                 height: 10
                             )
                             .animation(
@@ -219,7 +226,10 @@ struct CurrentSessionView: View {
                             Capsule()
                                 .fill(Color.red.opacity(0.3))
                                 .frame(
-                                    width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)),
+                                    width: min(
+                                        geometry.size.width,
+                                        geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)
+                                    ),
                                     height: 10
                                 )
                                 .blur(radius: 8)
@@ -381,7 +391,10 @@ struct SessionDetailView: View {
                                 (monitor.usageData.sessionUsagePercentage > 70 ? Color.orange : Color.green)
                             )
                             .frame(
-                                width: min(geometry.size.width, geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)),
+                                width: min(
+                                    geometry.size.width,
+                                    geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)
+                                ),
                                 height: 8
                             )
                             .animation(.easeInOut(duration: 0.3), value: monitor.usageData.sessionUsagePercentage)
