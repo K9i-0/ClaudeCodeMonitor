@@ -38,7 +38,7 @@
 "history.sessionDetails" = "Session: %@ tokens, from %@ to %@";
 "history.noHistory" = "No history available";
 "history.tokensFormat" = "%@ tokens";
-"history.referenceNote" = "※Daily and monthly cost information is for reference only.\nClaude Code resets token limits every 5-hour session.";
+"history.referenceNote" = "※Daily and monthly cost information is for reference only.\nClaude Code resets token limits every 5-hour session.\nDate calculations use your system's local timezone.";
 "history.time" = "Time";
 "history.tokens" = "Tokens";
 "history.noData" = "No data available";

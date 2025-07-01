@@ -38,7 +38,7 @@
 "history.sessionDetails" = "セッション: %@トークン、%@ 〜 %@";
 "history.noHistory" = "履歴がありません";
 "history.tokensFormat" = "%@ トークン";
-"history.referenceNote" = "※日次・月次のコスト情報は参考値です。\nClaude Codeは5時間セッションごとにトークン制限がリセットされます。";
+"history.referenceNote" = "※日次・月次のコスト情報は参考値です。\nClaude Codeは5時間セッションごとにトークン制限がリセットされます。\n日付の計算はシステムのローカルタイムゾーンを使用します。";
 "history.time" = "時間";
 "history.tokens" = "トークン";
 "history.noData" = "データがありません";
