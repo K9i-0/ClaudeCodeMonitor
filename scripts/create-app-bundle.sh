@@ -147,31 +147,8 @@ if [ -f "$APP_PATH/Contents/Resources/node/node" ] && [ "$SKIP_SIGNING" = false 
     echo ""
     echo "Signing Node.js binary..."
     
-    # Check if we have a Developer ID
-    if security find-identity -v -p codesigning | grep -q "Developer ID Application"; then
-        # Get the first Developer ID
-        DEVELOPER_ID=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
-        echo "  Using Developer ID: $DEVELOPER_ID"
-        
-        # Sign with node entitlements
-        if [ -f "node.entitlements" ]; then
-            codesign --force --sign "$DEVELOPER_ID" \
-                --entitlements node.entitlements \
-                --options runtime \
-                --timestamp \
-                "$APP_PATH/Contents/Resources/node/node"
-            echo "  ✅ Node.js binary signed"
-        else
-            echo "  ⚠️  node.entitlements not found, signing without entitlements"
-            codesign --force --sign "$DEVELOPER_ID" \
-                --options runtime \
-                --timestamp \
-                "$APP_PATH/Contents/Resources/node/node"
-        fi
-    else
-        echo "  ⚠️  No Developer ID found, using ad-hoc signing"
-        codesign --force --sign - "$APP_PATH/Contents/Resources/node/node"
-    fi
+    codesign --force --sign - "$APP_PATH/Contents/Resources/node/node"
+    echo "  ✅ Node.js binary signed"
 fi
 
 echo ""
