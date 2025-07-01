@@ -12,6 +12,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
     private let userDefaults = UserDefaults.standard
     private let detectedPlanKey = "ClaudeUsageMonitor.detectedPlan"
     private let userPlanKey = "ClaudeUsageMonitor.userSelectedPlan"
+    private let serverPort: Int
     private lazy var notificationManager: NotificationManager? = {
         // バンドル環境でのみ通知マネージャーを初期化
         guard Bundle.main.bundleIdentifier != nil else {
@@ -28,6 +29,15 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
     }
 
     init() {
+        // 環境変数CLAUDE_MONITOR_PORTからポート番号を取得、デフォルトは3456
+        if let portString = ProcessInfo.processInfo.environment["CLAUDE_MONITOR_PORT"],
+           let port = Int(portString) {
+            self.serverPort = port
+        } else {
+            self.serverPort = 3456
+        }
+        print("[UsageMonitor] Using port: \(serverPort)")
+        
         // ユーザーが手動選択したプランを優先的に読み込む
         if let userPlan = userDefaults.string(forKey: userPlanKey) {
             usageData.detectedPlanType = userPlan
@@ -70,7 +80,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
 
         do {
             // Try local server first
-            if let url = URL(string: "http://127.0.0.1:3456/usage") {
+            if let url = URL(string: "http://127.0.0.1:\(serverPort)/usage") {
                 var request = URLRequest(url: url)
                 request.timeoutInterval = 5.0 // 5 second timeout
 
@@ -178,7 +188,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
 
         do {
             // Try local server first for session data
-            if let url = URL(string: "http://127.0.0.1:3456/blocks/active") {
+            if let url = URL(string: "http://127.0.0.1:\(serverPort)/blocks/active") {
                 print("[DEBUG] Attempting server connection to \(url)")
 
                 var request = URLRequest(url: url)
