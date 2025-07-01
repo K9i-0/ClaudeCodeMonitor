@@ -231,28 +231,28 @@ struct ContentView: View {
             switch selectedTab {
             case 0:
                 if let session = monitor.usageData.activeSession {
-                    let usage = monitor.usageData.sessionUsagePercentage
+                    let tokens = monitor.formatTokens(session.totalTokens)
+                    let cost = String(format: "%.2f", session.costUSD)
                     textContent = """
-                    Claude Code Monitor - Usage Report
+                    \(String(format: L10n.Share.CurrentSession.consuming, tokens, cost))
                     
-                    📊 Usage: \(String(format: "%.1f", usage))%
-                    💰 Cost: $\(String(format: "%.2f", session.costUSD))
-                    🔥 Burn Rate: \(monitor.usageData.sessionBurnRate) tokens/min
-                    ⏱️ Time Until Reset: \(monitor.usageData.sessionRemainingTime)
-                    
-                    #ClaudeCode #AIProductivity #DeveloperTools
+                    \(L10n.Share.hashtags)
                     """
                 } else {
-                    textContent = "Claude Code Monitor - No active session\n\n#ClaudeCode #AIProductivity"
+                    textContent = "\(L10n.Share.CurrentSession.noSession)\n\n\(L10n.Share.hashtags)"
                 }
             case 1:
-                let totalCost = monitor.usageData.monthlyTotal?.totalCost ?? 0.0
+                let todayTokens = monitor.formatTokens(monitor.usageData.todayUsage?.totalTokens ?? 0)
+                let todayCost = String(format: "%.2f", monitor.usageData.todayUsage?.totalCost ?? 0.0)
+                let monthTokens = monitor.formatTokens(monitor.usageData.monthlyTotal?.totalTokens ?? 0)
+                let monthCost = String(format: "%.2f", monitor.usageData.monthlyTotal?.totalCost ?? 0.0)
+                
                 textContent = """
-                Claude Code Monitor - History
+                \(L10n.Share.History.title)
+                \(String(format: L10n.Share.History.today, todayTokens, todayCost))
+                \(String(format: L10n.Share.History.month, monthTokens, monthCost))
                 
-                💸 Monthly Total Cost: $\(String(format: "%.2f", totalCost))
-                
-                #ClaudeCode #AIProductivity #DeveloperTools
+                \(L10n.Share.hashtags)
                 """
             default:
                 textContent = ""

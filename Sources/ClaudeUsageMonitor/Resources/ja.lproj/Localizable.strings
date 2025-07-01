@@ -118,3 +118,11 @@
 "claudeDataFolderMessage" = "このアプリはClaudeのデータフォルダへのアクセスが必要です。\n\nフォルダは既に選択されています（~/.claude）。\n「アクセスを許可」をクリックして続行してください。";
 "invalidClaudeFolder" = "選択されたフォルダは有効なClaudeデータフォルダではないようです。'projects'サブディレクトリが含まれていることを確認してください。";
 "failedToSaveAccess" = "フォルダアクセスの保存に失敗しました。もう一度お試しください。";
+
+// Share Text
+"share.currentSession.consuming" = "現在%@トークン($%@)を消費中🔥";
+"share.currentSession.noSession" = "アクティブなClaude Codeセッションがありません";
+"share.history.title" = "Claude Code使用状況 📊";
+"share.history.today" = "今日: %@トークン ($%@)";
+"share.history.month" = "今月: %@トークン ($%@)";
+"share.hashtags" = "#ClaudeCodeMonitor";

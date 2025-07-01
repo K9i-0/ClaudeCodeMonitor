@@ -231,4 +231,20 @@ struct L10n {
     static var claudeDataFolderMessage: String { "claudeDataFolderMessage".localized }
     static var invalidClaudeFolder: String { "invalidClaudeFolder".localized }
     static var failedToSaveAccess: String { "failedToSaveAccess".localized }
+    
+    // Share Text
+    struct Share {
+        static var hashtags: String { "share.hashtags".localized }
+        
+        struct CurrentSession {
+            static var consuming: String { "share.currentSession.consuming".localized }
+            static var noSession: String { "share.currentSession.noSession".localized }
+        }
+        
+        struct History {
+            static var title: String { "share.history.title".localized }
+            static var today: String { "share.history.today".localized }
+            static var month: String { "share.history.month".localized }
+        }
+    }
 }
