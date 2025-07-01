@@ -244,9 +244,9 @@ struct ContentView: View {
                     textContent = "\(L10n.Share.CurrentSession.noSession)\n\n\(L10n.Share.hashtags)"
                 }
             case 1:
-                let todayTokens = monitor.formatTokens(monitor.usageData.todayUsage?.totalTokens ?? 0)
+                let todayTokens = monitor.formatTokens(monitor.usageData.todayBillableTokens)
                 let todayCost = String(format: "%.2f", monitor.usageData.todayUsage?.totalCost ?? 0.0)
-                let monthTokens = monitor.formatTokens(monitor.usageData.monthlyTotal?.totalTokens ?? 0)
+                let monthTokens = monitor.formatTokens(monitor.usageData.monthlyBillableTokens)
                 let monthCost = String(format: "%.2f", monitor.usageData.monthlyTotal?.totalCost ?? 0.0)
                 
                 textContent = """
