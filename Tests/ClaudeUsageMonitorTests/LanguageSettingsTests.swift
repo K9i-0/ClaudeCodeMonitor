@@ -7,18 +7,18 @@ final class LanguageSettingsTests: XCTestCase {
     override func setUp() {
         super.setUp()
         // Reset language settings
-        UserDefaults.standard.removeObject(forKey: "AppLanguage")
-        UserDefaults.standard.removeObject(forKey: "AppleLanguages")
-        UserDefaults.standard.synchronize()
+        UserDefaultsManager.shared.removeObject(forKey: "AppLanguage")
+        UserDefaultsManager.shared.removeObject(forKey: "AppleLanguages")
+        UserDefaultsManager.shared.synchronize()
 
         sut = LanguageSettings.shared
     }
 
     override func tearDown() {
         // Reset to system default
-        UserDefaults.standard.removeObject(forKey: "AppLanguage")
-        UserDefaults.standard.removeObject(forKey: "AppleLanguages")
-        UserDefaults.standard.synchronize()
+        UserDefaultsManager.shared.removeObject(forKey: "AppLanguage")
+        UserDefaultsManager.shared.removeObject(forKey: "AppleLanguages")
+        UserDefaultsManager.shared.synchronize()
 
         sut = nil
         super.tearDown()
@@ -35,24 +35,24 @@ final class LanguageSettingsTests: XCTestCase {
         sut.currentLanguage = .japanese
 
         // Verify it's saved
-        let saved = UserDefaults.standard.string(forKey: "AppLanguage")
+        let saved = UserDefaultsManager.shared.string(forKey: "AppLanguage")
         XCTAssertEqual(saved, "ja")
 
         // Verify AppleLanguages is set
-        let appleLanguages = UserDefaults.standard.stringArray(forKey: "AppleLanguages")
+        let appleLanguages = UserDefaultsManager.shared.stringArray(forKey: "AppleLanguages")
         XCTAssertEqual(appleLanguages?.first, "ja")
     }
 
     func testSystemLanguageRemovesOverride() {
         // Clean up any existing language settings first
-        UserDefaults.standard.removeObject(forKey: "AppleLanguages")
-        UserDefaults.standard.synchronize()
+        UserDefaultsManager.shared.removeObject(forKey: "AppleLanguages")
+        UserDefaultsManager.shared.synchronize()
 
         // First set a specific language
         sut.currentLanguage = .english
 
         // Verify it's set
-        var appleLanguages = UserDefaults.standard.stringArray(forKey: "AppleLanguages")
+        var appleLanguages = UserDefaultsManager.shared.stringArray(forKey: "AppleLanguages")
         XCTAssertNotNil(appleLanguages)
         XCTAssertEqual(appleLanguages?.first, "en")
 
@@ -60,7 +60,7 @@ final class LanguageSettingsTests: XCTestCase {
         sut.currentLanguage = .system
 
         // Verify override is removed
-        appleLanguages = UserDefaults.standard.stringArray(forKey: "AppleLanguages")
+        appleLanguages = UserDefaultsManager.shared.stringArray(forKey: "AppleLanguages")
         // Note: In some test environments, this might not be nil but rather the system default
         // So we check that it's either nil or doesn't contain our explicitly set language
         if let languages = appleLanguages {

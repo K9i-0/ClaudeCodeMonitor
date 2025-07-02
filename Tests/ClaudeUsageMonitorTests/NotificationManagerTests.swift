@@ -11,7 +11,7 @@ final class NotificationManagerTests: XCTestCase {
         try await super.setUp()
 
         // Reset notification state
-        UserDefaults.standard.removeObject(forKey: "ClaudeUsageMonitor.notificationsEnabled")
+        UserDefaultsManager.shared.removeObject(forKey: "ClaudeUsageMonitor.notificationsEnabled")
     }
 
     // MARK: - Settings Tests
@@ -21,15 +21,15 @@ final class NotificationManagerTests: XCTestCase {
         let key = "ClaudeUsageMonitor.notificationsEnabled"
 
         // Test default state
-        XCTAssertFalse(UserDefaults.standard.bool(forKey: key))
+        XCTAssertFalse(UserDefaultsManager.shared.bool(forKey: key))
 
         // Enable notifications
-        UserDefaults.standard.set(true, forKey: key)
-        XCTAssertTrue(UserDefaults.standard.bool(forKey: key))
+        UserDefaultsManager.shared.set(true, forKey: key)
+        XCTAssertTrue(UserDefaultsManager.shared.bool(forKey: key))
 
         // Disable notifications
-        UserDefaults.standard.set(false, forKey: key)
-        XCTAssertFalse(UserDefaults.standard.bool(forKey: key))
+        UserDefaultsManager.shared.set(false, forKey: key)
+        XCTAssertFalse(UserDefaultsManager.shared.bool(forKey: key))
     }
 
     // MARK: - Notification Logic Tests

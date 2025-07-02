@@ -41,8 +41,8 @@ final class UsageMonitorTests: XCTestCase {
         XCTAssertEqual(sut.getUserPlan(), "Pro")
 
         // Clean up
-        UserDefaults.standard.removeObject(forKey: "ClaudeUsageMonitor.userSelectedPlan")
-        UserDefaults.standard.removeObject(forKey: "ClaudeUsageMonitor.detectedPlan")
+        UserDefaultsManager.shared.removeObject(forKey: "ClaudeUsageMonitor.userSelectedPlan")
+        UserDefaultsManager.shared.removeObject(forKey: "ClaudeUsageMonitor.detectedPlan")
     }
 
     func testPlanPersistence() {
@@ -56,8 +56,8 @@ final class UsageMonitorTests: XCTestCase {
         XCTAssertEqual(newMonitor.getUserPlan(), "Max5")
 
         // Clean up
-        UserDefaults.standard.removeObject(forKey: "ClaudeUsageMonitor.userSelectedPlan")
-        UserDefaults.standard.removeObject(forKey: "ClaudeUsageMonitor.detectedPlan")
+        UserDefaultsManager.shared.removeObject(forKey: "ClaudeUsageMonitor.userSelectedPlan")
+        UserDefaultsManager.shared.removeObject(forKey: "ClaudeUsageMonitor.detectedPlan")
     }
 
     // MARK: - Session Data Processing Tests
