@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>com.k9i.claude-code-monitor</string>
+    <string>com.k9i.ClaudeCodeMonitor</string>
     <key>CFBundleName</key>
-    <string>Claude Code Monitor</string>
+    <string>ClaudeCodeMonitor</string>
     <key>CFBundleDisplayName</key>
-    <string>Claude Code Monitor</string>
+    <string>ClaudeCodeMonitor</string>
     <key>CFBundleExecutable</key>
     <string>ClaudeCodeMonitor</string>
     <key>CFBundleVersion</key>

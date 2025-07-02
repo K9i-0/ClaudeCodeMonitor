@@ -11,6 +11,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var dataAccessManager: ClaudeDataAccessManager!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Debug builds use different settings to avoid conflicts with release version
+        #if DEBUG
+        // This will be reflected in menu bar and other UI elements
+        print("Running in DEBUG mode")
+        #endif
+        
         // Initialize data access manager
         dataAccessManager = ClaudeDataAccessManager()
 
@@ -143,7 +149,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             // パーセンテージのみ表示（HIGに準拠した簡潔な表示）
+            #if DEBUG
+            button.title = String(format: "%.0f%% [D]", percentage)
+            #else
             button.title = String(format: "%.0f%%", percentage)
+            #endif
             button.attributedTitle = NSAttributedString(
                 string: button.title,
                 attributes: [

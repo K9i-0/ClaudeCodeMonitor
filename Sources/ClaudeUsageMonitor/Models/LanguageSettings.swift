@@ -45,24 +45,24 @@ class LanguageSettings: ObservableObject {
 
     @Published var currentLanguage: AppLanguage {
         didSet {
-            UserDefaults.standard.set(currentLanguage.rawValue, forKey: "AppLanguage")
+            UserDefaultsManager.shared.set(currentLanguage.rawValue, forKey: "AppLanguage")
             applyLanguage()
         }
     }
 
     private init() {
-        let savedLanguage = UserDefaults.standard.string(forKey: "AppLanguage") ?? AppLanguage.system.rawValue
+        let savedLanguage = UserDefaultsManager.shared.string(forKey: "AppLanguage") ?? AppLanguage.system.rawValue
         self.currentLanguage = AppLanguage(rawValue: savedLanguage) ?? .system
         applyLanguage()
     }
 
     private func applyLanguage() {
         if let languageCode = currentLanguage.languageCode {
-            UserDefaults.standard.set([languageCode], forKey: "AppleLanguages")
+            UserDefaultsManager.shared.set([languageCode], forKey: "AppleLanguages")
         } else {
-            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+            UserDefaultsManager.shared.removeObject(forKey: "AppleLanguages")
         }
-        UserDefaults.standard.synchronize()
+        UserDefaultsManager.shared.synchronize()
     }
 
     func effectiveLanguageCode() -> String {

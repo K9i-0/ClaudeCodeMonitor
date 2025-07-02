@@ -9,7 +9,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
 
     private var timer: Timer?
     private let updateInterval = Constants.Timing.refreshInterval
-    private let userDefaults = UserDefaults.standard
+    private let userDefaults = UserDefaultsManager.shared
     private let detectedPlanKey = "ClaudeUsageMonitor.detectedPlan"
     private let userPlanKey = "ClaudeUsageMonitor.userSelectedPlan"
     private let serverPort: Int

@@ -15,7 +15,7 @@ class ClaudeDataAccessManager: ObservableObject {
     /// Check if we have existing access via saved path or auto-detect
     func checkExistingAccess() {
         // First try to load saved path
-        if let savedPath = UserDefaults.standard.string(forKey: "claudeDataPath") {
+        if let savedPath = UserDefaultsManager.shared.string(forKey: "claudeDataPath") {
             print("[ClaudeDataAccess] Found saved path: \(savedPath)")
             // Verify the path still exists and has projects subdirectory
             let url = URL(fileURLWithPath: savedPath)
@@ -29,7 +29,7 @@ class ClaudeDataAccessManager: ObservableObject {
             } else {
                 print("[ClaudeDataAccess] Saved path no longer valid")
                 // Clear invalid path
-                UserDefaults.standard.removeObject(forKey: "claudeDataPath")
+                UserDefaultsManager.shared.removeObject(forKey: "claudeDataPath")
             }
         }
 
@@ -42,7 +42,7 @@ class ClaudeDataAccessManager: ObservableObject {
             claudePath = defaultClaudePath.path
             hasAccess = true
             // Save the auto-detected path
-            UserDefaults.standard.set(defaultClaudePath.path, forKey: "claudeDataPath")
+            UserDefaultsManager.shared.set(defaultClaudePath.path, forKey: "claudeDataPath")
             print("[ClaudeDataAccess] Auto-detected Claude data at: \(defaultClaudePath.path)")
         } else {
             print("[ClaudeDataAccess] Claude data not found at default location: \(defaultClaudePath.path)")
@@ -128,8 +128,8 @@ class ClaudeDataAccessManager: ObservableObject {
         hasAccess = true
 
         // Save the resolved path to UserDefaults
-        UserDefaults.standard.set(resolvedURL.path, forKey: "claudeDataPath")
-        UserDefaults.standard.synchronize()
+        UserDefaultsManager.shared.set(resolvedURL.path, forKey: "claudeDataPath")
+        UserDefaultsManager.shared.synchronize()
 
         print("[ClaudeDataAccess] Successfully saved path: \(resolvedURL.path)")
         print("[ClaudeDataAccess] hasAccess is now: \(hasAccess)")
