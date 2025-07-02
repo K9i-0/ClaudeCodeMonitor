@@ -93,6 +93,15 @@ In Xcode:
 - **Build**: Product > Build (⌘B)
 - **Run**: Product > Run (⌘R)
 
+##### Debug with Different Port
+
+To run debug builds alongside the release version:
+
+1. Edit scheme: Product → Scheme → Edit Scheme...
+2. Go to Run → Arguments → Environment Variables
+3. Add: `CLAUDE_MONITOR_PORT` = `3457`
+4. Start server on different port: `cd server && PORT=3457 npm start`
+
 #### Method 2: Command Line Build
 
 ```bash

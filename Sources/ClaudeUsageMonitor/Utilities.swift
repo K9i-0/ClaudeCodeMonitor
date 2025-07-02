@@ -273,7 +273,7 @@ struct Constants {
         static let longAnimationDuration: Double = 0.5
         static let serverRestartDelay: TimeInterval = 2.0
         static let serverHealthCheckInterval: TimeInterval = 30.0
-        static let serverStartupRetryDelay: TimeInterval = 1.0
+        static let serverStartupRetryDelay: TimeInterval = 2.0
         static let dataAccessWaitTime: TimeInterval = 2.0
     }
 

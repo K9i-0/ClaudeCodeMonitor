@@ -9,9 +9,10 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
 
     private var timer: Timer?
     private let updateInterval = Constants.Timing.refreshInterval
-    private let userDefaults = UserDefaults.standard
+    private let userDefaults = UserDefaultsManager.shared
     private let detectedPlanKey = "ClaudeUsageMonitor.detectedPlan"
     private let userPlanKey = "ClaudeUsageMonitor.userSelectedPlan"
+    private let serverPort: Int
     private lazy var notificationManager: NotificationManager? = {
         // バンドル環境でのみ通知マネージャーを初期化
         guard Bundle.main.bundleIdentifier != nil else {
@@ -28,6 +29,21 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
     }
 
     init() {
+        // 環境変数CLAUDE_MONITOR_PORTからポート番号を取得、デフォルトは3456
+        if let portString = ProcessInfo.processInfo.environment["CLAUDE_MONITOR_PORT"],
+           let port = Int(portString) {
+            self.serverPort = port
+        } else {
+            self.serverPort = 3456
+        }
+        print("[UsageMonitor] Using port: \(serverPort)")
+        
+        // デバッグ情報を出力
+        #if DEBUG
+        print("[DEBUG] userPlanKey: \(userPlanKey) = \(String(describing: userDefaults.string(forKey: userPlanKey)))")
+        print("[DEBUG] detectedPlanKey: \(detectedPlanKey) = \(String(describing: userDefaults.string(forKey: detectedPlanKey)))")
+        #endif
+        
         // ユーザーが手動選択したプランを優先的に読み込む
         if let userPlan = userDefaults.string(forKey: userPlanKey) {
             usageData.detectedPlanType = userPlan
@@ -36,6 +52,8 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
             // 自動検出されたプランを読み込む（後方互換性）
             usageData.detectedPlanType = savedPlan
             print("Loaded auto-detected plan: \(savedPlan)")
+        } else {
+            print("No saved plan found, will auto-detect")
         }
         startMonitoring()
     }
@@ -70,7 +88,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
 
         do {
             // Try local server first
-            if let url = URL(string: "http://127.0.0.1:3456/usage") {
+            if let url = URL(string: "http://127.0.0.1:\(serverPort)/usage") {
                 var request = URLRequest(url: url)
                 request.timeoutInterval = 5.0 // 5 second timeout
 
@@ -178,7 +196,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
 
         do {
             // Try local server first for session data
-            if let url = URL(string: "http://127.0.0.1:3456/blocks/active") {
+            if let url = URL(string: "http://127.0.0.1:\(serverPort)/blocks/active") {
                 print("[DEBUG] Attempting server connection to \(url)")
 
                 var request = URLRequest(url: url)
@@ -317,6 +335,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         if usageData.detectedPlanType != plan {
             usageData.detectedPlanType = plan
             userDefaults.set(plan, forKey: detectedPlanKey)
+            userDefaults.synchronize()
             print("Updated detected plan to: \(plan)")
         }
     }
@@ -326,6 +345,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         userDefaults.set(plan, forKey: userPlanKey)
         // 自動検出のキーを削除
         userDefaults.removeObject(forKey: detectedPlanKey)
+        userDefaults.synchronize()
         print("User selected plan: \(plan)")
 
         // UIを即座に更新するために、変更を通知

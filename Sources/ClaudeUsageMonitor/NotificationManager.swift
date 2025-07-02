@@ -7,7 +7,7 @@ class NotificationManager: NSObject {
     static let shared = NotificationManager()
 
     private var hasNotified90Percent: Bool = false
-    private let userDefaults = UserDefaults.standard
+    private let userDefaults = UserDefaultsManager.shared
     private let notificationEnabledKey = "ClaudeUsageMonitor.notificationsEnabled"
     private var currentSessionId: String?
 

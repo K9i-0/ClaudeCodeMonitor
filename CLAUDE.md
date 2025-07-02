@@ -50,6 +50,39 @@ open Package.swift
 # Clean up processes if needed
 killall ClaudeCodeMonitor 2>/dev/null || true
 ps aux | grep -E "node.*server" | grep -v grep | awk '{print $2}' | xargs kill 2>/dev/null || true
+
+# Debug with different port (to avoid conflict with release version)
+cd server && PORT=3457 npm start  # Start server on port 3457
+CLAUDE_MONITOR_PORT=3457 swift run  # Run app using port 3457
+```
+
+## Debugging with Port Configuration
+
+To avoid port conflicts between the DMG-distributed app and debug builds:
+
+### Using Environment Variables
+
+Both the server and application support custom port configuration via environment variables:
+
+- Server: `PORT` environment variable (defaults to 3456)
+- Application: `CLAUDE_MONITOR_PORT` environment variable (defaults to 3456)
+
+### Debug Setup in Xcode
+
+1. Open the project in Xcode: `open Package.swift`
+2. Edit the scheme (Product → Scheme → Edit Scheme...)
+3. In the "Run" section, go to "Arguments" tab
+4. Add environment variable: `CLAUDE_MONITOR_PORT` = `3457`
+
+### Command Line Debug
+
+```bash
+# Terminal 1: Start server on custom port
+cd server
+PORT=3457 npm start
+
+# Terminal 2: Run app with custom port
+CLAUDE_MONITOR_PORT=3457 swift run
 ```
 
 ## Architecture

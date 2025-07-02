@@ -5,12 +5,21 @@ class ServerManager: ObservableObject {
     static let shared = ServerManager()
 
     private var serverProcess: Process?
-    private let serverPort = 3_456
+    private let serverPort: Int
     @Published var isServerRunning = false
     var claudePath: String?
     private var serverMonitorTask: Task<Void, Never>?
 
-    private init() {}
+    private init() {
+        // 環境変数CLAUDE_MONITOR_PORTからポート番号を取得、デフォルトは3456
+        if let portString = ProcessInfo.processInfo.environment["CLAUDE_MONITOR_PORT"],
+           let port = Int(portString) {
+            self.serverPort = port
+        } else {
+            self.serverPort = 3_456
+        }
+        print("[ServerManager] Using port: \(serverPort)")
+    }
 
     func checkAndStartServer() async -> Bool {
         // Check if server is already running

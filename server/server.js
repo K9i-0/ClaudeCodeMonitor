@@ -4,7 +4,12 @@ import { loadDailyUsageData } from 'ccusage/data-loader';
 import { spawn } from 'child_process';
 
 const app = express();
-const PORT = 3456;
+const PORT = process.env.PORT || 3456;
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', port: PORT });
+});
 
 app.get('/usage', async (req, res) => {
   try {

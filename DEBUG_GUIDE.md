@@ -51,7 +51,16 @@ npm start
 ```
 **解決策**: エラーメッセージに基づいて対処
 
-### 5. 追加のデバッグ情報
+### 5. デバッグビルドでポートを変更
+
+リリース版と同時に実行するには：
+
+1. Xcodeでスキームを編集: Product → Scheme → Edit Scheme...
+2. Run → Arguments → Environment Variables
+3. 追加: `CLAUDE_MONITOR_PORT` = `3457`
+4. サーバーも別ポートで起動: `cd server && PORT=3457 npm start`
+
+### 6. 追加のデバッグ情報
 
 環境変数を確認するには、AppDelegate.swiftに以下を追加：
 
