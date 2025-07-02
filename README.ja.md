@@ -89,6 +89,15 @@ Xcodeで:
 - **ビルド**: Product > Build（⌘B）
 - **実行**: Product > Run（⌘R）
 
+##### 異なるポートでデバッグ実行
+
+リリース版と同時に実行するには：
+
+1. スキームを編集: Product → Scheme → Edit Scheme...
+2. Run → Arguments → Environment Variables へ移動
+3. 追加: `CLAUDE_MONITOR_PORT` = `3457`
+4. サーバーも別ポートで起動: `cd server && PORT=3457 npm start`
+
 #### 方法2: コマンドラインでビルド
 
 ```bash
