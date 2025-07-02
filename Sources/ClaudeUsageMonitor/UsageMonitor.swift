@@ -38,6 +38,12 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         }
         print("[UsageMonitor] Using port: \(serverPort)")
         
+        // デバッグ情報を出力
+        #if DEBUG
+        print("[DEBUG] userPlanKey: \(userPlanKey) = \(String(describing: userDefaults.string(forKey: userPlanKey)))")
+        print("[DEBUG] detectedPlanKey: \(detectedPlanKey) = \(String(describing: userDefaults.string(forKey: detectedPlanKey)))")
+        #endif
+        
         // ユーザーが手動選択したプランを優先的に読み込む
         if let userPlan = userDefaults.string(forKey: userPlanKey) {
             usageData.detectedPlanType = userPlan
@@ -46,6 +52,8 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
             // 自動検出されたプランを読み込む（後方互換性）
             usageData.detectedPlanType = savedPlan
             print("Loaded auto-detected plan: \(savedPlan)")
+        } else {
+            print("No saved plan found, will auto-detect")
         }
         startMonitoring()
     }
@@ -327,6 +335,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         if usageData.detectedPlanType != plan {
             usageData.detectedPlanType = plan
             userDefaults.set(plan, forKey: detectedPlanKey)
+            userDefaults.synchronize()
             print("Updated detected plan to: \(plan)")
         }
     }
@@ -336,6 +345,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         userDefaults.set(plan, forKey: userPlanKey)
         // 自動検出のキーを削除
         userDefaults.removeObject(forKey: detectedPlanKey)
+        userDefaults.synchronize()
         print("User selected plan: \(plan)")
 
         // UIを即座に更新するために、変更を通知
