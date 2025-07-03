@@ -31,7 +31,7 @@ struct ContentView: View {
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 20, height: 20)
-                            Text("Claude Code Monitor")
+                            Text("ClaudeCodeMonitor")
                                 .font(.system(size: 14, weight: .semibold))
                         }
 
