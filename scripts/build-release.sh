@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Build script for Claude Code Monitor release
+# Build script for ClaudeCodeMonitor release
 # Creates a signed and notarized DMG for distribution
 
 set -e
 
 # Configuration
-APP_NAME="Claude Code Monitor"
+APP_NAME="ClaudeCodeMonitor"
 BUNDLE_ID="com.k9i.claude-code-monitor"
 VERSION="1.0.0"
 BUILD_DIR=".build/release"

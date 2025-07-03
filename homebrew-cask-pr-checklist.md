@@ -73,7 +73,7 @@ GitHubで自動表示される"Compare & pull request"ボタンをクリック
 - [x] I have read the [Acceptable Casks document](https://docs.brew.sh/Acceptable-Casks).
 
 #### App details
-- **Name**: Claude Code Monitor
+- **Name**: ClaudeCodeMonitor
 - **Homepage**: https://github.com/K9i-0/ClaudeCodeMonitor
 - **Description**: Monitor Claude Code API usage and costs in your menubar
 - **Version**: 0.1.5

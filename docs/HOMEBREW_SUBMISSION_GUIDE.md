@@ -1,6 +1,6 @@
-# Homebrew Cask Submission Guide for Claude Code Monitor
+# Homebrew Cask Submission Guide for ClaudeCodeMonitor
 
-This guide provides step-by-step instructions for submitting Claude Code Monitor (ccmonitor) to Homebrew Cask.
+This guide provides step-by-step instructions for submitting ClaudeCodeMonitor (ccmonitor) to Homebrew Cask.
 
 ## Pre-submission Checklist
 
@@ -48,7 +48,7 @@ cask "claude-code-monitor" do
   sha256 "YOUR_SHA256_CHECKSUM_HERE"
 
   url "https://github.com/K9i-0/claude-code-monitor/releases/download/v#{version}/ClaudeCodeMonitor-v#{version}.dmg"
-  name "Claude Code Monitor"
+  name "ClaudeCodeMonitor"
   desc "Monitor Claude Code API usage and costs from your menubar"
   homepage "https://github.com/K9i-0/claude-code-monitor"
 
@@ -120,7 +120,7 @@ codesign -dv --verbose=4 /Applications/ClaudeCodeMonitor.app
 git add Casks/c/claude-code-monitor.rb
 
 # Commit with a descriptive message
-git commit -m "Add Claude Code Monitor 1.0.0"
+git commit -m "Add ClaudeCodeMonitor 1.0.0"
 
 # Push to your fork
 git push origin claude-code-monitor
@@ -130,7 +130,7 @@ git push origin claude-code-monitor
 
 ### PR Title
 ```
-Add Claude Code Monitor 1.0.0
+Add ClaudeCodeMonitor 1.0.0
 ```
 
 ### PR Template
@@ -144,7 +144,7 @@ Add Claude Code Monitor 1.0.0
 - [x] The app is stable and reproducible (not a beta or nightly build)
 
 ### Description
-Claude Code Monitor is a macOS menubar application that monitors Claude Code API usage and costs in real-time.
+ClaudeCodeMonitor is a macOS menubar application that monitors Claude Code API usage and costs in real-time.
 
 ### Additional Information
 - The app uses ad-hoc code signing, which is acceptable for Homebrew Cask

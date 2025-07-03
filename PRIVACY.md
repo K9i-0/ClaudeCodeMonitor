@@ -4,13 +4,13 @@
 
 ## Overview
 
-Claude Code Monitor ("we", "our", or "the app") is committed to protecting your privacy. This Privacy Policy explains how our macOS application handles information.
+ClaudeCodeMonitor ("we", "our", or "the app") is committed to protecting your privacy. This Privacy Policy explains how our macOS application handles information.
 
 ## Data Collection
 
 **We do not collect any personal data.**
 
-Claude Code Monitor operates entirely on your local machine and:
+ClaudeCodeMonitor operates entirely on your local machine and:
 - Does not collect, store, or transmit any personal information
 - Does not track usage analytics
 - Does not use cookies or similar tracking technologies
@@ -55,13 +55,13 @@ If you have questions about this Privacy Policy, please create an issue on our [
 
 ## 概要
 
-Claude Code Monitor（以下「本アプリ」）は、お客様のプライバシーを保護することをお約束します。このプライバシーポリシーは、本macOSアプリケーションが情報をどのように扱うかを説明します。
+ClaudeCodeMonitor（以下「本アプリ」）は、お客様のプライバシーを保護することをお約束します。このプライバシーポリシーは、本macOSアプリケーションが情報をどのように扱うかを説明します。
 
 ## データ収集
 
 **本アプリは個人データを一切収集しません。**
 
-Claude Code Monitorは完全にローカルで動作し：
+ClaudeCodeMonitorは完全にローカルで動作し：
 - 個人情報の収集、保存、送信を行いません
 - 使用状況の分析を行いません
 - Cookieや類似の追跡技術を使用しません

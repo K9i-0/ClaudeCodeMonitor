@@ -1,6 +1,6 @@
-# Contributing to Claude Code Monitor
+# Contributing to ClaudeCodeMonitor
 
-First off, thank you for considering contributing to Claude Code Monitor! It's people like you that make Claude Code Monitor such a great tool.
+First off, thank you for considering contributing to ClaudeCodeMonitor! It's people like you that make ClaudeCodeMonitor such a great tool.
 
 ## Code of Conduct
 
@@ -28,7 +28,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 * **Provide a step-by-step description of the suggested enhancement** in as many details as possible
 * **Provide specific examples to demonstrate the steps**
 * **Describe the current behavior** and **explain which behavior you expected to see instead** and why
-* **Explain why this enhancement would be useful** to most Claude Code Monitor users
+* **Explain why this enhancement would be useful** to most ClaudeCodeMonitor users
 
 ### Pull Requests
 

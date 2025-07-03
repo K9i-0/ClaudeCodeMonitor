@@ -29,8 +29,8 @@ DEVELOPER_ID="Developer ID Application: Your Name (XXXXXXXXXX)"
 ./scripts/build-release.sh
 
 # 署名を確認
-codesign -dv --verbose=4 "Claude Code Monitor.app"
-spctl -a -vvv -t install "Claude Code Monitor.app"
+codesign -dv --verbose=4 "ClaudeCodeMonitor.app"
+spctl -a -vvv -t install "ClaudeCodeMonitor.app"
 ```
 
 ## 4. 公証（Notarization）- オプション

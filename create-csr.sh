@@ -14,7 +14,7 @@ default_md = sha256
 distinguished_name = dn
 
 [ dn ]
-CN = Claude Code Monitor Developer ID
+CN = ClaudeCodeMonitor Developer ID
 emailAddress = your-email@example.com
 C = JP
 ST = Tokyo
