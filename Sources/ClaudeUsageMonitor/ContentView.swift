@@ -27,10 +27,11 @@ struct ContentView: View {
 
                     HStack {
                         HStack(spacing: 4) {
-                            Image(systemName: "chart.line.uptrend.xyaxis.circle.fill")
-                                .font(.system(size: 16))
-                                .foregroundStyle(.blue)
-                            Text("Claude Code Monitor")
+                            Image("AppLogo", bundle: .module)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 20, height: 20)
+                            Text("ClaudeCodeMonitor")
                                 .font(.system(size: 14, weight: .semibold))
                         }
 

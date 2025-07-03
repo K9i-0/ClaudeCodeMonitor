@@ -1,4 +1,4 @@
-# Claude Code Monitor
+# ClaudeCodeMonitor
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-macOS-blue.svg" alt="Platform">
@@ -46,7 +46,7 @@ macOSのメニューバーに常駐し、Claude Codeの使用状況をリアル�
 **注意**: 初回起動時に「開発元を検証できません」と表示される場合：
 1. 警告ダイアログで「キャンセル」をクリック
 2. システム設定 → プライバシーとセキュリティを開く
-3. Claude Code Monitorの「このまま開く」をクリック
+3. ClaudeCodeMonitorの「このまま開く」をクリック
 4. またはアプリを右クリックして「開く」を選択
 
 ## 📋 必要な環境

@@ -3,7 +3,7 @@ cask "ccmonitor" do
   sha256 "4913490738222396f361ad5dd48d0620ff26fad80db8bd75967a1f353b240140"
 
   url "https://github.com/K9i-0/ClaudeCodeMonitor/releases/download/v#{version}/ClaudeCodeMonitor-#{version}.dmg"
-  name "Claude Code Monitor"
+  name "ClaudeCodeMonitor"
   desc "Monitor Claude Code API usage and costs in your menubar"
   homepage "https://github.com/K9i-0/ClaudeCodeMonitor"
 
@@ -21,6 +21,6 @@ cask "ccmonitor" do
 
   zap trash: [
     "~/Library/Preferences/com.k9i.claude-code-monitor.plist",
-    "~/Library/Application Support/Claude Code Monitor",
+    "~/Library/Application Support/ClaudeCodeMonitor",
   ]
 end

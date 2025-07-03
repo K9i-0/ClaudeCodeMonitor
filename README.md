@@ -1,4 +1,4 @@
-# Claude Code Monitor
+# ClaudeCodeMonitor
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/aa06a619-cac7-46c1-8acd-d446e41065af" />
@@ -50,7 +50,7 @@ Download the latest release from [GitHub Releases](https://github.com/K9i-0/Clau
 **Note**: On first launch, you may see "Cannot be opened because the developer cannot be verified":
 1. Click "Cancel" on the warning dialog
 2. Open System Settings → Privacy & Security
-3. Click "Open Anyway" for Claude Code Monitor
+3. Click "Open Anyway" for ClaudeCodeMonitor
 4. Or simply right-click the app and select "Open"
 
 ## 📋 Requirements

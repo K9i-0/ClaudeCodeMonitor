@@ -3,7 +3,7 @@
 # Build script for local development
 # This creates a development build with the current git state
 
-echo "🔨 Building Claude Code Monitor (Development Version)"
+echo "🔨 Building ClaudeCodeMonitor (Development Version)"
 
 # Get version information
 if git describe --exact-match --tags HEAD 2>/dev/null; then

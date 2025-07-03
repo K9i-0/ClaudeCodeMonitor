@@ -38,7 +38,7 @@ brew uninstall --cask ccmonitor
 ### 6. コミット
 ```bash
 git add Casks/c/ccmonitor.rb
-git commit -m "Add Claude Code Monitor 0.1.5
+git commit -m "Add ClaudeCodeMonitor 0.1.5
 
 Real-time monitoring for Claude Code API usage in your menubar.
 Short name: ccmonitor"
@@ -52,7 +52,7 @@ git push origin add-ccmonitor
 ### 8. PR作成
 GitHub上で自動的に表示される "Compare & pull request" ボタンをクリック、または：
 ```bash
-gh pr create --repo Homebrew/homebrew-cask --title "Add Claude Code Monitor 0.1.5" --body "- **Name**: Claude Code Monitor
+gh pr create --repo Homebrew/homebrew-cask --title "Add ClaudeCodeMonitor 0.1.5" --body "- **Name**: ClaudeCodeMonitor
 - **Short name**: ccmonitor
 - **Homepage**: https://github.com/K9i-0/ClaudeCodeMonitor
 - **Description**: Real-time monitoring for Claude Code API usage
