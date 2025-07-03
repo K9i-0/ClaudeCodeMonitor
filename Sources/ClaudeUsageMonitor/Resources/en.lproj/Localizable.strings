@@ -112,13 +112,7 @@
 // General
 "ok" = "OK";
 "error" = "Error";
-"select" = "Grant Access";
 
-// Claude Data Access
-"selectClaudeDataFolder" = "Grant Access to Claude Data";
-"claudeDataFolderMessage" = "This app needs access to your Claude data folder.\n\nThe folder should already be selected (~/.claude).\nJust click 'Grant Access' to continue.";
-"invalidClaudeFolder" = "The selected folder doesn't appear to be a valid Claude data folder. Please make sure it contains a 'projects' subdirectory.";
-"failedToSaveAccess" = "Failed to save folder access. Please try again.";
 
 // Share Text
 "share.currentSession.consuming" = "Currently consuming %@ tokens ($%@) 🔥";
