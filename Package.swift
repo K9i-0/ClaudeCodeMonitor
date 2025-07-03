@@ -18,7 +18,9 @@ let package = Package(
             name: "ClaudeCodeMonitor",
             path: "Sources/ClaudeUsageMonitor",
             resources: [
-                .process("Resources")
+                .process("Resources/en.lproj"),
+                .process("Resources/ja.lproj"),
+                .process("Resources/Assets.xcassets")
             ]
         ),
         .testTarget(
