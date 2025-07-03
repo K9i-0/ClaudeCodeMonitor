@@ -1,6 +1,13 @@
 import SwiftUI
 
 struct ClaudeNotInstalledView: View {
+    @StateObject private var languageSettings = LanguageSettings.shared
+    
+    private var setupURL: String {
+        let langCode = languageSettings.currentLanguage == .japanese ? "ja" : "en"
+        return "https://docs.anthropic.com/\(langCode)/docs/claude-code/setup"
+    }
+    
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.circle")
@@ -17,7 +24,7 @@ struct ClaudeNotInstalledView: View {
                 .padding(.horizontal)
             
             Button(action: {
-                if let url = URL(string: "https://claude.ai/download") {
+                if let url = URL(string: setupURL) {
                     NSWorkspace.shared.open(url)
                 }
             }) {
