@@ -8,7 +8,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var popover: NSPopover!
     private var eventMonitor: EventMonitor?
     private var usageMonitor: UsageMonitor!
-    private var dataAccessManager: ClaudeDataAccessManager!
+    private var isClaudeInstalled = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Debug builds use different settings to avoid conflicts with release version
@@ -17,22 +17,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("Running in DEBUG mode")
         #endif
         
-        // Initialize data access manager
-        dataAccessManager = ClaudeDataAccessManager()
-
-        // Pass claude path to server manager if available
-        if dataAccessManager.hasAccess {
-            print("[AppDelegate] Data access already available, path: \(dataAccessManager.claudePath ?? "nil")")
-            NSLog("[AppDelegate] Data access already available, path: %@", dataAccessManager.claudePath ?? "nil")
-            ServerManager.shared.claudePath = dataAccessManager.claudePath
-
-            // Start the local server with path
+        // Check if Claude Code is installed
+        let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
+        let claudePath = homeDirectory.appendingPathComponent(".claude")
+        let projectsPath = claudePath.appendingPathComponent("projects")
+        
+        isClaudeInstalled = FileManager.default.fileExists(atPath: projectsPath.path)
+        
+        if isClaudeInstalled {
+            print("[AppDelegate] Claude Code is installed at: \(claudePath.path)")
+            ServerManager.shared.claudePath = claudePath.path
+            
+            // Start the local server
             Task {
                 await ServerManager.shared.checkAndStartServer()
             }
         } else {
-            print("[AppDelegate] No data access yet, server will start after folder selection")
-            // Don't start server yet - will start after user selects folder
+            print("[AppDelegate] Claude Code is not installed")
         }
 
         usageMonitor = UsageMonitor()
@@ -71,11 +72,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentSize = NSSize(width: 380, height: 480)
         popover.behavior = .transient
         popover.animates = true
-        popover.contentViewController = NSHostingController(
-            rootView: ContentView()
-                .environmentObject(usageMonitor)
-                .environmentObject(dataAccessManager)
-        )
+        if isClaudeInstalled {
+            popover.contentViewController = NSHostingController(
+                rootView: ContentView()
+                    .environmentObject(usageMonitor)
+            )
+        } else {
+            popover.contentViewController = NSHostingController(
+                rootView: ClaudeNotInstalledView()
+            )
+        }
 
         // Monitor for clicks outside the popover
         eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
@@ -95,28 +101,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
-        // Observe data access changes
-        dataAccessManager.$hasAccess
-            .receive(on: DispatchQueue.main)
-            .dropFirst() // Skip initial value
-            .sink { [weak self] hasAccess in
-                if hasAccess {
-                    // Update server with claude path
-                    ServerManager.shared.claudePath = self?.dataAccessManager.claudePath
-
-                    // Restart server if needed
-                    if ServerManager.shared.isServerRunning {
-                        ServerManager.shared.stopServer()
-                        Task {
-                            await ServerManager.shared.checkAndStartServer()
-                        }
-                    }
-
-                    // Fetch data
-                    self?.usageMonitor.fetchUsageData()
-                }
-            }
-            .store(in: &cancellables)
     }
 
     private var cancellables = Set<AnyCancellable>()
@@ -242,15 +226,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         eventMonitor?.stop()
     }
 
-    func pauseEventMonitor() {
-        eventMonitor?.stop()
-    }
-
-    func resumeEventMonitor() {
-        if popover.isShown {
-            eventMonitor?.start()
-        }
-    }
 
     func applicationWillTerminate(_ notification: Notification) {
         usageMonitor.stopMonitoring()

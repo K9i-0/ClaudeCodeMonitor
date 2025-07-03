@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SettingsTabView: View {
     @EnvironmentObject var monitor: UsageMonitor
-    @EnvironmentObject var dataAccessManager: ClaudeDataAccessManager
     @StateObject private var languageSettings = LanguageSettings.shared
     // @State private var notificationEnabled = Bundle.main.bundleIdentifier != nil ? NotificationManager.shared.isNotificationEnabled : false
 
