@@ -96,11 +96,14 @@ done
 
 # Copy app icon
 echo "  Copying app icon..."
-if [ -f "AppIcon.icns" ]; then
-    cp "AppIcon.icns" "$APP_PATH/Contents/Resources/"
+if [ -f "Sources/ClaudeUsageMonitor/AppIcon.icns" ]; then
+    cp "Sources/ClaudeUsageMonitor/AppIcon.icns" "$APP_PATH/Contents/Resources/"
     echo "    App icon copied"
+elif [ -f "AppIcon.icns" ]; then
+    cp "AppIcon.icns" "$APP_PATH/Contents/Resources/"
+    echo "    App icon copied from root"
 else
-    echo "    ⚠️  App icon not found at AppIcon.icns"
+    echo "    ⚠️  App icon not found"
 fi
 
 # Copy Node.js binary
