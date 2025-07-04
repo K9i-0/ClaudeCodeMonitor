@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 // MARK: - Resource Bundle Helper
-private struct ResourceBundle {
+struct ResourceBundle {
     static let current: Bundle = {
         let bundleName = "ClaudeCodeMonitor_ClaudeCodeMonitor.bundle"
 
@@ -29,8 +29,8 @@ private struct ResourceBundle {
             }
         }
 
-        // Fallback: use the auto-generated Bundle.module
-        return Bundle.module
+        // Fallback: use main bundle
+        return Bundle.main
     }()
 }
 
