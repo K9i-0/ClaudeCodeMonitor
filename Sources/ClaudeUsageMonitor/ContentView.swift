@@ -26,14 +26,8 @@ struct ContentView: View {
                         .frame(height: 44)
 
                     HStack {
-                        HStack(spacing: 4) {
-                            Image("AppLogo", bundle: ResourceBundle.current)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 20, height: 20)
-                            Text("ClaudeCodeMonitor")
-                                .font(.system(size: 14, weight: .semibold))
-                        }
+                        Text("ClaudeCodeMonitor")
+                            .font(.system(size: 14, weight: .semibold))
 
                         Spacer()
 
