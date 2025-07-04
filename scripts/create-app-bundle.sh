@@ -94,6 +94,15 @@ find .build -path "*arm64*/release/*.bundle" -type d | while read bundle; do
     cp -R "$bundle" "$APP_PATH/Contents/Resources/"
 done
 
+# Copy app icon
+echo "  Copying app icon..."
+if [ -f "AppIcon.icns" ]; then
+    cp "AppIcon.icns" "$APP_PATH/Contents/Resources/"
+    echo "    App icon copied"
+else
+    echo "    ⚠️  App icon not found at AppIcon.icns"
+fi
+
 # Copy Node.js binary
 echo "  Copying Node.js binary..."
 if [ -f "Resources/node/node" ]; then
