@@ -27,7 +27,7 @@ struct ContentView: View {
 
                     HStack {
                         HStack(spacing: 4) {
-                            Image("AppLogo", bundle: .module)
+                            Image("AppLogo", bundle: ResourceBundle.current)
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 20, height: 20)
