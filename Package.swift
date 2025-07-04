@@ -20,7 +20,8 @@ let package = Package(
             resources: [
                 .process("Resources/en.lproj"),
                 .process("Resources/ja.lproj"),
-                .process("Resources/Assets.xcassets")
+                .process("Resources/Assets.xcassets"),
+                .copy("AppIcon.icns")
             ]
         ),
         .testTarget(

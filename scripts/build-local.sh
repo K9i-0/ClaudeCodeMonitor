@@ -53,6 +53,15 @@ find .build -name "*.bundle" -type d | grep release | while read bundle; do
   cp -R "$bundle" "ClaudeCodeMonitor.app/Contents/Resources/"
 done
 
+# Copy app icon
+if [ -f "Sources/ClaudeUsageMonitor/AppIcon.icns" ]; then
+  echo "Copying app icon..."
+  cp "Sources/ClaudeUsageMonitor/AppIcon.icns" "ClaudeCodeMonitor.app/Contents/Resources/"
+elif [ -f "AppIcon.icns" ]; then
+  echo "Copying app icon from root..."
+  cp "AppIcon.icns" "ClaudeCodeMonitor.app/Contents/Resources/"
+fi
+
 # Ad-hoc sign for local use
 echo "Signing app bundle..."
 codesign --force --deep --sign - "ClaudeCodeMonitor.app"
