@@ -133,6 +133,7 @@ struct L10n {
         static var dailyAverage: String { "history.dailyAverage".localized }
         static var peak: String { "history.peak".localized }
         static var today: String { "history.today".localized }
+        static var perDay: String { "history.perDay".localized }
     }
 
     struct Plan {

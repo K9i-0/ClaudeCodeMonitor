@@ -104,6 +104,7 @@
 "history.dailyAverage" = "Daily Average";
 "history.peak" = "Peak";
 "history.today" = "Today";
+"history.perDay" = "per day";
 "status.usageFormat" = "Usage: %.1f%%\nCost: $%.2f\nBurn rate: %.0f tokens/min\nTime remaining: %@";
 
 // Notifications
