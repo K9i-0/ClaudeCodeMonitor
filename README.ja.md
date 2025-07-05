@@ -35,7 +35,7 @@ macOSのメニューバーに常駐し、Claude Codeの使用状況をリアル�
 - 🔄 5分ごとの自動更新
 - 🔄 手動更新ボタン
 - ⚙️ プラン設定（Pro/Max5/Max20）
-- 🌐 ローカルサーバーモードでの安定動作
+- 🌍 多言語対応（英語/日本語）
 
 ## 🚀 インストール
 
@@ -53,7 +53,7 @@ macOSのメニューバーに常駐し、Claude Codeの使用状況をリアル�
 
 - macOS 13.0以上
 - Swift 5.9以上
-- Node.js 18以上（ccusage CLIツールの実行に必要）
+- BunまたはNode.js 18以上（ccusage CLIツールの実行に必要）
 - Xcode 15以上（開発時）
 
 ## 🛠️ セットアップ
@@ -65,19 +65,7 @@ git clone https://github.com/K9i-0/ClaudeCodeMonitor.git
 cd ClaudeCodeMonitor
 ```
 
-### 2. Node.jsサーバーのセットアップ（推奨）
-
-ローカルサーバーを使用することで、より安定した動作を実現できます：
-
-```bash
-cd server
-npm install
-npm start
-```
-
-サーバーは`http://127.0.0.1:3456`で起動します。
-
-### 3. ビルド方法
+### 2. ビルド方法
 
 #### 方法1: Xcodeを使用（推奨）
 
@@ -89,14 +77,6 @@ Xcodeで:
 - **ビルド**: Product > Build（⌘B）
 - **実行**: Product > Run（⌘R）
 
-##### 異なるポートでデバッグ実行
-
-リリース版と同時に実行するには：
-
-1. スキームを編集: Product → Scheme → Edit Scheme...
-2. Run → Arguments → Environment Variables へ移動
-3. 追加: `CLAUDE_MONITOR_PORT` = `3457`
-4. サーバーも別ポートで起動: `cd server && PORT=3457 npm start`
 
 #### 方法2: コマンドラインでビルド
 

@@ -28,82 +28,32 @@ open ClaudeCodeMonitor.app
 # Build release with code signing (requires Developer ID)
 ./scripts/build-release.sh
 
-# Run local server (REQUIRED for App Sandbox mode)
-cd server
-npm install
-npm start  # Runs on http://127.0.0.1:3456
-
 # Open in Xcode (recommended for development)
 open Package.swift
 # Then Build (⌘B) and Run (⌘R) in Xcode
 
-# Local testing with Node.js bundled (App Sandbox mode)
-./scripts/test-local-with-node.sh
-# This script:
-# 1. Downloads Node.js binaries (if not already present)
-# 2. Creates universal binary
-# 3. Builds the app with --skip-signing flag
-# 4. Signs Node.js with entitlements
-# 5. Signs the app with ad-hoc certificate
-# Then run: open ClaudeCodeMonitor.app
-
 # Clean up processes if needed
 killall ClaudeCodeMonitor 2>/dev/null || true
-ps aux | grep -E "node.*server" | grep -v grep | awk '{print $2}' | xargs kill 2>/dev/null || true
-
-# Debug with different port (to avoid conflict with release version)
-cd server && PORT=3457 npm start  # Start server on port 3457
-CLAUDE_MONITOR_PORT=3457 swift run  # Run app using port 3457
-```
-
-## Debugging with Port Configuration
-
-To avoid port conflicts between the DMG-distributed app and debug builds:
-
-### Using Environment Variables
-
-Both the server and application support custom port configuration via environment variables:
-
-- Server: `PORT` environment variable (defaults to 3456)
-- Application: `CLAUDE_MONITOR_PORT` environment variable (defaults to 3456)
-
-### Debug Setup in Xcode
-
-1. Open the project in Xcode: `open Package.swift`
-2. Edit the scheme (Product → Scheme → Edit Scheme...)
-3. In the "Run" section, go to "Arguments" tab
-4. Add environment variable: `CLAUDE_MONITOR_PORT` = `3457`
-
-### Command Line Debug
-
-```bash
-# Terminal 1: Start server on custom port
-cd server
-PORT=3457 npm start
-
-# Terminal 2: Run app with custom port
-CLAUDE_MONITOR_PORT=3457 swift run
 ```
 
 ## Architecture
 
 ### Data Flow
-1. **ccusage Integration**: Fetches usage data via local server (required when App Sandbox is enabled)
+1. **ccusage Integration**: Directly executes ccusage via CommandExecutor (bunx preferred, npx fallback)
 2. **Session-Based Monitoring**: Claude Code uses 5-hour session blocks with token limits
 3. **Real-Time Updates**: 5-minute auto-refresh with manual refresh option
 4. **MainActor Isolation**: SwiftUI views and UsageMonitor are @MainActor isolated
 
-### App Sandbox Support
-- **App Sandbox is enabled** for App Store distribution
-- When App Sandbox is enabled, the local server (http://127.0.0.1:3456) is **required**
-- Direct command execution (npx) is not possible with App Sandbox
-- Network entitlements allow localhost connections only
+### Command Execution Strategy
+- **CommandExecutor.swift**: Manages ccusage command execution
+- Preference order: bunx > npx
+- Automatic fallback if preferred command is not available
+- Environment setup validation before app launch
 
-### Data Access (App Sandbox)
-- Uses NSOpenPanel for user to grant access to ~/.claude directory
-- Security-scoped bookmarks persist access across app launches
-- No temporary-exception entitlements (App Store compliant)
-- ClaudeDataAccessManager handles folder selection and bookmark management
+### Environment Requirements
+- Claude Code installed (~/.claude/projects directory)
+- Either Bun (bunx) or Node.js (npx) installed
+- EnvironmentSetupView guides users through missing requirements
 
 ### Key Components
 
@@ -111,14 +61,26 @@ CLAUDE_MONITOR_PORT=3457 swift run
 - Manages NSStatusItem (menubar icon) and NSPopover
 - Updates menubar display: SF Symbol + percentage (e.g., "bolt.fill 24%")
 - Handles popover show/hide with outside click detection
-- Sets up notification delegate with bundle safety checks
+- Checks environment requirements on launch
 
 **UsageMonitor.swift**
 - Central data management with @Published properties
-- Server-first strategy when App Sandbox is enabled
+- Direct command execution via CommandExecutor
 - Handles Pro/Max5/Max20 plan detection and persistence
 - Implements UsageMonitoring protocol for dependency injection
 - Key methods: `fetchUsageData()`, `startMonitoring()`, `stopMonitoring()`
+
+**CommandExecutor.swift**
+- Executes ccusage commands with bunx/npx
+- Handles command detection and fallback logic
+- Provides environment checking functionality
+- Thread-safe singleton pattern
+
+**EnvironmentSetupView.swift**
+- Replaces ClaudeNotInstalledView
+- Comprehensive environment checking
+- Guides users to install missing dependencies
+- Shows Claude Code, Bun, and Node.js status
 
 **ContentView.swift**
 - Three-tab interface: Current Session / History / Settings
@@ -137,12 +99,6 @@ CLAUDE_MONITOR_PORT=3457 swift run
 - One notification per session (tracked by session ID)
 - Handles Xcode debug build limitations with bundle checks
 - Implements UNUserNotificationCenterDelegate
-
-**ServerManager.swift**
-- Manages local Express server lifecycle
-- Auto-starts server when app launches
-- Handles server health checks and restarts
-- Logs server output for debugging
 
 ### Testing Strategy
 - Unit tests with mocks for UsageMonitor and network services
@@ -176,9 +132,11 @@ When Apple Developer Program is available:
 
 ## Technical Decisions
 
-### ccusage Execution Strategy
-1. App Sandbox enabled: Server-only mode (required)
-2. App Sandbox disabled: Try server first, then fall back to direct npx
+### Direct Command Execution
+- No local server required
+- Simpler architecture and maintenance
+- Better reliability
+- Faster startup time
 
 ### Module Name Mismatch
 - Package name: `ClaudeCodeMonitor`
@@ -188,6 +146,7 @@ When Apple Developer Program is available:
 
 ### Error Handling
 - ClaudeMonitorError enum for typed errors
+- CommandExecutor.CommandError for command-specific errors
 - Localized error descriptions and recovery suggestions
 - Network errors, parsing errors, command execution errors
 
@@ -201,6 +160,6 @@ When Apple Developer Program is available:
 
 - macOS 13.0+
 - Swift 5.9+
-- Node.js 18+ (for ccusage CLI and local server)
+- Bun or Node.js 18+ (for ccusage CLI)
 - Xcode 15+ (for development)
 - App runs as LSUIElement (menubar only, no Dock icon)
