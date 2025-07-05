@@ -20,10 +20,13 @@ class NotificationManager: NSObject {
         super.init()
         // CI環境やテスト環境では初期化しない
         guard ProcessInfo.processInfo.environment["CI"] == nil &&
-              !ProcessInfo.processInfo.environment.keys.contains("XCTestConfigurationFilePath") else { return }
+              !ProcessInfo.processInfo.environment.keys.contains("XCTestConfigurationFilePath") &&
+              !ProcessInfo.processInfo.arguments.contains("XCTRunner.app") else { return }
 
         // アプリバンドルから実行されている場合のみ通知を初期化
-        if Bundle.main.bundleIdentifier != nil {
+        if Bundle.main.bundleIdentifier != nil &&
+           !Bundle.main.bundlePath.contains("Xcode") &&
+           !Bundle.main.bundlePath.contains("/usr/bin") {
             requestNotificationPermission()
         }
     }

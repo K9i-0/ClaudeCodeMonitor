@@ -37,8 +37,9 @@ struct ResourceBundle {
 // MARK: - Localization Helper
 extension String {
     var localized: String {
-        // In CI environment, return the key itself to avoid Bundle.module issues
-        guard ProcessInfo.processInfo.environment["CI"] == nil else {
+        // In CI or test environment, return the key itself to avoid Bundle.module issues
+        guard ProcessInfo.processInfo.environment["CI"] == nil &&
+              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
             return self
         }
 
@@ -56,8 +57,9 @@ extension String {
     }
 
     func localized(with arguments: CVarArg...) -> String {
-        // In CI environment, return formatted string with key to avoid Bundle.module issues
-        guard ProcessInfo.processInfo.environment["CI"] == nil else {
+        // In CI or test environment, return formatted string with key to avoid Bundle.module issues
+        guard ProcessInfo.processInfo.environment["CI"] == nil &&
+              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
             return String(format: self, arguments: arguments)
         }
 
@@ -192,6 +194,11 @@ struct L10n {
         static var languageSettings: String { "settings.languageSettings".localized }
         static var useSystemLanguage: String { "settings.useSystemLanguage".localized }
         static var selectLanguage: String { "settings.selectLanguage".localized }
+        static var currencySettings: String { "settings.currencySettings".localized }
+        static func lastUpdated(date: String) -> String {
+            return "settings.lastUpdated".localized(with: date)
+        }
+        static var rateFetchFailed: String { "settings.rateFetchFailed".localized }
     }
 
     struct Language {
@@ -241,7 +248,7 @@ struct L10n {
         }
         static var loading: String { "status.loading".localized }
         static var noActiveSession: String { "status.noActiveSession".localized }
-        static func usageFormat(usage: Double, cost: Double, burnRate: Double, timeRemaining: String) -> String {
+        static func usageFormat(usage: Double, cost: String, burnRate: Double, timeRemaining: String) -> String {
             return "status.usageFormat".localized(with: usage, cost, burnRate, timeRemaining)
         }
     }

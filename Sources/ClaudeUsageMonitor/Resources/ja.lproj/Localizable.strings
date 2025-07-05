@@ -87,6 +87,9 @@
 "settings.languageSettings" = "言語";
 "settings.useSystemLanguage" = "システムの言語を使用";
 "settings.selectLanguage" = "言語を選択";
+"settings.currencySettings" = "通貨";
+"settings.lastUpdated" = "最終更新: %@";
+"settings.rateFetchFailed" = "レート取得失敗（USD表示）";
 
 // Language options
 "language.system" = "システム";
@@ -97,7 +100,7 @@
 "status.lastUpdated" = "更新: %@";
 "status.loading" = "使用状況を読み込み中...";
 "status.noActiveSession" = "アクティブなセッションがありません";
-"status.usageFormat" = "使用率: %.1f%%\nコスト: $%.2f\n燃焼率: %.0f tokens/分\n残り時間: %@";
+"status.usageFormat" = "使用率: %.1f%%\nコスト: %@\n燃焼率: %.0f tokens/分\n残り時間: %@";
 
 // Notifications
 "notification.highUsage.title" = "🔥 使用率が90%を超えました";
@@ -136,12 +139,12 @@
 
 
 // Share Text
-"share.currentSession.consuming" = "現在%@トークン($%@)を消費中🔥";
+"share.currentSession.consuming" = "現在%@トークン(%@)を消費中🔥";
 "share.currentSession.resetIn" = "リセットまで残り%@ ⏰";
 "share.currentSession.noSession" = "アクティブなClaude Codeセッションがありません";
 "share.history.title" = "Claude Code使用状況 📊";
-"share.history.today" = "今日: %@トークン ($%@)";
-"share.history.month" = "今月: %@トークン ($%@)";
+"share.history.today" = "今日: %@トークン (%@)";
+"share.history.month" = "今月: %@トークン (%@)";
 "share.hashtags" = "#ClaudeCodeMonitor";
 
 // History

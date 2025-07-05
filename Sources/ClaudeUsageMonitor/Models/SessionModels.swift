@@ -223,10 +223,7 @@ extension UsageData {
     }
 
     var sessionCostPerHour: String {
-        guard let session = activeSession,
-              let burnRate = session.burnRate else { return "$0.00" }
-
-        return String(format: "$%.2f", burnRate.costPerHour)
+        return formattedSessionCostPerHour
     }
 
     var isOverLimit: Bool {

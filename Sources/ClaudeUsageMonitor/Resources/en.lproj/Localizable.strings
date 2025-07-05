@@ -87,6 +87,9 @@
 "settings.languageSettings" = "Language";
 "settings.useSystemLanguage" = "Use system language";
 "settings.selectLanguage" = "Select language";
+"settings.currencySettings" = "Currency";
+"settings.lastUpdated" = "Last updated: %@";
+"settings.rateFetchFailed" = "Rate fetch failed (showing USD)";
 
 // Language options
 "language.system" = "System";
@@ -105,7 +108,7 @@
 "history.peak" = "Peak";
 "history.today" = "Today";
 "history.perDay" = "per day";
-"status.usageFormat" = "Usage: %.1f%%\nCost: $%.2f\nBurn rate: %.0f tokens/min\nTime remaining: %@";
+"status.usageFormat" = "Usage: %.1f%%\nCost: %@\nBurn rate: %.0f tokens/min\nTime remaining: %@";
 
 // Notifications
 "notification.highUsage.title" = "High Usage Warning";
@@ -144,10 +147,10 @@
 
 
 // Share Text
-"share.currentSession.consuming" = "Currently consuming %@ tokens ($%@) 🔥";
+"share.currentSession.consuming" = "Currently consuming %@ tokens (%@) 🔥";
 "share.currentSession.resetIn" = "Reset in %@ ⏰";
 "share.currentSession.noSession" = "No active Claude Code session";
 "share.history.title" = "Claude Code Usage 📊";
-"share.history.today" = "Today: %@ tokens ($%@)";
-"share.history.month" = "Month: %@ tokens ($%@)";
+"share.history.today" = "Today: %@ tokens (%@)";
+"share.history.month" = "Month: %@ tokens (%@)";
 "share.hashtags" = "#ClaudeCodeMonitor";

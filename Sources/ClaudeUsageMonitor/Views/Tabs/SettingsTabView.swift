@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsTabView: View {
     @EnvironmentObject var monitor: UsageMonitor
     @StateObject private var languageSettings = LanguageSettings.shared
+    @StateObject private var currencySettings = CurrencySettings.shared
     // @State private var notificationEnabled = Bundle.main.bundleIdentifier != nil ? NotificationManager.shared.isNotificationEnabled : false
 
     let plans = [
@@ -80,6 +81,75 @@ struct SettingsTabView: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
+                }
+            }
+
+            Divider()
+
+            // Currency settings section
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text(L10n.Settings.currencySettings)
+                        .font(.system(size: 16, weight: .semibold))
+                    
+                    Spacer()
+                    
+                    if currencySettings.isLoadingRates {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                    }
+                }
+
+                VStack(spacing: 8) {
+                    ForEach(CurrencySettings.Currency.allCases, id: \.self) { currency in
+                        Button(action: {
+                            currencySettings.setSelectedCurrency(currency)
+                        }) {
+                            HStack {
+                                Image(systemName: currencySettings.selectedCurrency == currency
+                                    ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(currencySettings.selectedCurrency == currency
+                                        ? .accentColor : .secondary)
+                                    .frame(width: 20)
+
+                                Text(CurrencyConverter.getCurrencyDisplayText(for: currency, using: currencySettings))
+                                    .font(.system(size: 14))
+
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(currencySettings.selectedCurrency == currency
+                                ? Color.accentColor.opacity(0.1) : Color.clear)
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+                
+                // Show exchange rate info
+                if let lastUpdated = currencySettings.formatLastUpdated() {
+                    HStack {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        Text(L10n.Settings.lastUpdated(date: lastUpdated))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 4)
+                }
+                
+                if currencySettings.ratesFetchError != nil {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.orange)
+                        Text(L10n.Settings.rateFetchFailed)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.orange)
+                    }
+                    .padding(.top, 4)
                 }
             }
 

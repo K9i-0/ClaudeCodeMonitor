@@ -3,6 +3,7 @@ import SwiftUI
 struct HistoryView: View {
     @StateObject var viewModel: HistoryViewModel
     @Environment(\.colorScheme) var colorScheme
+    @StateObject private var currencySettings = CurrencySettings.shared
 
     // formatPeakDate関数を定義
     private func formatPeakDate(_ dateString: String) -> String {
@@ -77,7 +78,7 @@ struct HistoryView: View {
                                 .font(.system(size: 10, weight: .medium))
                                 .foregroundStyle(.secondary)
                             
-                            Text(String(format: "$%.2f", totals.totalCost))
+                            Text(CurrencyConverter.formatCostWithFallback(totals.totalCost, using: currencySettings))
                                 .font(.system(size: 16, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.primary)
                             
@@ -103,7 +104,7 @@ struct HistoryView: View {
                                 .font(.system(size: 10, weight: .medium))
                                 .foregroundStyle(.secondary)
                             
-                            Text(String(format: "$%.2f", totals.totalCost / Double(viewModel.dailyData.count)))
+                            Text(CurrencyConverter.formatCostWithFallback(totals.totalCost / Double(viewModel.dailyData.count), using: currencySettings))
                                 .font(.system(size: 16, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.primary)
                             
@@ -130,7 +131,7 @@ struct HistoryView: View {
                                 .foregroundStyle(.secondary)
                             
                             if let peak = viewModel.dailyData.max(by: { $0.totalCost < $1.totalCost }) {
-                                Text(String(format: "$%.2f", peak.totalCost))
+                                Text(CurrencyConverter.formatCostWithFallback(peak.totalCost, using: currencySettings))
                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                                     .foregroundStyle(.primary)
                                 
@@ -207,6 +208,7 @@ struct HistoryView: View {
 struct MonthlySummaryCard: View {
     let totals: Totals
     let dailyData: [DailyUsage]
+    @StateObject private var currencySettings = CurrencySettings.shared
 
     private var dailyAverage: Double {
         guard !dailyData.isEmpty else { return 0 }
@@ -246,7 +248,7 @@ struct MonthlySummaryCard: View {
                     Spacer()
 
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(String(format: "$%.2f", totals.totalCost))
+                        Text(CurrencyConverter.formatCostWithFallback(totals.totalCost, using: currencySettings))
                             .font(.system(size: 16, weight: .semibold, design: .rounded))
                         Text("\(NumberFormatters.formatTokens(totals.totalTokens)) tokens")
                             .font(.system(size: 12))
@@ -265,7 +267,7 @@ struct MonthlySummaryCard: View {
 
                     Spacer()
 
-                    Text(String(format: "$%.2f", dailyAverage))
+                    Text(CurrencyConverter.formatCostWithFallback(dailyAverage, using: currencySettings))
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.secondary)
                 }
@@ -287,7 +289,7 @@ struct MonthlySummaryCard: View {
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
 
-                        Text(String(format: "$%.2f", peak.totalCost))
+                        Text(CurrencyConverter.formatCostWithFallback(peak.totalCost, using: currencySettings))
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(.secondary)
                     }
@@ -306,6 +308,7 @@ struct MonthlySummaryCard: View {
 struct CompactDailyUsageCard: View {
     let daily: DailyUsage
     let isToday: Bool
+    @StateObject private var currencySettings = CurrencySettings.shared
 
     private var date: Date? {
         let formatter = DateFormatter()
@@ -349,7 +352,7 @@ struct CompactDailyUsageCard: View {
 
             // コスト情報（コンパクト化）
             HStack {
-                Text(String(format: "$%.2f", daily.totalCost))
+                Text(CurrencyConverter.formatCostWithFallback(daily.totalCost, using: currencySettings))
                     .font(.system(size: 14, weight: .semibold))
 
                 Text("\(NumberFormatters.formatTokens(totalTokens)) • \(formatModels(daily.modelsUsed))")
@@ -404,6 +407,7 @@ struct CompactDailyUsageCard: View {
 struct DailyUsageCard: View {
     let daily: DailyUsage
     let isToday: Bool
+    @StateObject private var currencySettings = CurrencySettings.shared
 
     private var date: Date? {
         let formatter = DateFormatter()
@@ -452,7 +456,7 @@ struct DailyUsageCard: View {
             // コスト情報
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(String(format: "$%.2f", daily.totalCost))
+                    Text(CurrencyConverter.formatCostWithFallback(daily.totalCost, using: currencySettings))
                         .font(.system(size: 16, weight: .semibold))
 
                     Spacer()

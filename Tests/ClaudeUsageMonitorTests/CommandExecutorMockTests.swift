@@ -187,8 +187,23 @@ final class CommandExecutorMockTests: XCTestCase {
             let mock = MockProcessWithPipe()
             mock.mockTerminationStatus = 0
             mock.mockOutput = "/usr/bin/bunx"
-            capturedEnvironment = mock.environment
-            return mock
+            
+            // Override run to capture environment when process is actually run
+            class CapturingMockProcess: MockProcessWithPipe {
+                var onRun: (() -> Void)?
+                override func run() throws {
+                    onRun?()
+                    try super.run()
+                }
+            }
+            
+            let capturingMock = CapturingMockProcess()
+            capturingMock.mockTerminationStatus = mock.mockTerminationStatus
+            capturingMock.mockOutput = mock.mockOutput
+            capturingMock.onRun = {
+                capturedEnvironment = capturingMock.environment
+            }
+            return capturingMock
         }
 
         _ = try await executor.testFindCommand("bunx")
