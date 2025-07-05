@@ -225,82 +225,117 @@ struct ContentView: View {
                 // HistoryViewの中身を直接構築（ScrollViewを除外）
                 contentToCapture = AnyView(
                     VStack(spacing: 12) {
-                        // 月選択ヘッダーと月間サマリーを横並び
-                        HStack(spacing: 12) {
-                            // 月選択部分
-                            HStack(spacing: 8) {
+                        // 月選択ヘッダー
+                        HStack {
+                            Button(action: {}) {
                                 Image(systemName: "chevron.left")
-                                    .font(.system(size: 12, weight: .medium))
+                                    .font(.system(size: 14, weight: .medium))
                                     .foregroundStyle(.secondary)
-                                    .opacity(0.5)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(true)
 
-                                Text(historyViewModel.monthDescription)
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .frame(minWidth: 100)
+                            Text(historyViewModel.monthDescription)
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(minWidth: 140)
 
+                            Button(action: {}) {
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 12, weight: .medium))
+                                    .font(.system(size: 14, weight: .medium))
                                     .foregroundStyle(.secondary)
-                                    .opacity(0.5)
                             }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color(NSColor.controlBackgroundColor))
-                            )
-
-                            // 月間サマリー（インライン）
-                            if !historyViewModel.dailyData.isEmpty, let totals = historyViewModel.monthlyTotals {
-                                HStack(spacing: 16) {
-                                    // 合計
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        HStack(spacing: 4) {
-                                            Image(systemName: "dollarsign.circle.fill")
-                                                .font(.system(size: 12))
-                                                .foregroundStyle(.secondary)
-                                            Text(L10n.History.total)
-                                                .font(.system(size: 11, weight: .medium))
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Text(String(format: "$%.0f", totals.totalCost))
-                                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                        Text("\(NumberFormatters.formatTokens(totals.totalTokens))")
-                                            .font(.system(size: 12))
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    
-                                    Divider()
-                                        .frame(height: 36)
-                                    
-                                    // 日次平均
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        HStack(spacing: 4) {
-                                            Image(systemName: "calendar.day.timeline.left")
-                                                .font(.system(size: 12))
-                                                .foregroundStyle(.secondary)
-                                            Text(L10n.History.dailyAverage)
-                                                .font(.system(size: 11, weight: .medium))
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Text(String(format: "$%.0f", totals.totalCost / Double(historyViewModel.dailyData.count)))
-                                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                        Text(L10n.History.perDay)
-                                            .font(.system(size: 12))
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(Color(NSColor.controlBackgroundColor))
-                                )
-                            }
+                            .buttonStyle(.plain)
+                            .disabled(true)
 
                             Spacer()
                         }
                         .padding(.horizontal, 4)
+                        
+                        // 月間サマリー（カラフルなカード）
+                        if !historyViewModel.dailyData.isEmpty, let totals = historyViewModel.monthlyTotals {
+                            HStack(spacing: 12) {
+                                // 合計
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.blue.opacity(0.15))
+                                        .frame(height: 100)
+                                    
+                                    VStack(spacing: 6) {
+                                        Image(systemName: "dollarsign.circle.fill")
+                                            .font(.system(size: 22))
+                                            .foregroundStyle(.blue)
+                                        
+                                        Text(L10n.History.total)
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                        
+                                        Text(String(format: "$%.2f", totals.totalCost))
+                                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                                            .foregroundStyle(.primary)
+                                        
+                                        Text("\(NumberFormatters.formatTokens(totals.totalTokens)) tokens")
+                                            .font(.system(size: 10))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                                
+                                // 日次平均
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.green.opacity(0.15))
+                                        .frame(height: 100)
+                                    
+                                    VStack(spacing: 6) {
+                                        Image(systemName: "chart.line.uptrend.xyaxis")
+                                            .font(.system(size: 22))
+                                            .foregroundStyle(.green)
+                                        
+                                        Text(L10n.History.dailyAverage)
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                        
+                                        Text(String(format: "$%.2f", totals.totalCost / Double(historyViewModel.dailyData.count)))
+                                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                                            .foregroundStyle(.primary)
+                                        
+                                        Text(L10n.History.perDay)
+                                            .font(.system(size: 10))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                                
+                                // ピーク
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.orange.opacity(0.15))
+                                        .frame(height: 100)
+                                    
+                                    VStack(spacing: 6) {
+                                        Image(systemName: "flame.fill")
+                                            .font(.system(size: 22))
+                                            .foregroundStyle(.orange)
+                                        
+                                        Text(L10n.History.peak)
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                        
+                                        if let peak = historyViewModel.dailyData.max(by: { $0.totalCost < $1.totalCost }) {
+                                            Text(String(format: "$%.2f", peak.totalCost))
+                                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                                .foregroundStyle(.primary)
+                                            
+                                            Text(formatShareDate(peak.date))
+                                                .font(.system(size: 10))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                            .padding(.horizontal, 4)
+                        }
 
                         // コンテンツ部分
                         VStack(spacing: 8) {
