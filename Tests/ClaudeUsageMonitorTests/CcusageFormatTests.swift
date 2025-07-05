@@ -430,7 +430,7 @@ final class CcusageFormatTests: XCTestCase {
         // Also verify that CommandExecutor uses BundleConfiguration
         let commandExecutorPath = #file.replacingOccurrences(
             of: "Tests/ClaudeUsageMonitorTests/CcusageFormatTests.swift",
-            with: "Sources/ClaudeUsageMonitor/CommandExecutor.swift"
+            with: "Sources/ClaudeUsageMonitor/Services/CommandExecutor.swift"
         )
         
         do {
