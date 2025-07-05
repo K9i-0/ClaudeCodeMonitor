@@ -14,8 +14,12 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
     private let userPlanKey = "ClaudeUsageMonitor.userSelectedPlan"
     private lazy var notificationManager: NotificationManager? = {
         // バンドル環境でのみ通知マネージャーを初期化
-        guard Bundle.main.bundleIdentifier != nil else {
-            print("[DEBUG] Running outside of app bundle - notifications disabled")
+        guard Bundle.main.bundleIdentifier != nil &&
+              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil &&
+              !ProcessInfo.processInfo.arguments.contains("XCTRunner.app") &&
+              !Bundle.main.bundlePath.contains("Xcode") &&
+              !Bundle.main.bundlePath.contains("/usr/bin") else {
+            print("[DEBUG] Running outside of app bundle or in test environment - notifications disabled")
             return nil
         }
         return NotificationManager.shared

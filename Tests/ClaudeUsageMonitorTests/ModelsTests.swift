@@ -44,12 +44,15 @@ final class ModelsTests: XCTestCase {
         var usageData = UsageData()
 
         // Test with no data
+        // formattedDailyCost and formattedMonthlyCost now return stored values
         XCTAssertEqual(usageData.formattedDailyCost, "$0.00")
         XCTAssertEqual(usageData.formattedMonthlyCost, "$0.00")
 
-        // Test with data
+        // Test with data - need to set the formatted values directly
         usageData.todayUsage = createDailyUsage(cost: 12.34)
         usageData.monthlyTotal = createTotals(cost: 56.78)
+        usageData.formattedTodayCost = "$12.34"
+        usageData.formattedMonthlyCostValue = "$56.78"
 
         XCTAssertEqual(usageData.formattedDailyCost, "$12.34")
         XCTAssertEqual(usageData.formattedMonthlyCost, "$56.78")

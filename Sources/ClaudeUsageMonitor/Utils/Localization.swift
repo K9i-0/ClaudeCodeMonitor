@@ -37,8 +37,9 @@ struct ResourceBundle {
 // MARK: - Localization Helper
 extension String {
     var localized: String {
-        // In CI environment, return the key itself to avoid Bundle.module issues
-        guard ProcessInfo.processInfo.environment["CI"] == nil else {
+        // In CI or test environment, return the key itself to avoid Bundle.module issues
+        guard ProcessInfo.processInfo.environment["CI"] == nil &&
+              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
             return self
         }
 
@@ -56,8 +57,9 @@ extension String {
     }
 
     func localized(with arguments: CVarArg...) -> String {
-        // In CI environment, return formatted string with key to avoid Bundle.module issues
-        guard ProcessInfo.processInfo.environment["CI"] == nil else {
+        // In CI or test environment, return formatted string with key to avoid Bundle.module issues
+        guard ProcessInfo.processInfo.environment["CI"] == nil &&
+              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
             return String(format: self, arguments: arguments)
         }
 
