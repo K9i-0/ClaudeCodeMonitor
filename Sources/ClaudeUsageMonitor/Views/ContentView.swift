@@ -224,36 +224,75 @@ struct ContentView: View {
 
                 // HistoryViewの中身を直接構築（ScrollViewを除外）
                 contentToCapture = AnyView(
-                    VStack(spacing: 16) {
-                        // 月選択ヘッダー
-                        HStack {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.secondary)
-                                .opacity(0.5)
+                    VStack(spacing: 12) {
+                        // 月選択ヘッダーと月間サマリーを横並び
+                        HStack(spacing: 12) {
+                            // 月選択部分
+                            HStack(spacing: 8) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                                    .opacity(0.5)
 
-                            Text(historyViewModel.monthDescription)
-                                .font(.system(size: 16, weight: .semibold))
-                                .frame(minWidth: 140)
+                                Text(historyViewModel.monthDescription)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .frame(minWidth: 100)
 
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.secondary)
-                                .opacity(0.5)
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                                    .opacity(0.5)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(NSColor.controlBackgroundColor))
+                            )
+
+                            // 月間サマリー（インライン）
+                            if !historyViewModel.dailyData.isEmpty, let totals = historyViewModel.monthlyTotals {
+                                HStack(spacing: 16) {
+                                    // 合計
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(L10n.History.total)
+                                            .font(.system(size: 10))
+                                            .foregroundStyle(.secondary)
+                                        HStack(spacing: 4) {
+                                            Text(String(format: "$%.0f", totals.totalCost))
+                                                .font(.system(size: 14, weight: .semibold))
+                                            Text("\(NumberFormatters.formatTokens(totals.totalTokens))")
+                                                .font(.system(size: 11))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                    
+                                    Divider()
+                                        .frame(height: 24)
+                                    
+                                    // 日次平均
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(L10n.History.dailyAverage)
+                                            .font(.system(size: 10))
+                                            .foregroundStyle(.secondary)
+                                        Text(String(format: "$%.0f", totals.totalCost / Double(historyViewModel.dailyData.count)))
+                                            .font(.system(size: 14, weight: .medium))
+                                    }
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color(NSColor.controlBackgroundColor))
+                                )
+                            }
 
                             Spacer()
                         }
                         .padding(.horizontal, 4)
 
                         // コンテンツ部分
-                        VStack(spacing: 12) {
-                            if !historyViewModel.dailyData.isEmpty, let totals = historyViewModel.monthlyTotals {
-                                MonthlySummaryCard(
-                                    totals: totals,
-                                    dailyData: historyViewModel.dailyData
-                                )
-                            }
-
+                        VStack(spacing: 8) {
                             if historyViewModel.dailyData.isEmpty {
                                 EmptyStateView(
                                     message: L10n.History.noData
@@ -261,7 +300,7 @@ struct ContentView: View {
                                 .padding(.vertical, 60)
                             } else {
                                 ForEach(historyViewModel.dailyData.sorted(by: { $0.date > $1.date }), id: \.date) { daily in
-                                    DailyUsageCard(
+                                    CompactDailyUsageCard(
                                         daily: daily,
                                         isToday: isToday(daily.date)
                                     )

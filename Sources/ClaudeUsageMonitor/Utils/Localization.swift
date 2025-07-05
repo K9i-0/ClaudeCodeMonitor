@@ -128,6 +128,11 @@ struct L10n {
         static var time: String { "history.time".localized }
         static var tokens: String { "history.tokens".localized }
         static var noData: String { "history.noData".localized }
+        static var monthSummary: String { "history.monthSummary".localized }
+        static var total: String { "history.total".localized }
+        static var dailyAverage: String { "history.dailyAverage".localized }
+        static var peak: String { "history.peak".localized }
+        static var today: String { "history.today".localized }
     }
 
     struct Plan {

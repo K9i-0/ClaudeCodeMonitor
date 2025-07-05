@@ -143,3 +143,10 @@
 "share.history.today" = "今日: %@トークン ($%@)";
 "share.history.month" = "今月: %@トークン ($%@)";
 "share.hashtags" = "#ClaudeCodeMonitor";
+
+// History
+"history.monthSummary" = "月間サマリー";
+"history.total" = "合計";
+"history.dailyAverage" = "日次平均";
+"history.peak" = "ピーク";
+"history.today" = "今日";
