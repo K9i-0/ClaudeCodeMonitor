@@ -252,70 +252,50 @@ struct ContentView: View {
 
                             // 月間サマリー（インライン）
                             if !historyViewModel.dailyData.isEmpty, let totals = historyViewModel.monthlyTotals {
-                                HStack(spacing: 4) {
+                                HStack(spacing: 16) {
                                     // 合計
-                                    HStack(spacing: 12) {
-                                        VStack(spacing: 4) {
-                                            Image(systemName: "chart.bar.fill")
-                                                .font(.system(size: 16))
-                                                .foregroundStyle(.blue)
-                                                .frame(width: 20, height: 20)
-                                            
-                                            Text(L10n.History.total)
-                                                .font(.system(size: 9, weight: .medium))
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "dollarsign.circle.fill")
+                                                .font(.system(size: 12))
                                                 .foregroundStyle(.secondary)
-                                        }
-                                        
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(String(format: "$%.0f", totals.totalCost))
-                                                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                                .foregroundStyle(.primary)
-                                            Text("\(NumberFormatters.formatTokens(totals.totalTokens))")
+                                            Text(L10n.History.total)
                                                 .font(.system(size: 11, weight: .medium))
                                                 .foregroundStyle(.secondary)
                                         }
+                                        Text(String(format: "$%.0f", totals.totalCost))
+                                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                        Text("\(NumberFormatters.formatTokens(totals.totalTokens))")
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(.secondary)
                                     }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 10)
-                                    .frame(maxWidth: .infinity)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .fill(Color(NSColor.controlBackgroundColor))
-                                            .opacity(0.8)
-                                    )
+                                    
+                                    Divider()
+                                        .frame(height: 36)
                                     
                                     // 日次平均
-                                    HStack(spacing: 12) {
-                                        VStack(spacing: 4) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack(spacing: 4) {
                                             Image(systemName: "calendar.day.timeline.left")
-                                                .font(.system(size: 16))
-                                                .foregroundStyle(.green)
-                                                .frame(width: 20, height: 20)
-                                            
-                                            Text(L10n.History.dailyAverage)
-                                                .font(.system(size: 9, weight: .medium))
+                                                .font(.system(size: 12))
                                                 .foregroundStyle(.secondary)
-                                        }
-                                        
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(String(format: "$%.0f", totals.totalCost / Double(historyViewModel.dailyData.count)))
-                                                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                                .foregroundStyle(.primary)
-                                            Text(L10n.History.perDay)
+                                            Text(L10n.History.dailyAverage)
                                                 .font(.system(size: 11, weight: .medium))
                                                 .foregroundStyle(.secondary)
                                         }
+                                        Text(String(format: "$%.0f", totals.totalCost / Double(historyViewModel.dailyData.count)))
+                                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                        Text(L10n.History.perDay)
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(.secondary)
                                     }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 10)
-                                    .frame(maxWidth: .infinity)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .fill(Color(NSColor.controlBackgroundColor))
-                                            .opacity(0.8)
-                                    )
                                 }
-                                .padding(.horizontal, 2)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color(NSColor.controlBackgroundColor))
+                                )
                             }
 
                             Spacer()
