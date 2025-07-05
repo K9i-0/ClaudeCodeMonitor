@@ -4,8 +4,6 @@ struct HistoryView: View {
     @StateObject var viewModel: HistoryViewModel
     @Environment(\.colorScheme) var colorScheme
 
-    @State private var selectedSummaryTab = 0
-    
     // formatPeakDate関数を定義
     private func formatPeakDate(_ dateString: String) -> String {
         let inputFormatter = DateFormatter()
@@ -61,71 +59,66 @@ struct HistoryView: View {
             }
             .padding(.horizontal, 4)
             
-            // 月間サマリー（タブ形式）
+            // 月間サマリー（常時表示）
             if !viewModel.isLoading && !viewModel.dailyData.isEmpty, let totals = viewModel.monthlyTotals {
-                VStack(spacing: 0) {
-                    // タブセレクター
-                    HStack(spacing: 0) {
-                        ForEach(0..<3) { index in
-                            Button(action: {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    selectedSummaryTab = index
-                                }
-                            }) {
-                                VStack(spacing: 4) {
-                                    Text(index == 0 ? L10n.History.total : (index == 1 ? L10n.History.dailyAverage : L10n.History.peak))
-                                        .font(.system(size: 12, weight: selectedSummaryTab == index ? .semibold : .regular))
-                                        .foregroundStyle(selectedSummaryTab == index ? .primary : .secondary)
-                                    
-                                    Rectangle()
-                                        .fill(selectedSummaryTab == index ? Color.accentColor : Color.clear)
-                                        .frame(height: 2)
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.plain)
-                        }
+                HStack(spacing: 0) {
+                    // 合計
+                    VStack(spacing: 6) {
+                        Text(L10n.History.total)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                        
+                        Text(String(format: "$%.2f", totals.totalCost))
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        
+                        Text("\(NumberFormatters.formatTokens(totals.totalTokens))")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
                     }
-                    .padding(.horizontal, 4)
+                    .frame(maxWidth: .infinity)
                     
-                    // コンテンツ
-                    Group {
-                        switch selectedSummaryTab {
-                        case 0: // 合計
-                            VStack(spacing: 8) {
-                                Text(String(format: "$%.2f", totals.totalCost))
-                                    .font(.system(size: 24, weight: .semibold, design: .rounded))
-                                Text("\(NumberFormatters.formatTokens(totals.totalTokens)) tokens")
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(.secondary)
-                            }
-                        case 1: // 日次平均
-                            VStack(spacing: 8) {
-                                Text(String(format: "$%.2f", totals.totalCost / Double(viewModel.dailyData.count)))
-                                    .font(.system(size: 24, weight: .semibold, design: .rounded))
-                                Text(L10n.History.perDay)
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(.secondary)
-                            }
-                        case 2: // ピーク
-                            if let peak = viewModel.dailyData.max(by: { $0.totalCost < $1.totalCost }) {
-                                VStack(spacing: 8) {
-                                    Text(String(format: "$%.2f", peak.totalCost))
-                                        .font(.system(size: 24, weight: .semibold, design: .rounded))
-                                    Text(self.formatPeakDate(peak.date))
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        default:
-                            EmptyView()
+                    Divider()
+                        .frame(height: 50)
+                        .padding(.horizontal, 8)
+                    
+                    // 日次平均
+                    VStack(spacing: 6) {
+                        Text(L10n.History.dailyAverage)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                        
+                        Text(String(format: "$%.2f", totals.totalCost / Double(viewModel.dailyData.count)))
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        
+                        Text(L10n.History.perDay)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    
+                    Divider()
+                        .frame(height: 50)
+                        .padding(.horizontal, 8)
+                    
+                    // ピーク
+                    VStack(spacing: 6) {
+                        Text(L10n.History.peak)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                        
+                        if let peak = viewModel.dailyData.max(by: { $0.totalCost < $1.totalCost }) {
+                            Text(String(format: "$%.2f", peak.totalCost))
+                                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            
+                            Text(self.formatPeakDate(peak.date))
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .padding(.horizontal, 16)
-                    .animation(.easeInOut(duration: 0.2), value: selectedSummaryTab)
                 }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 12)
                 .background(
                     RoundedRectangle(cornerRadius: 10)
                         .fill(Color(NSColor.controlBackgroundColor))
