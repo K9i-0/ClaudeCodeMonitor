@@ -33,7 +33,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         print("[DEBUG] userPlanKey: \(userPlanKey) = \(String(describing: userDefaults.string(forKey: userPlanKey)))")
         print("[DEBUG] detectedPlanKey: \(detectedPlanKey) = \(String(describing: userDefaults.string(forKey: detectedPlanKey)))")
         #endif
-        
+
         // ユーザーが手動選択したプランを優先的に読み込む
         if let userPlan = userDefaults.string(forKey: userPlanKey) {
             usageData.detectedPlanType = userPlan
@@ -81,14 +81,14 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
             let calendar = Calendar.current
             let now = Date()
             let startOfMonth = calendar.dateInterval(of: .month, for: now)?.start ?? now
-            
+
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "yyyyMMdd"
             let monthStart = dateFormatter.string(from: startOfMonth)
             let today = dateFormatter.string(from: now)
-            
+
             print("Fetching usage data for current month: \(monthStart) to \(today)")
-            
+
             // Fetch usage data for current month only
             let result = try await CommandExecutor.shared.executeCcusageCommand(
                 subcommand: nil,
@@ -129,7 +129,6 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
             // Debug final state
             print("Final state - Today's cost: $\(usageData.todayUsage?.totalCost ?? 0)")
             print("Final state - Monthly cost: $\(usageData.monthlyTotal?.totalCost ?? 0)")
-
         } catch let decodingError as DecodingError {
             self.error = ClaudeMonitorError.parsingError(decodingError.localizedDescription)
             print("Decoding error: \(decodingError)")

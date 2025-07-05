@@ -9,13 +9,13 @@ enum UserDefaultsManager {
         return "com.k9i.ClaudeCodeMonitor"
         #endif
     }()
-    
+
     private static let releaseSuiteName = "com.k9i.ClaudeCodeMonitor"
-    
+
     static var shared: UserDefaults {
         return UserDefaults(suiteName: suiteName) ?? UserDefaults.standard
     }
-    
+
     /// Read-only access to release settings for migration
     static var releaseDefaults: UserDefaults? {
         #if DEBUG

@@ -191,7 +191,7 @@ struct CurrentSessionView: View {
     private func formatTime(_ timeString: String) -> String {
         return Date.formatTime(from: timeString)
     }
-    
+
     private func formatSessionEndTime(_ timeString: String) -> String {
         return Date.formatUserFriendlyDateTime(from: timeString)
     }

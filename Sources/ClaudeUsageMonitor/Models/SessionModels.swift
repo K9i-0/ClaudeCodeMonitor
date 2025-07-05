@@ -181,7 +181,7 @@ extension UsageData {
             return "\(minutes)m"
         }
     }
-    
+
     // Share text用のシンプルな残り時間表示
     var sessionRemainingTimeForShare: String {
         guard let session = activeSession,
@@ -190,7 +190,7 @@ extension UsageData {
         let totalMinutes = projection.remainingMinutes
         let hours = totalMinutes / 60
         let minutes = totalMinutes % 60
-        
+
         // 英語環境かどうかを判定
         let isEnglish = LanguageSettings.shared.effectiveLanguageCode() == "en"
 
@@ -216,8 +216,8 @@ extension UsageData {
 
         // ccusage seems to return the value in a different unit (1000x larger)
         // Divide by 1000 to get the actual tokens per minute
-        let actualTokensPerMinute = burnRate.tokensPerMinute / 1000.0
-        
+        let actualTokensPerMinute = burnRate.tokensPerMinute / 1_000.0
+
         // Format with appropriate precision
         return String(format: "%.0f", actualTokensPerMinute)
     }
