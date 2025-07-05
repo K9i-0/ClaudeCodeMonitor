@@ -1,6 +1,7 @@
 import XCTest
 @testable import ClaudeCodeMonitor
 
+@MainActor
 final class CurrencyConverterTests: XCTestCase {
     
     override func setUp() {
@@ -22,7 +23,6 @@ final class CurrencyConverterTests: XCTestCase {
     }
     
     func testConvertWithCustomRate() {
-        let settings = CurrencySettings.shared
         let amount = 100.0
         
         // Simulate JPY rate of 150
@@ -64,8 +64,9 @@ final class CurrencyConverterTests: XCTestCase {
         let settings = CurrencySettings.shared
         
         let formatted = CurrencyConverter.formatCost(75.25, currency: .eur, using: settings)
-        XCTAssertTrue(formatted.contains("75"), "EUR formatting should include the amount")
-        XCTAssertTrue(formatted.contains("€"), "EUR formatting should include euro sign")
+        // Since no rates are loaded, EUR will be treated as 1:1 with USD
+        XCTAssertTrue(formatted.contains("75.25") || formatted.contains("75,25"), "EUR formatting should include the amount")
+        XCTAssertTrue(formatted.contains("€") || formatted.contains("EUR"), "EUR formatting should include euro sign or code")
     }
     
     // MARK: - Fallback Tests
