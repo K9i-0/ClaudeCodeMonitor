@@ -167,6 +167,68 @@ class CommandExecutor {
         
         return result
     }
+    
+    // Synchronous environment check for startup
+    nonisolated func checkEnvironmentSync() -> EnvironmentCheckResult {
+        var result = EnvironmentCheckResult()
+        
+        // Check Claude Code
+        let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
+        let claudePath = homeDirectory.appendingPathComponent(".claude")
+        let projectsPath = claudePath.appendingPathComponent("projects")
+        result.isClaudeCodeInstalled = FileManager.default.fileExists(atPath: projectsPath.path)
+        
+        // Check bunx - synchronous check using which command
+        result.isBunInstalled = findCommandSync("bunx") != nil
+        
+        // Check npx - synchronous check using which command
+        result.isNpxInstalled = findCommandSync("npx") != nil
+        
+        result.canExecuteCommands = result.isBunInstalled || result.isNpxInstalled
+        
+        return result
+    }
+    
+    private nonisolated func findCommandSync(_ command: String) -> String? {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+        task.arguments = [command]
+        
+        // Set up environment with additional paths
+        var environment = ProcessInfo.processInfo.environment
+        let existingPath = environment["PATH"] ?? ""
+        let additionalPaths = [
+            "/usr/local/bin",
+            "/opt/homebrew/bin",
+            "/Users/\(NSUserName())/.local/share/mise/shims",
+            "/Users/\(NSUserName())/.local/share/mise/installs/bun/latest/bin",
+            "/Users/\(NSUserName())/.local/share/mise/installs/bun/*/bin",
+            "/Users/\(NSUserName())/.bun/bin",
+            "/usr/bin"
+        ].joined(separator: ":")
+        environment["PATH"] = "\(additionalPaths):\(existingPath)"
+        task.environment = environment
+        
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = Pipe()
+        
+        do {
+            try task.run()
+            task.waitUntilExit()
+            
+            if task.terminationStatus == 0 {
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                if let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), !path.isEmpty {
+                    return path
+                }
+            }
+        } catch {
+            // Command failed
+        }
+        
+        return nil
+    }
 }
 
 struct EnvironmentCheckResult {

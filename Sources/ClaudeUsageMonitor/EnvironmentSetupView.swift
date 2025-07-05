@@ -31,6 +31,14 @@ struct EnvironmentSetupView: View {
                 // If all requirements are met, show restart message
                 if result.isClaudeCodeInstalled && result.canExecuteCommands {
                     showRestartMessage = true
+                    
+                    // Close the popover after a short delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        // Find and close the popover
+                        if let window = NSApplication.shared.windows.first(where: { $0.isKind(of: NSPanel.self) }) {
+                            window.close()
+                        }
+                    }
                 }
                 
                 isChecking = false
