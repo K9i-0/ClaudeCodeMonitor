@@ -1,266 +1,371 @@
 import SwiftUI
-import Charts
 
 struct HistoryView: View {
     let monitor: UsageMonitor
     @Environment(\.colorScheme) var colorScheme
-
+    @State private var selectedMonth = Date()
+    @State private var dailyData: [DailyUsage] = []
+    @State private var monthlyTotals: Totals?
+    @State private var isLoading = false
+    
+    private var monthFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy年MM月"
+        return formatter
+    }
+    
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd"
+        return formatter
+    }
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // ヘッダー
-            Text(L10n.History.usageSummary)
-                .font(.system(size: 16, weight: .semibold))
-
-            // 現在のセッション情報（カード風デザイン）
-            if let session = monitor.usageData.activeSession {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        HStack(spacing: 6) {
-                            Image(systemName: "bolt.circle.fill")
-                                .font(.system(size: 16))
-                                .foregroundStyle(.blue)
-                            Text(L10n.History.currentSession)
-                                .font(.system(size: 14, weight: .semibold))
-                        }
-                        Spacer()
-                        Text(String(format: "$%.2f", session.costUSD))
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .foregroundStyle(.primary)
-                    }
-
-                    HStack {
-                        Label(
-                            L10n.History.tokensFormat(tokens: monitor.formatTokens(session.totalTokens)),
-                            systemImage: "number.circle"
+        VStack(spacing: 16) {
+            // 月選択ヘッダー
+            HStack {
+                Button(action: previousMonth) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(isFirstAvailableMonth)
+                
+                Text(monthFormatter.string(from: selectedMonth))
+                    .font(.system(size: 16, weight: .semibold))
+                    .frame(minWidth: 140)
+                
+                Button(action: nextMonth) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .disabled(isCurrentMonth)
+                
+                Spacer()
+                
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                }
+            }
+            .padding(.horizontal, 4)
+            
+            ScrollView {
+                VStack(spacing: 12) {
+                    // 月間サマリー
+                    if !dailyData.isEmpty, let totals = monthlyTotals {
+                        MonthlySummaryCard(
+                            totals: totals,
+                            dailyData: dailyData
                         )
+                    }
+                    
+                    // 日次データ
+                    if dailyData.isEmpty && !isLoading {
+                        EmptyStateView(
+                            message: L10n.History.noData
+                        )
+                        .padding(.vertical, 60)
+                    } else {
+                        ForEach(dailyData.sorted(by: { $0.date > $1.date }), id: \.date) { daily in
+                            DailyUsageCard(
+                                daily: daily,
+                                isToday: isToday(daily.date)
+                            )
+                        }
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+        }
+        .onAppear {
+            loadMonthData()
+        }
+        .onChange(of: selectedMonth) { _ in
+            loadMonthData()
+        }
+    }
+    
+    private var isCurrentMonth: Bool {
+        Calendar.current.isDate(selectedMonth, equalTo: Date(), toGranularity: .month)
+    }
+    
+    private var isFirstAvailableMonth: Bool {
+        // 2025年6月を最初の利用可能月とする（Claude Codeのリリース時期）
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month], from: selectedMonth)
+        return components.year == 2025 && components.month == 6
+    }
+    
+    private func previousMonth() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            selectedMonth = Calendar.current.date(byAdding: .month, value: -1, to: selectedMonth) ?? selectedMonth
+        }
+    }
+    
+    private func nextMonth() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            selectedMonth = Calendar.current.date(byAdding: .month, value: 1, to: selectedMonth) ?? selectedMonth
+        }
+    }
+    
+    private func loadMonthData() {
+        Task {
+            await fetchMonthlyData()
+        }
+    }
+    
+    @MainActor
+    private func fetchMonthlyData() async {
+        isLoading = true
+        
+        let calendar = Calendar.current
+        let startOfMonth = calendar.dateInterval(of: .month, for: selectedMonth)?.start ?? selectedMonth
+        let endOfMonth = calendar.dateInterval(of: .month, for: selectedMonth)?.end ?? selectedMonth
+        
+        let monthStart = dateFormatter.string(from: startOfMonth)
+        let monthEnd = dateFormatter.string(from: endOfMonth)
+        
+        do {
+            let result = try await CommandExecutor.shared.executeCcusageCommand(
+                subcommand: nil,
+                additionalArgs: ["--since", monthStart, "--until", monthEnd]
+            )
+            
+            let data = Data(result.utf8)
+            let response = try JSONDecoder().decode(CcusageResponse.self, from: data)
+            
+            withAnimation {
+                dailyData = response.daily
+                monthlyTotals = response.totals
+            }
+        } catch {
+            print("Failed to fetch monthly data: \(error)")
+            dailyData = []
+            monthlyTotals = nil
+        }
+        
+        isLoading = false
+    }
+    
+    private func isToday(_ dateString: String) -> Bool {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return dateString == formatter.string(from: Date())
+    }
+}
+
+// 月間サマリーカード
+struct MonthlySummaryCard: View {
+    let totals: Totals
+    let dailyData: [DailyUsage]
+    
+    private var dailyAverage: Double {
+        guard !dailyData.isEmpty else { return 0 }
+        return totals.totalCost / Double(dailyData.count)
+    }
+    
+    private var peakDay: DailyUsage? {
+        dailyData.max(by: { $0.totalCost < $1.totalCost })
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("月間サマリー")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+            
+            VStack(spacing: 10) {
+                // 合計
+                HStack {
+                    Label("合計", systemImage: "yensign.circle.fill")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.primary)
+                    
+                    Spacer()
+                    
+                    Text(String(format: "$%.2f", totals.totalCost))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                }
+                
+                Divider()
+                    .opacity(0.5)
+                
+                // 日次平均
+                HStack {
+                    Label("日次平均", systemImage: "chart.bar.fill")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.blue)
+                    
+                    Spacer()
+                    
+                    Text(String(format: "$%.2f", dailyAverage))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                
+                // ピーク日
+                if let peak = peakDay {
+                    HStack {
+                        Label("ピーク", systemImage: "flame.fill")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.orange)
+                        
+                        Spacer()
+                        
+                        Text(formatPeakDate(peak.date))
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
-                        Spacer()
-                        Text(monitor.usageData.formattedSessionPercentage)
-                            .font(.system(size: 12, weight: .medium))
+                        
+                        Text("•")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                        
+                        Text(String(format: "$%.2f", peak.totalCost))
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(NSColor.controlBackgroundColor))
+            )
+        }
+    }
+    
+    private func formatPeakDate(_ dateString: String) -> String {
+        let inputFormatter = DateFormatter()
+        inputFormatter.dateFormat = "yyyy-MM-dd"
+        
+        let outputFormatter = DateFormatter()
+        outputFormatter.dateFormat = "M/d"
+        
+        if let date = inputFormatter.date(from: dateString) {
+            return outputFormatter.string(from: date)
+        }
+        return dateString
+    }
+}
+
+// 日次使用量カード
+struct DailyUsageCard: View {
+    let daily: DailyUsage
+    let isToday: Bool
+    
+    private var date: Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: daily.date)
+    }
+    
+    private var dayString: String {
+        guard let date = date else { return "" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd"
+        return formatter.string(from: date)
+    }
+    
+    private var weekdayString: String {
+        guard let date = date else { return "" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "E"
+        formatter.locale = Locale(identifier: "ja_JP")
+        return formatter.string(from: date)
+    }
+    
+    private var totalTokens: Int {
+        daily.inputTokens + daily.outputTokens
+    }
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            // 日付部分
+            HStack(spacing: 8) {
+                Text(dayString)
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    .frame(width: 32, alignment: .trailing)
+                
+                Divider()
+                    .frame(height: 20)
+                    .opacity(0.3)
+                
+                Text(weekdayString)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 20)
+            }
+            .padding(.leading, 12)
+            
+            // コスト情報
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(String(format: "$%.2f", daily.totalCost))
+                        .font(.system(size: 16, weight: .semibold))
+                    
+                    Spacer()
+                    
+                    if isToday {
+                        Text("今日")
+                            .font(.system(size: 11, weight: .medium))
                             .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
+                            .padding(.vertical, 3)
                             .background(
                                 Capsule()
-                                    .fill(progressBackgroundColor)
+                                    .fill(Color.blue)
                             )
-                            .foregroundStyle(progressForegroundColor)
+                            .foregroundStyle(.white)
                     }
-
-                    // ミニプログレスバー
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            Capsule()
-                                .fill(Color(NSColor.separatorColor).opacity(0.2))
-                                .frame(height: 4)
-
-                            Capsule()
-                                .fill(progressGradient)
-                                .frame(
-                                    width: min(
-                                        geometry.size.width,
-                                        geometry.size.width * (monitor.usageData.sessionUsagePercentage / 100)
-                                    ),
-                                    height: 4
-                                )
-                        }
-                    }
-                    .frame(height: 4)
                 }
-                .padding(16)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(NSColor.controlBackgroundColor))
-                        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-                )
+                
+                HStack {
+                    Text("\(NumberFormatters.formatTokens(totalTokens)) tokens")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    
+                    if !daily.modelsUsed.isEmpty {
+                        Text("•")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                        
+                        Text(formatModels(daily.modelsUsed))
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                    
+                    Spacer()
+                }
             }
-
-            // 今日と今月の統計（横並び）- アクティブセッションに関係なく表示
-            HStack(spacing: 12) {
-                // 今日の使用量
-                StatCard(
-                    icon: "calendar",
-                    title: L10n.Usage.today,
-                    cost: monitor.formatCost(monitor.usageData.todayUsage?.totalCost ?? 0),
-                    tokens: monitor.formatTokens(
-                        (monitor.usageData.todayUsage?.inputTokens ?? 0) + (monitor.usageData.todayUsage?.outputTokens ?? 0)
-                    ),
-                    accentColor: .green
-                )
-
-                // 今月の使用量
-                StatCard(
-                    icon: "calendar.badge.clock",
-                    title: L10n.Usage.thisMonth,
-                    cost: monitor.formatCost(monitor.usageData.monthlyTotal?.totalCost ?? 0),
-                    tokens: monitor.formatTokens(
-                        (monitor.usageData.monthlyTotal?.inputTokens ?? 0) + (monitor.usageData.monthlyTotal?.outputTokens ?? 0)
-                    ),
-                    accentColor: .purple
-                )
-            }
-
-            Text(L10n.History.referenceNote)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .padding(.top, 4)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity)
         }
-    }
-
-    // 計算プロパティ
-    @MainActor
-    private var progressGradient: LinearGradient {
-        return Color.usageGradient(for: monitor.usageData.sessionUsagePercentage)
-    }
-
-    @MainActor
-    private var progressBackgroundColor: Color {
-        return Color.usageColor(for: monitor.usageData.sessionUsagePercentage).opacity(0.15)
-    }
-
-    @MainActor
-    private var progressForegroundColor: Color {
-        return Color.usageColor(for: monitor.usageData.sessionUsagePercentage)
-    }
-
-    // チャートデータ生成（仮実装）
-    private func generateTodayChartData(session: SessionBlock?) -> [ChartData] {
-        // 実際のデータ構造に合わせて実装が必要
-        guard let session = session else { return [] }
-
-        // 仮のデータ生成
-        let formatter = ISO8601DateFormatter()
-        guard let startDate = formatter.date(from: session.startTime) else { return [] }
-
-        var data: [ChartData] = []
-        let now = Date()
-        let elapsed = now.timeIntervalSince(startDate)
-        let intervals = min(Int(elapsed / 300), 12) // 5分間隔、最大12ポイント
-
-        for i in 0...intervals {
-            let time = startDate.addingTimeInterval(Double(i) * 300)
-            let tokens = Int(Double(session.totalTokens) * Double(i) / Double(intervals))
-            data.append(ChartData(time: time, value: Double(tokens)))
-        }
-
-        return data
-    }
-}
-
-// チャートデータ構造
-struct ChartData: Identifiable {
-    let id = UUID()
-    let time: Date
-    let value: Double
-}
-
-// 統計カードコンポーネント
-struct StatCard: View {
-    let icon: String
-    let title: String
-    let cost: String
-    let tokens: String
-    let accentColor: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.system(size: 14))
-                    .foregroundStyle(accentColor)
-                Text(title)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.primary)
-            }
-
-            Text(cost)
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
-
-            Text(L10n.History.tokensFormat(tokens: tokens))
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .fill(Color(NSColor.controlBackgroundColor))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(accentColor.opacity(0.3), lineWidth: 1)
-                )
+                .opacity(isToday ? 1.0 : 0.6)
         )
-    }
-}
-
-// チャートビューコンポーネント
-struct UsageChartView: View {
-    let title: String
-    let data: [ChartData]
-    @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.secondary)
-
-            if !data.isEmpty {
-                Chart(data) { item in
-                    LineMark(
-                        x: .value(L10n.History.time, item.time),
-                        y: .value(L10n.History.tokens, item.value)
-                    )
-                    .foregroundStyle(.blue)
-                    .lineStyle(StrokeStyle(lineWidth: 2))
-
-                    AreaMark(
-                        x: .value(L10n.History.time, item.time),
-                        y: .value(L10n.History.tokens, item.value)
-                    )
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.blue.opacity(0.3), .blue.opacity(0.1)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                }
-                .chartXAxis {
-                    AxisMarks(preset: .aligned) { _ in
-                        AxisValueLabel(format: .dateTime.hour().minute())
-                            .font(.system(size: 9))
-                    }
-                }
-                .chartYAxis {
-                    AxisMarks { value in
-                        AxisValueLabel {
-                            if let intValue = value.as(Double.self) {
-                                Text(formatAxisValue(intValue))
-                                    .font(.system(size: 9))
-                            }
-                        }
-                    }
-                }
-                .frame(height: 120)
-                .padding(.horizontal, 4)
-            } else {
-                Text(L10n.History.noData)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .frame(height: 120)
-            }
-        }
-        .padding(12)
-        .background(
+        .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                .stroke(isToday ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 1)
         )
     }
-
-    private func formatAxisValue(_ value: Double) -> String {
-        return NumberFormatters.formatAxisValue(value)
+    
+    private func formatModels(_ models: [String]) -> String {
+        let shortNames = models.map { model in
+            if model.contains("opus") {
+                return "Opus"
+            } else if model.contains("sonnet") {
+                return "Sonnet"
+            } else if model.contains("haiku") {
+                return "Haiku"
+            }
+            return "Other"
+        }
+        return shortNames.joined(separator: ", ")
     }
 }
