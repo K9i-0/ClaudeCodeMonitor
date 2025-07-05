@@ -77,7 +77,23 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         error = nil
 
         do {
-            let result = try await CommandExecutor.shared.executeCcusageCommand()
+            // Calculate the first day of current month
+            let calendar = Calendar.current
+            let now = Date()
+            let startOfMonth = calendar.dateInterval(of: .month, for: now)?.start ?? now
+            
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyyMMdd"
+            let monthStart = dateFormatter.string(from: startOfMonth)
+            let today = dateFormatter.string(from: now)
+            
+            print("Fetching usage data for current month: \(monthStart) to \(today)")
+            
+            // Fetch usage data for current month only
+            let result = try await CommandExecutor.shared.executeCcusageCommand(
+                subcommand: nil,
+                additionalArgs: ["--since", monthStart, "--until", today]
+            )
             let data = Data(result.utf8)
             let ccusageResponse = try JSONDecoder().decode(CcusageResponse.self, from: data)
 
@@ -91,14 +107,14 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
             }
             print("Monthly total: $\(ccusageResponse.totals.totalCost)")
 
-            // Get today's date in YYYY-MM-DD format
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            let today = formatter.string(from: Date())
-            print("Looking for today's date: \(today)")
+            // Get today's date in YYYY-MM-DD format for matching
+            let dashFormatter = DateFormatter()
+            dashFormatter.dateFormat = "yyyy-MM-dd"
+            let todayWithDashes = dashFormatter.string(from: now)
+            print("Looking for today's date: \(todayWithDashes)")
 
             // Find today's usage from the array
-            if let todayData = ccusageResponse.daily.first(where: { $0.date == today }) {
+            if let todayData = ccusageResponse.daily.first(where: { $0.date == todayWithDashes }) {
                 print("Found today's data: cost=$\(todayData.totalCost)")
                 usageData.todayUsage = todayData
             } else {
