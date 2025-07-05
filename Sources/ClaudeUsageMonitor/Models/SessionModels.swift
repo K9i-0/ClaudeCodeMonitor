@@ -214,7 +214,12 @@ extension UsageData {
         guard let session = activeSession,
               let burnRate = session.burnRate else { return "0" }
 
-        return String(format: "%.1f", burnRate.tokensPerMinute)
+        // ccusage seems to return the value in a different unit (1000x larger)
+        // Divide by 1000 to get the actual tokens per minute
+        let actualTokensPerMinute = burnRate.tokensPerMinute / 1000.0
+        
+        // Format with appropriate precision
+        return String(format: "%.0f", actualTokensPerMinute)
     }
 
     var sessionCostPerHour: String {
