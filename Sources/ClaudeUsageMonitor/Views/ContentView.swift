@@ -204,67 +204,30 @@ struct ContentView: View {
                     )
                 }
             case 1:
-                // History tab content - use actual HistoryView state
+                // History tab content - use actual HistoryView
+                print("[Share] History data count: \(historyViewModel.dailyData.count)")
+                print("[Share] Monthly totals: \(String(describing: historyViewModel.monthlyTotals))")
+                print("[Share] Is loading: \(historyViewModel.isLoading)")
+                
+                // もしデータがまだ読み込まれていない場合は、読み込みを待つ
+                if historyViewModel.dailyData.isEmpty && !historyViewModel.isLoading {
+                    await historyViewModel.fetchMonthlyData()
+                    
+                    // データ取得後の状態を再度ログに出力
+                    print("[Share] After fetch - data count: \(historyViewModel.dailyData.count)")
+                    print("[Share] After fetch - monthly totals: \(String(describing: historyViewModel.monthlyTotals))")
+                }
+                
+                // 少し待機してUIの更新を確実にする
+                try? await Task.sleep(nanoseconds: 200_000_000) // 0.2秒
+                
+                // 実際のHistoryViewをそのまま使用
                 contentToCapture = AnyView(
-                    VStack(spacing: 20) {
-                        Text(historyViewModel.monthDescription)
-                            .font(.system(size: 18, weight: .semibold))
-                        
-                        if let totals = historyViewModel.monthlyTotals {
-                            VStack(alignment: .leading, spacing: 16) {
-                                // Monthly total
-                                HStack {
-                                    Label("月間合計", systemImage: "yensign.circle.fill")
-                                        .font(.system(size: 14, weight: .medium))
-                                    Spacer()
-                                    VStack(alignment: .trailing) {
-                                        Text(String(format: "$%.2f", totals.totalCost))
-                                            .font(.system(size: 16, weight: .semibold))
-                                        Text("\(NumberFormatters.formatTokens(totals.totalTokens)) tokens")
-                                            .font(.system(size: 12))
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                                
-                                Divider()
-                                
-                                // Daily average
-                                HStack {
-                                    Label("日次平均", systemImage: "chart.bar.fill")
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundStyle(.blue)
-                                    Spacer()
-                                    Text(String(format: "$%.2f", historyViewModel.dailyAverage))
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundStyle(.secondary)
-                                }
-                                
-                                // Peak day
-                                if let peak = historyViewModel.peakDay {
-                                    Divider()
-                                    HStack {
-                                        Label("ピーク日", systemImage: "flame.fill")
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundStyle(.orange)
-                                        Spacer()
-                                        Text(formatShareDate(peak.date))
-                                            .font(.system(size: 12))
-                                            .foregroundStyle(.secondary)
-                                        Text(String(format: "$%.2f", peak.totalCost))
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
+                    ScrollView {
+                        HistoryView(viewModel: historyViewModel)
                             .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
-                            )
-                        }
                     }
-                    .padding()
-                    .frame(width: 380)
+                    .frame(width: 380, height: 400)
                     .background(colorScheme == .dark ? Color.black : Color.white)
                     .environment(\.colorScheme, colorScheme)
                 )
