@@ -5,6 +5,7 @@ struct ContentView: View {
     @State private var selectedTab = 0
     @State private var isRefreshing = false
     @State private var showCopiedFeedback = false
+    @StateObject private var historyViewModel = HistoryViewModel()
     
     @Environment(\.colorScheme)
     var colorScheme
@@ -117,7 +118,7 @@ struct ContentView: View {
                     case 1:
                         // History
                         ScrollView {
-                            HistoryView(monitor: monitor)
+                            HistoryView(viewModel: historyViewModel)
                                 .padding()
                         }
                         .transition(.asymmetric(
@@ -203,13 +204,69 @@ struct ContentView: View {
                     )
                 }
             case 1:
-                // History tab content
+                // History tab content - use actual HistoryView state
                 contentToCapture = AnyView(
-                    HistoryView(monitor: monitor)
-                        .padding()
-                        .frame(width: 380)
-                        .background(colorScheme == .dark ? Color.black : Color.white)
-                        .environment(\.colorScheme, colorScheme)
+                    VStack(spacing: 20) {
+                        Text(historyViewModel.monthDescription)
+                            .font(.system(size: 18, weight: .semibold))
+                        
+                        if let totals = historyViewModel.monthlyTotals {
+                            VStack(alignment: .leading, spacing: 16) {
+                                // Monthly total
+                                HStack {
+                                    Label("月間合計", systemImage: "yensign.circle.fill")
+                                        .font(.system(size: 14, weight: .medium))
+                                    Spacer()
+                                    VStack(alignment: .trailing) {
+                                        Text(String(format: "$%.2f", totals.totalCost))
+                                            .font(.system(size: 16, weight: .semibold))
+                                        Text("\(NumberFormatters.formatTokens(totals.totalTokens)) tokens")
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                
+                                Divider()
+                                
+                                // Daily average
+                                HStack {
+                                    Label("日次平均", systemImage: "chart.bar.fill")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(.blue)
+                                    Spacer()
+                                    Text(String(format: "$%.2f", historyViewModel.dailyAverage))
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(.secondary)
+                                }
+                                
+                                // Peak day
+                                if let peak = historyViewModel.peakDay {
+                                    Divider()
+                                    HStack {
+                                        Label("ピーク日", systemImage: "flame.fill")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundStyle(.orange)
+                                        Spacer()
+                                        Text(formatShareDate(peak.date))
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(.secondary)
+                                        Text(String(format: "$%.2f", peak.totalCost))
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                            )
+                        }
+                    }
+                    .padding()
+                    .frame(width: 380)
+                    .background(colorScheme == .dark ? Color.black : Color.white)
+                    .environment(\.colorScheme, colorScheme)
                 )
             default:
                 return
@@ -233,15 +290,21 @@ struct ContentView: View {
                     textContent = "\(L10n.Share.CurrentSession.noSession)\n\n\(L10n.Share.hashtags)"
                 }
             case 1:
-                let todayTokens = monitor.formatTokens(monitor.usageData.todayBillableTokens)
-                let todayCost = String(format: "%.2f", monitor.usageData.todayUsage?.totalCost ?? 0.0)
-                let monthTokens = monitor.formatTokens(monitor.usageData.monthlyBillableTokens)
-                let monthCost = String(format: "%.2f", monitor.usageData.monthlyTotal?.totalCost ?? 0.0)
+                let monthTokens = NumberFormatters.formatTokens(historyViewModel.monthlyTotalTokens)
+                let monthCost = String(format: "%.2f", historyViewModel.monthlyTotalCost)
+                let dailyAvg = String(format: "%.2f", historyViewModel.dailyAverage)
+                
+                var peakInfo = ""
+                if let peak = historyViewModel.peakDay {
+                    let peakDate = formatShareDate(peak.date)
+                    let peakCost = String(format: "%.2f", peak.totalCost)
+                    peakInfo = "\nピーク: \(peakDate) - $\(peakCost)"
+                }
                 
                 textContent = """
-                \(L10n.Share.History.title)
-                \(String(format: L10n.Share.History.today, todayTokens, todayCost))
-                \(String(format: L10n.Share.History.month, monthTokens, monthCost))
+                \(historyViewModel.monthDescription)の使用状況
+                月間合計: \(monthTokens) tokens ($\(monthCost))
+                日次平均: $\(dailyAvg)\(peakInfo)
                 
                 \(L10n.Share.hashtags)
                 """
@@ -259,6 +322,19 @@ struct ContentView: View {
                 showCopiedFeedback = false
             }
         }
+    }
+    
+    private func formatShareDate(_ dateString: String) -> String {
+        let inputFormatter = DateFormatter()
+        inputFormatter.dateFormat = "yyyy-MM-dd"
+        
+        let outputFormatter = DateFormatter()
+        outputFormatter.dateFormat = "M/d"
+        
+        if let date = inputFormatter.date(from: dateString) {
+            return outputFormatter.string(from: date)
+        }
+        return dateString
     }
 }
 

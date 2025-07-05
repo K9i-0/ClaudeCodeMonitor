@@ -89,66 +89,99 @@ class SessionViewModel: ObservableObject {
 // MARK: - History ViewModel
 @MainActor
 class HistoryViewModel: ObservableObject {
-    @Published var todayUsage: DailyUsage?
-    @Published var monthlyUsage: TotalUsage?
-    @Published var chartData: [ChartData] = []
-
-    private let monitor: UsageMonitoring
-
-    init(monitor: UsageMonitoring) {
-        self.monitor = monitor
-        updateFromMonitor()
+    @Published var selectedMonth = Date()
+    @Published var dailyData: [DailyUsage] = []
+    @Published var monthlyTotals: Totals?
+    @Published var isLoading = false
+    
+    private let commandExecutor = CommandExecutor.shared
+    
+    private var monthFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy年MM月"
+        return formatter
     }
-
-    func updateFromMonitor() {
-        todayUsage = monitor.usageData.todayUsage
-        monthlyUsage = monitor.usageData.monthlyTotal
-        updateChartData()
+    
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd"
+        return formatter
     }
-
-    private func updateChartData() {
-        guard let session = monitor.usageData.activeSession else {
-            chartData = []
-            return
+    
+    init() {
+        Task {
+            await fetchMonthlyData()
         }
-
-        let formatter = ISO8601DateFormatter()
-        guard let startDate = formatter.date(from: session.startTime) else {
-            chartData = []
-            return
+    }
+    
+    func previousMonth() {
+        selectedMonth = Calendar.current.date(byAdding: .month, value: -1, to: selectedMonth) ?? selectedMonth
+        Task {
+            await fetchMonthlyData()
         }
-
-        var data: [ChartData] = []
-        let now = Date()
-        let elapsed = now.timeIntervalSince(startDate)
-        let intervals = min(Int(elapsed / 300), 12) // 5分間隔、最大12ポイント
-
-        for i in 0...intervals {
-            let time = startDate.addingTimeInterval(Double(i) * 300)
-            let tokens = Int(Double(session.totalTokens) * Double(i) / Double(intervals))
-            data.append(ChartData(time: time, value: Double(tokens)))
+    }
+    
+    func nextMonth() {
+        selectedMonth = Calendar.current.date(byAdding: .month, value: 1, to: selectedMonth) ?? selectedMonth
+        Task {
+            await fetchMonthlyData()
         }
-
-        chartData = data
     }
-
-    var formattedTodayCost: String? {
-        guard let cost = todayUsage?.totalCost else { return nil }
-        return NumberFormatters.formatCost(cost)
+    
+    func fetchMonthlyData() async {
+        isLoading = true
+        
+        let calendar = Calendar.current
+        let startOfMonth = calendar.dateInterval(of: .month, for: selectedMonth)?.start ?? selectedMonth
+        
+        // endOfMonthは次月の最初の日なので、1日引いて当月の最終日を取得
+        let endOfMonth = calendar.dateInterval(of: .month, for: selectedMonth)?.end ?? selectedMonth
+        let lastDayOfMonth = calendar.date(byAdding: .day, value: -1, to: endOfMonth) ?? endOfMonth
+        
+        let monthStart = dateFormatter.string(from: startOfMonth)
+        let monthEnd = dateFormatter.string(from: lastDayOfMonth)
+        
+        do {
+            let result = try await commandExecutor.executeCcusageCommand(
+                subcommand: nil,
+                additionalArgs: ["--since", monthStart, "--until", monthEnd]
+            )
+            
+            let data = Data(result.utf8)
+            let response = try JSONDecoder().decode(CcusageResponse.self, from: data)
+            
+            withAnimation {
+                dailyData = response.daily
+                monthlyTotals = response.totals
+            }
+        } catch {
+            print("Failed to fetch monthly data: \(error)")
+            dailyData = []
+            monthlyTotals = nil
+        }
+        
+        isLoading = false
     }
-
-    var formattedTodayTokens: String? {
-        guard let tokens = todayUsage?.totalTokens else { return nil }
-        return NumberFormatters.formatTokens(tokens)
+    
+    // For sharing
+    var monthDescription: String {
+        monthFormatter.string(from: selectedMonth)
     }
-
-    var formattedMonthlyCost: String? {
-        guard let cost = monthlyUsage?.totalCost else { return nil }
-        return NumberFormatters.formatCost(cost)
+    
+    var monthlyTotalCost: Double {
+        monthlyTotals?.totalCost ?? 0
     }
-
-    var formattedMonthlyTokens: String? {
-        guard let tokens = monthlyUsage?.totalTokens else { return nil }
-        return NumberFormatters.formatTokens(tokens)
+    
+    var monthlyTotalTokens: Int {
+        monthlyTotals?.totalTokens ?? 0
+    }
+    
+    var dailyAverage: Double {
+        guard !dailyData.isEmpty else { return 0 }
+        return monthlyTotalCost / Double(dailyData.count)
+    }
+    
+    var peakDay: DailyUsage? {
+        dailyData.max(by: { $0.totalCost < $1.totalCost })
     }
 }

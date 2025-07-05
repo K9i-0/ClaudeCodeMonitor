@@ -1,30 +1,18 @@
 import SwiftUI
 
 struct HistoryView: View {
-    let monitor: UsageMonitor
+    @StateObject var viewModel: HistoryViewModel
     @Environment(\.colorScheme) var colorScheme
-    @State private var selectedMonth = Date()
-    @State private var dailyData: [DailyUsage] = []
-    @State private var monthlyTotals: Totals?
-    @State private var isLoading = false
-    
-    private var monthFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy年MM月"
-        return formatter
-    }
-    
-    private var dateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMdd"
-        return formatter
-    }
     
     var body: some View {
         VStack(spacing: 16) {
             // 月選択ヘッダー
             HStack {
-                Button(action: previousMonth) {
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.previousMonth()
+                    }
+                }) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.secondary)
@@ -32,11 +20,15 @@ struct HistoryView: View {
                 .buttonStyle(.plain)
                 .disabled(isFirstAvailableMonth)
                 
-                Text(monthFormatter.string(from: selectedMonth))
+                Text(viewModel.monthDescription)
                     .font(.system(size: 16, weight: .semibold))
                     .frame(minWidth: 140)
                 
-                Button(action: nextMonth) {
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.nextMonth()
+                    }
+                }) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.secondary)
@@ -46,7 +38,7 @@ struct HistoryView: View {
                 
                 Spacer()
                 
-                if isLoading {
+                if viewModel.isLoading {
                     ProgressView()
                         .scaleEffect(0.7)
                 }
@@ -55,7 +47,7 @@ struct HistoryView: View {
             
             ScrollView {
                 VStack(spacing: 12) {
-                    if isLoading {
+                    if viewModel.isLoading {
                         // Skeleton loading state
                         MonthlySummarySkeletonCard()
                         
@@ -64,10 +56,10 @@ struct HistoryView: View {
                         }
                     } else {
                         // 月間サマリー
-                        if !dailyData.isEmpty, let totals = monthlyTotals {
+                        if !viewModel.dailyData.isEmpty, let totals = viewModel.monthlyTotals {
                             MonthlySummaryCard(
                                 totals: totals,
-                                dailyData: dailyData
+                                dailyData: viewModel.dailyData
                             )
                                 .transition(.asymmetric(
                                     insertion: .opacity.combined(with: .move(edge: .top)),
@@ -76,14 +68,14 @@ struct HistoryView: View {
                         }
                         
                         // 日次データ
-                        if dailyData.isEmpty {
+                        if viewModel.dailyData.isEmpty {
                             EmptyStateView(
                                 message: L10n.History.noData
                             )
                             .padding(.vertical, 60)
                             .transition(.opacity)
                         } else {
-                            ForEach(dailyData.sorted(by: { $0.date > $1.date }), id: \.date) { daily in
+                            ForEach(viewModel.dailyData.sorted(by: { $0.date > $1.date }), id: \.date) { daily in
                                 DailyUsageCard(
                                     daily: daily,
                                     isToday: isToday(daily.date)
@@ -99,22 +91,16 @@ struct HistoryView: View {
                 .padding(.horizontal, 4)
             }
         }
-        .onAppear {
-            loadMonthData()
-        }
-        .onChange(of: selectedMonth) { _ in
-            loadMonthData()
-        }
     }
     
     private var isCurrentMonth: Bool {
-        Calendar.current.isDate(selectedMonth, equalTo: Date(), toGranularity: .month)
+        Calendar.current.isDate(viewModel.selectedMonth, equalTo: Date(), toGranularity: .month)
     }
     
     private var isFirstAvailableMonth: Bool {
         // Claude Codeは2025年2月24日リリース
         let calendar = Calendar.current
-        let components = calendar.dateComponents([.year, .month], from: selectedMonth)
+        let components = calendar.dateComponents([.year, .month], from: viewModel.selectedMonth)
         
         // 2025年2月より前には戻れないようにする（Claude Codeリリース前）
         if components.year! < 2025 || (components.year == 2025 && components.month! < 2) {
@@ -122,60 +108,6 @@ struct HistoryView: View {
         }
         
         return false
-    }
-    
-    private func previousMonth() {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            selectedMonth = Calendar.current.date(byAdding: .month, value: -1, to: selectedMonth) ?? selectedMonth
-        }
-    }
-    
-    private func nextMonth() {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            selectedMonth = Calendar.current.date(byAdding: .month, value: 1, to: selectedMonth) ?? selectedMonth
-        }
-    }
-    
-    private func loadMonthData() {
-        Task {
-            await fetchMonthlyData()
-        }
-    }
-    
-    @MainActor
-    private func fetchMonthlyData() async {
-        isLoading = true
-        
-        let calendar = Calendar.current
-        let startOfMonth = calendar.dateInterval(of: .month, for: selectedMonth)?.start ?? selectedMonth
-        
-        // endOfMonthは次月の最初の日なので、1日引いて当月の最終日を取得
-        let endOfMonth = calendar.dateInterval(of: .month, for: selectedMonth)?.end ?? selectedMonth
-        let lastDayOfMonth = calendar.date(byAdding: .day, value: -1, to: endOfMonth) ?? endOfMonth
-        
-        let monthStart = dateFormatter.string(from: startOfMonth)
-        let monthEnd = dateFormatter.string(from: lastDayOfMonth)
-        
-        do {
-            let result = try await CommandExecutor.shared.executeCcusageCommand(
-                subcommand: nil,
-                additionalArgs: ["--since", monthStart, "--until", monthEnd]
-            )
-            
-            let data = Data(result.utf8)
-            let response = try JSONDecoder().decode(CcusageResponse.self, from: data)
-            
-            withAnimation {
-                dailyData = response.daily
-                monthlyTotals = response.totals
-            }
-        } catch {
-            print("Failed to fetch monthly data: \(error)")
-            dailyData = []
-            monthlyTotals = nil
-        }
-        
-        isLoading = false
     }
     
     private func isToday(_ dateString: String) -> Bool {
