@@ -36,6 +36,11 @@ struct UsageData {
     var historicalMaxTokens: Int = 0  // 過去のセッションでの最大トークン使用量
     var detectedPlanType: String?  // ユーザーのプラン（Pro/Max5/Max20）を保存
     var lastUpdated = Date()
+    
+    // Store formatted costs for currency conversion
+    var formattedTodayCost: String = "$0.00"
+    var formattedMonthlyCostValue: String = "$0.00"
+    var formattedSessionCostPerHour: String = "$0.00"
 
     // Helper computed properties for billable tokens (input + output only)
     var todayBillableTokens: Int {
@@ -59,13 +64,11 @@ struct UsageData {
     static let averageCostPerMillionTokens: Double = 6.0  // Weighted average
 
     var formattedDailyCost: String {
-        guard let today = todayUsage else { return "$0.00" }
-        return String(format: "$%.2f", today.totalCost)
+        return formattedTodayCost
     }
 
     var formattedMonthlyCost: String {
-        guard let monthly = monthlyTotal else { return "$0.00" }
-        return String(format: "$%.2f", monthly.totalCost)
+        return formattedMonthlyCostValue
     }
 
     // Cost-based usage percentages
