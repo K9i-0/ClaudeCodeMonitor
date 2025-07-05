@@ -55,26 +55,44 @@ struct HistoryView: View {
             
             ScrollView {
                 VStack(spacing: 12) {
-                    // 月間サマリー
-                    if !dailyData.isEmpty, let totals = monthlyTotals {
-                        MonthlySummaryCard(
-                            totals: totals,
-                            dailyData: dailyData
-                        )
-                    }
-                    
-                    // 日次データ
-                    if dailyData.isEmpty && !isLoading {
-                        EmptyStateView(
-                            message: L10n.History.noData
-                        )
-                        .padding(.vertical, 60)
+                    if isLoading {
+                        // Skeleton loading state
+                        MonthlySummarySkeletonCard()
+                        
+                        ForEach(0..<5) { _ in
+                            DailyUsageSkeletonCard()
+                        }
                     } else {
-                        ForEach(dailyData.sorted(by: { $0.date > $1.date }), id: \.date) { daily in
-                            DailyUsageCard(
-                                daily: daily,
-                                isToday: isToday(daily.date)
+                        // 月間サマリー
+                        if !dailyData.isEmpty, let totals = monthlyTotals {
+                            MonthlySummaryCard(
+                                totals: totals,
+                                dailyData: dailyData
                             )
+                                .transition(.asymmetric(
+                                    insertion: .opacity.combined(with: .move(edge: .top)),
+                                    removal: .opacity
+                                ))
+                        }
+                        
+                        // 日次データ
+                        if dailyData.isEmpty {
+                            EmptyStateView(
+                                message: L10n.History.noData
+                            )
+                            .padding(.vertical, 60)
+                            .transition(.opacity)
+                        } else {
+                            ForEach(dailyData.sorted(by: { $0.date > $1.date }), id: \.date) { daily in
+                                DailyUsageCard(
+                                    daily: daily,
+                                    isToday: isToday(daily.date)
+                                )
+                                .transition(.asymmetric(
+                                    insertion: .opacity.combined(with: .scale(scale: 0.9)),
+                                    removal: .opacity
+                                ))
+                            }
                         }
                     }
                 }
@@ -94,10 +112,16 @@ struct HistoryView: View {
     }
     
     private var isFirstAvailableMonth: Bool {
-        // 2025年6月を最初の利用可能月とする（Claude Codeのリリース時期）
+        // Claude Codeは2025年2月24日リリース
         let calendar = Calendar.current
         let components = calendar.dateComponents([.year, .month], from: selectedMonth)
-        return components.year == 2025 && components.month == 6
+        
+        // 2025年2月より前には戻れないようにする（Claude Codeリリース前）
+        if components.year! < 2025 || (components.year == 2025 && components.month! < 2) {
+            return true
+        }
+        
+        return false
     }
     
     private func previousMonth() {
@@ -124,10 +148,13 @@ struct HistoryView: View {
         
         let calendar = Calendar.current
         let startOfMonth = calendar.dateInterval(of: .month, for: selectedMonth)?.start ?? selectedMonth
+        
+        // endOfMonthは次月の最初の日なので、1日引いて当月の最終日を取得
         let endOfMonth = calendar.dateInterval(of: .month, for: selectedMonth)?.end ?? selectedMonth
+        let lastDayOfMonth = calendar.date(byAdding: .day, value: -1, to: endOfMonth) ?? endOfMonth
         
         let monthStart = dateFormatter.string(from: startOfMonth)
-        let monthEnd = dateFormatter.string(from: endOfMonth)
+        let monthEnd = dateFormatter.string(from: lastDayOfMonth)
         
         do {
             let result = try await CommandExecutor.shared.executeCcusageCommand(
