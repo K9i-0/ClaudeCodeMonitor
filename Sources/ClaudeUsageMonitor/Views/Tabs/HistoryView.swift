@@ -63,89 +63,81 @@ struct HistoryView: View {
             if !viewModel.isLoading && !viewModel.dailyData.isEmpty, let totals = viewModel.monthlyTotals {
                 HStack(spacing: 12) {
                     // 合計
-                    VStack(spacing: 8) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.blue.opacity(0.15))
-                                .frame(height: 80)
-                            
-                            VStack(spacing: 4) {
-                                Image(systemName: "dollarsign.circle.fill")
-                                    .font(.system(size: 20))
-                                    .foregroundStyle(.blue)
-                                
-                                Text(L10n.History.total)
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundStyle(.secondary)
-                                
-                                Text(String(format: "$%.2f", totals.totalCost))
-                                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                                    .foregroundStyle(.primary)
-                            }
-                        }
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.blue.opacity(0.15))
+                            .frame(height: 100)
                         
-                        Text("\(NumberFormatters.formatTokens(totals.totalTokens)) tokens")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
+                        VStack(spacing: 6) {
+                            Image(systemName: "dollarsign.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.blue)
+                            
+                            Text(L10n.History.total)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.secondary)
+                            
+                            Text(String(format: "$%.2f", totals.totalCost))
+                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                .foregroundStyle(.primary)
+                            
+                            Text("\(NumberFormatters.formatTokens(totals.totalTokens)) tokens")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .frame(maxWidth: .infinity)
                     
                     // 日次平均
-                    VStack(spacing: 8) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.green.opacity(0.15))
-                                .frame(height: 80)
-                            
-                            VStack(spacing: 4) {
-                                Image(systemName: "chart.line.uptrend.xyaxis")
-                                    .font(.system(size: 20))
-                                    .foregroundStyle(.green)
-                                
-                                Text(L10n.History.dailyAverage)
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundStyle(.secondary)
-                                
-                                Text(String(format: "$%.2f", totals.totalCost / Double(viewModel.dailyData.count)))
-                                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                                    .foregroundStyle(.primary)
-                            }
-                        }
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.green.opacity(0.15))
+                            .frame(height: 100)
                         
-                        Text(L10n.History.perDay)
-                            .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
+                        VStack(spacing: 6) {
+                            Image(systemName: "chart.line.uptrend.xyaxis")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.green)
+                            
+                            Text(L10n.History.dailyAverage)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.secondary)
+                            
+                            Text(String(format: "$%.2f", totals.totalCost / Double(viewModel.dailyData.count)))
+                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                .foregroundStyle(.primary)
+                            
+                            Text(L10n.History.perDay)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .frame(maxWidth: .infinity)
                     
                     // ピーク
-                    VStack(spacing: 8) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.orange.opacity(0.15))
-                                .frame(height: 80)
-                            
-                            VStack(spacing: 4) {
-                                Image(systemName: "flame.fill")
-                                    .font(.system(size: 20))
-                                    .foregroundStyle(.orange)
-                                
-                                Text(L10n.History.peak)
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundStyle(.secondary)
-                                
-                                if let peak = viewModel.dailyData.max(by: { $0.totalCost < $1.totalCost }) {
-                                    Text(String(format: "$%.2f", peak.totalCost))
-                                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                                        .foregroundStyle(.primary)
-                                }
-                            }
-                        }
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.orange.opacity(0.15))
+                            .frame(height: 100)
                         
-                        if let peak = viewModel.dailyData.max(by: { $0.totalCost < $1.totalCost }) {
-                            Text(self.formatPeakDate(peak.date))
-                                .font(.system(size: 10))
+                        VStack(spacing: 6) {
+                            Image(systemName: "flame.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.orange)
+                            
+                            Text(L10n.History.peak)
+                                .font(.system(size: 11, weight: .medium))
                                 .foregroundStyle(.secondary)
+                            
+                            if let peak = viewModel.dailyData.max(by: { $0.totalCost < $1.totalCost }) {
+                                Text(String(format: "$%.2f", peak.totalCost))
+                                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.primary)
+                                
+                                Text(self.formatPeakDate(peak.date))
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity)
