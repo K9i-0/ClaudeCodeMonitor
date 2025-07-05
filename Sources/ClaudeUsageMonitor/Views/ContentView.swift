@@ -260,21 +260,21 @@ struct ContentView: View {
                                         .fill(Color.blue.opacity(0.15))
                                         .frame(height: 100)
                                     
-                                    VStack(spacing: 6) {
+                                    VStack(spacing: 4) {
                                         Image(systemName: "dollarsign.circle.fill")
-                                            .font(.system(size: 22))
+                                            .font(.system(size: 20))
                                             .foregroundStyle(.blue)
                                         
                                         Text(L10n.History.total)
-                                            .font(.system(size: 11, weight: .medium))
+                                            .font(.system(size: 10, weight: .medium))
                                             .foregroundStyle(.secondary)
                                         
                                         Text(String(format: "$%.2f", totals.totalCost))
-                                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                                            .font(.system(size: 16, weight: .semibold, design: .rounded))
                                             .foregroundStyle(.primary)
                                         
-                                        Text("\(NumberFormatters.formatTokens(totals.totalTokens)) tokens")
-                                            .font(.system(size: 10))
+                                        Text(NumberFormatters.formatTokens(totals.totalTokens))
+                                            .font(.system(size: 9))
                                             .foregroundStyle(.secondary)
                                     }
                                 }
@@ -286,21 +286,21 @@ struct ContentView: View {
                                         .fill(Color.green.opacity(0.15))
                                         .frame(height: 100)
                                     
-                                    VStack(spacing: 6) {
+                                    VStack(spacing: 4) {
                                         Image(systemName: "chart.line.uptrend.xyaxis")
-                                            .font(.system(size: 22))
+                                            .font(.system(size: 20))
                                             .foregroundStyle(.green)
                                         
                                         Text(L10n.History.dailyAverage)
-                                            .font(.system(size: 11, weight: .medium))
+                                            .font(.system(size: 10, weight: .medium))
                                             .foregroundStyle(.secondary)
                                         
                                         Text(String(format: "$%.2f", totals.totalCost / Double(historyViewModel.dailyData.count)))
-                                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                                            .font(.system(size: 16, weight: .semibold, design: .rounded))
                                             .foregroundStyle(.primary)
                                         
                                         Text(L10n.History.perDay)
-                                            .font(.system(size: 10))
+                                            .font(.system(size: 9))
                                             .foregroundStyle(.secondary)
                                     }
                                 }
@@ -312,22 +312,22 @@ struct ContentView: View {
                                         .fill(Color.orange.opacity(0.15))
                                         .frame(height: 100)
                                     
-                                    VStack(spacing: 6) {
+                                    VStack(spacing: 4) {
                                         Image(systemName: "flame.fill")
-                                            .font(.system(size: 22))
+                                            .font(.system(size: 20))
                                             .foregroundStyle(.orange)
                                         
                                         Text(L10n.History.peak)
-                                            .font(.system(size: 11, weight: .medium))
+                                            .font(.system(size: 10, weight: .medium))
                                             .foregroundStyle(.secondary)
                                         
                                         if let peak = historyViewModel.dailyData.max(by: { $0.totalCost < $1.totalCost }) {
                                             Text(String(format: "$%.2f", peak.totalCost))
-                                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                                .font(.system(size: 16, weight: .semibold, design: .rounded))
                                                 .foregroundStyle(.primary)
                                             
                                             Text(formatShareDate(peak.date))
-                                                .font(.system(size: 10))
+                                                .font(.system(size: 9))
                                                 .foregroundStyle(.secondary)
                                         }
                                     }
