@@ -39,6 +39,21 @@ class CommandExecutor {
         task.executableURL = URL(fileURLWithPath: "/usr/bin/which")
         task.arguments = [command]
         
+        // Set up environment with additional paths
+        var environment = ProcessInfo.processInfo.environment
+        let existingPath = environment["PATH"] ?? ""
+        let additionalPaths = [
+            "/usr/local/bin",
+            "/opt/homebrew/bin",
+            "/Users/\(NSUserName())/.local/share/mise/shims",
+            "/Users/\(NSUserName())/.local/share/mise/installs/bun/latest/bin",
+            "/Users/\(NSUserName())/.local/share/mise/installs/bun/*/bin",
+            "/Users/\(NSUserName())/.bun/bin",
+            "/usr/bin"
+        ].joined(separator: ":")
+        environment["PATH"] = "\(additionalPaths):\(existingPath)"
+        task.environment = environment
+        
         let pipe = Pipe()
         task.standardOutput = pipe
         task.standardError = Pipe()

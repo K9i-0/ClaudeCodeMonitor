@@ -108,13 +108,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func setupEventMonitor() {
         // Monitor for clicks outside the popover
-        eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] in _ in
+        eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             if let self = self, self.popover.isShown {
                 self.closePopover()
             }
         }
     }
     
+    @MainActor
     private func observeUsageDataChanges() {
         guard let usageMonitor = usageMonitor else { return }
         
