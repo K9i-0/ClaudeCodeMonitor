@@ -120,6 +120,43 @@ struct SettingsTabView: View {
             }
             */
 
+            #if DEBUG
+            Divider()
+            
+            // Debug section
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Debug")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.orange)
+                
+                Button(action: {
+                    // Show EnvironmentSetupView in a new window
+                    let window = NSWindow(
+                        contentRect: NSRect(x: 0, y: 0, width: 480, height: 400),
+                        styleMask: [.titled, .closable, .resizable],
+                        backing: .buffered,
+                        defer: false
+                    )
+                    window.title = "Environment Setup (Debug)"
+                    window.contentView = NSHostingView(rootView: EnvironmentSetupView())
+                    window.center()
+                    window.makeKeyAndOrderFront(nil)
+                }) {
+                    HStack {
+                        Image(systemName: "wrench.and.screwdriver")
+                            .font(.system(size: 14))
+                        Text("Show Environment Setup View")
+                            .font(.system(size: 14))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.orange.opacity(0.1))
+                    .cornerRadius(6)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            #endif
+            
             Spacer()
         }
     }
