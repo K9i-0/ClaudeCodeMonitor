@@ -62,3 +62,4 @@ yarn-debug.log*
 yarn-error.log*
 .npm
 .yarn-integrity
+package-lock.json

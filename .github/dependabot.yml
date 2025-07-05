@@ -31,3 +31,19 @@ updates:
       include: "scope"
     # PR数の制限
     open-pull-requests-limit: 5
+
+  # npm の依存関係を更新（ccusage）
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    open-pull-requests-limit: 5

@@ -16,4 +16,8 @@ enum BundleConfiguration {
         return "ClaudeCodeMonitor"
         #endif
     }
+
+    static var ccusageVersion: String {
+        return Bundle.main.object(forInfoDictionaryKey: "CcusageVersion") as? String ?? ""
+    }
 }
