@@ -39,7 +39,7 @@ This app wraps the [ccusage](https://github.com/ryoppippi/ccusage) CLI tool to p
 - 🔄 Auto-refresh every 5 minutes
 - 🔄 Manual refresh button
 - ⚙️ Plan settings (Pro/Max5/Max20)
-- 🌐 Stable operation with local server mode
+- 🌍 Multi-language support (English/Japanese)
 
 ## 🚀 Installation
 
@@ -57,7 +57,7 @@ Download the latest release from [GitHub Releases](https://github.com/K9i-0/Clau
 
 - macOS 13.0 or later
 - Swift 5.9 or later
-- Node.js 18 or later (required for ccusage CLI tool)
+- Bun or Node.js 18 or later (required for ccusage CLI tool)
 - Xcode 15 or later (for development)
 
 ## 🛠️ Setup
@@ -69,19 +69,7 @@ git clone https://github.com/K9i-0/ClaudeCodeMonitor.git
 cd ClaudeCodeMonitor
 ```
 
-### 2. Node.js Server Setup (Recommended)
-
-Using a local server provides more stable operation:
-
-```bash
-cd server
-npm install
-npm start
-```
-
-The server will start at `http://127.0.0.1:3456`.
-
-### 3. Build Instructions
+### 2. Build Instructions
 
 #### Method 1: Using Xcode (Recommended)
 
@@ -93,14 +81,6 @@ In Xcode:
 - **Build**: Product > Build (⌘B)
 - **Run**: Product > Run (⌘R)
 
-##### Debug with Different Port
-
-To run debug builds alongside the release version:
-
-1. Edit scheme: Product → Scheme → Edit Scheme...
-2. Go to Run → Arguments → Environment Variables
-3. Add: `CLAUDE_MONITOR_PORT` = `3457`
-4. Start server on different port: `cd server && PORT=3457 npm start`
 
 #### Method 2: Command Line Build
 

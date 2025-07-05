@@ -106,35 +106,6 @@ else
     echo "    ⚠️  App icon not found"
 fi
 
-# Copy Node.js binary
-echo "  Copying Node.js binary..."
-if [ -f "Resources/node/node" ]; then
-    mkdir -p "$APP_PATH/Contents/Resources/node"
-    cp "Resources/node/node" "$APP_PATH/Contents/Resources/node/"
-    echo "    Node.js binary copied"
-else
-    echo "    ⚠️  Node.js binary not found at Resources/node/node"
-fi
-
-# Copy server directory
-echo "  Copying server files..."
-if [ -d "server" ]; then
-    # Create a clean copy without node_modules first
-    mkdir -p "$APP_PATH/Contents/Resources/server"
-    cp server/package.json "$APP_PATH/Contents/Resources/server/"
-    cp server/package-lock.json "$APP_PATH/Contents/Resources/server/" 2>/dev/null || true
-    cp server/server*.js "$APP_PATH/Contents/Resources/server/"
-    
-    # Install production dependencies
-    echo "    Installing server dependencies..."
-    cd "$APP_PATH/Contents/Resources/server"
-    npm install --production --silent
-    cd - > /dev/null
-    
-    echo "    Server files copied"
-else
-    echo "    ⚠️  Server directory not found"
-fi
 
 # Verify app structure
 echo ""
@@ -154,14 +125,6 @@ echo ""
 echo "  Executable info:"
 file "$APP_PATH/Contents/MacOS/ClaudeCodeMonitor"
 
-# Sign Node.js binary if Developer ID is available and not skipping
-if [ -f "$APP_PATH/Contents/Resources/node/node" ] && [ "$SKIP_SIGNING" = false ]; then
-    echo ""
-    echo "Signing Node.js binary..."
-    
-    codesign --force --sign - "$APP_PATH/Contents/Resources/node/node"
-    echo "  ✅ Node.js binary signed"
-fi
 
 echo ""
 echo "✅ App bundle created successfully: $APP_PATH"

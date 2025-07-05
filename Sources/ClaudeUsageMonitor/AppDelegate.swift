@@ -8,7 +8,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var popover: NSPopover!
     private var eventMonitor: EventMonitor?
     private var usageMonitor: UsageMonitor!
-    private var isClaudeInstalled = false
+    private var environmentCheckResult = EnvironmentCheckResult()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Debug builds use different settings to avoid conflicts with release version
@@ -17,25 +17,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("Running in DEBUG mode")
         #endif
         
-        // Check if Claude Code is installed
-        let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
-        let claudePath = homeDirectory.appendingPathComponent(".claude")
-        let projectsPath = claudePath.appendingPathComponent("projects")
-        
-        isClaudeInstalled = FileManager.default.fileExists(atPath: projectsPath.path)
-        
-        if isClaudeInstalled {
-            print("[AppDelegate] Claude Code is installed at: \(claudePath.path)")
-            ServerManager.shared.claudePath = claudePath.path
+        // Check environment
+        Task {
+            environmentCheckResult = await CommandExecutor.shared.checkEnvironment()
             
-            // Start the local server
-            Task {
-                await ServerManager.shared.checkAndStartServer()
+            await MainActor.run {
+                if environmentCheckResult.isClaudeCodeInstalled && environmentCheckResult.canExecuteCommands {
+                    print("[AppDelegate] All requirements met")
+                    setupMainInterface()
+                } else {
+                    print("[AppDelegate] Environment setup required")
+                    setupEnvironmentCheckInterface()
+                }
             }
-        } else {
-            print("[AppDelegate] Claude Code is not installed")
         }
-
+    }
+    
+    @MainActor
+    private func setupMainInterface() {
         usageMonitor = UsageMonitor()
 
         // 通知機能は初回リリースでは無効化
@@ -51,6 +50,45 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.close()
         }
 
+        setupStatusItem()
+        
+        // Create popover
+        popover = NSPopover()
+        popover.contentSize = NSSize(width: 380, height: 480)
+        popover.behavior = .transient
+        popover.animates = true
+        popover.contentViewController = NSHostingController(
+            rootView: ContentView()
+                .environmentObject(usageMonitor)
+        )
+
+        setupEventMonitor()
+        updateStatusBarTitle()
+        observeUsageDataChanges()
+    }
+    
+    @MainActor
+    private func setupEnvironmentCheckInterface() {
+        // Hide all windows for menubar-only app
+        NSApp.windows.forEach { window in
+            window.close()
+        }
+
+        setupStatusItem()
+        
+        // Create popover with environment setup view
+        popover = NSPopover()
+        popover.contentSize = NSSize(width: 480, height: 360)
+        popover.behavior = .transient
+        popover.animates = true
+        popover.contentViewController = NSHostingController(
+            rootView: EnvironmentSetupView()
+        )
+
+        setupEventMonitor()
+    }
+    
+    private func setupStatusItem() {
         // Create status bar item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
@@ -66,30 +104,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.action = #selector(togglePopover)
             button.target = self
         }
-
-        // Create popover
-        popover = NSPopover()
-        popover.contentSize = NSSize(width: 380, height: 480)
-        popover.behavior = .transient
-        popover.animates = true
-        if isClaudeInstalled {
-            popover.contentViewController = NSHostingController(
-                rootView: ContentView()
-                    .environmentObject(usageMonitor)
-            )
-        } else {
-            popover.contentViewController = NSHostingController(
-                rootView: ClaudeNotInstalledView()
-            )
-        }
-
+    }
+    
+    private func setupEventMonitor() {
         // Monitor for clicks outside the popover
         eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             if let self = self, self.popover.isShown {
                 self.closePopover()
             }
         }
-
+    }
+    
+    @MainActor
+    private func observeUsageDataChanges() {
+        guard let usageMonitor = usageMonitor else { return }
+        
         // Update status bar title when usage data changes
         updateStatusBarTitle()
 
@@ -100,7 +129,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.updateStatusBarTitle()
             }
             .store(in: &cancellables)
-
     }
 
     private var cancellables = Set<AnyCancellable>()
@@ -108,6 +136,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     private func updateStatusBarTitle() {
         guard let button = statusItem.button else { return }
+        guard let usageMonitor = usageMonitor else {
+            // Environment setup mode
+            if let image = NSImage(systemSymbolName: "exclamationmark.circle", accessibilityDescription: "Setup Required") {
+                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+                button.image = image.withSymbolConfiguration(config)
+                button.title = ""
+                button.toolTip = L10n.Environment.setupRequired
+            }
+            return
+        }
 
         if usageMonitor.isLoading && usageMonitor.usageData.activeSession == nil {
             // ローディング中
@@ -214,8 +252,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     func showPopover() {
         if let button = statusItem.button {
-            // Refresh data when opening popover
-            usageMonitor.fetchUsageData()
+            // Refresh data when opening popover (only if main interface is setup)
+            if let usageMonitor = usageMonitor {
+                usageMonitor.fetchUsageData()
+            }
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             eventMonitor?.start()
         }
@@ -228,7 +268,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 
     func applicationWillTerminate(_ notification: Notification) {
-        usageMonitor.stopMonitoring()
+        usageMonitor?.stopMonitoring()
     }
 }
 

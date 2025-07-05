@@ -62,13 +62,16 @@
 "action.quit" = "終了";
 "action.close" = "閉じる";
 "action.quitApp" = "アプリケーションを終了";
+"action.installClaudeCode" = "Claude Codeをインストール";
+"action.installBun" = "Bunをインストール";
+"action.installNode" = "Node.jsをインストール";
+"action.checkAgain" = "再チェック";
 
 // Errors
 "error.loadingData" = "データを読み込み中...";
 "error.dataFetchFailed" = "データの取得に失敗しました";
 "error.networkError" = "ネットワークエラー";
 "error.unknown" = "不明なエラー";
-"error.serverNotRunning" = "ローカルサーバーが起動していません。serverディレクトリで'npm start'を実行してください。";
 
 // Time format
 "time.hoursMinutes" = "%d時間%d分";
@@ -112,6 +115,24 @@
 // General
 "ok" = "OK";
 "error" = "エラー";
+
+// Environment setup
+"environment.setupRequired" = "環境セットアップが必要です";
+"environment.allRequirementsMet" = "すべての要件を満たしています！";
+"environment.pleaseRestart" = "アプリを再起動してください";
+"environment.debugRestartNote" = "注意: Xcodeデバッグモードでは手動で再起動が必要です";
+"environment.nodeOrBunRequired" = "BunまたはNode.jsのいずれかが必要です:";
+"environment.afterInstallation" = "インストール後:";
+"environment.installed" = "インストール済み";
+"environment.optional" = "(オプション)";
+
+// Error messages
+"error.commandNotFound" = "コマンドが見つかりません: %@";
+"error.commandExecutionFailed" = "コマンド実行エラー: %@";
+"error.outputDecodingFailed" = "コマンド出力のデコードに失敗しました";
+"error.recovery.installNodeOrBun" = "このアプリケーションを使用するにはNode.jsまたはBunをインストールしてください";
+"error.recovery.checkCommandInstallation" = "ccusageが正しくインストールされているか確認してください";
+"error.recovery.updateCcusage" = "ccusageを最新バージョンに更新してください";
 
 
 // Share Text

@@ -165,7 +165,7 @@ final class UtilitiesTests: XCTestCase {
         XCTAssertEqual(parsingError.recoverySuggestion, "ccusageが最新バージョンであることを確認してください")
 
         let commandError = ClaudeMonitorError.commandExecutionError("Command not found")
-        XCTAssertEqual(commandError.recoverySuggestion, "Node.jsとnpxが正しくインストールされているか確認してください")
+        XCTAssertEqual(commandError.recoverySuggestion, "Node.jsまたはBunが正しくインストールされているか確認してください")
     }
 
     // MARK: - Constants Tests

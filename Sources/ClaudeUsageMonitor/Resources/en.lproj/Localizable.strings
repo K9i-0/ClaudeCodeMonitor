@@ -62,13 +62,16 @@
 "action.quit" = "Quit";
 "action.close" = "Close";
 "action.quitApp" = "Quit Application";
+"action.installClaudeCode" = "Install Claude Code";
+"action.installBun" = "Install Bun";
+"action.installNode" = "Install Node.js";
+"action.checkAgain" = "Check Again";
 
 // Errors
 "error.loadingData" = "Loading data...";
 "error.dataFetchFailed" = "Failed to fetch data";
 "error.networkError" = "Network error";
 "error.unknown" = "Unknown error";
-"error.serverNotRunning" = "Local server is not running. Please start the server with 'npm start' in the server directory.";
 
 // Time format
 "time.hoursMinutes" = "%d hours %d minutes";
@@ -112,6 +115,24 @@
 // General
 "ok" = "OK";
 "error" = "Error";
+
+// Environment setup
+"environment.setupRequired" = "Environment Setup Required";
+"environment.allRequirementsMet" = "All Requirements Met!";
+"environment.pleaseRestart" = "Please restart the app to continue";
+"environment.debugRestartNote" = "Note: In Xcode debug mode, you'll need to manually restart";
+"environment.nodeOrBunRequired" = "Either Bun or Node.js is required:";
+"environment.afterInstallation" = "After installation:";
+"environment.installed" = "Installed";
+"environment.optional" = "(optional)";
+
+// Error messages
+"error.commandNotFound" = "Command not found: %@";
+"error.commandExecutionFailed" = "Command execution failed: %@";
+"error.outputDecodingFailed" = "Failed to decode command output";
+"error.recovery.installNodeOrBun" = "Please install Node.js or Bun to use this application";
+"error.recovery.checkCommandInstallation" = "Please check that ccusage is properly installed";
+"error.recovery.updateCcusage" = "Please update ccusage to the latest version";
 
 
 // Share Text

@@ -256,7 +256,7 @@ enum ClaudeMonitorError: LocalizedError {
         case .parsingError:
             return "ccusageが最新バージョンであることを確認してください"
         case .commandExecutionError:
-            return "Node.jsとnpxが正しくインストールされているか確認してください"
+            return "Node.jsまたはBunが正しくインストールされているか確認してください"
         case .fileNotFound:
             return "必要なファイルが存在することを確認してください"
         case .unknownError:

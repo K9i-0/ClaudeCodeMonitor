@@ -152,6 +152,10 @@ struct L10n {
         static var quit: String { "action.quit".localized }
         static var close: String { "action.close".localized }
         static var quitApp: String { "action.quitApp".localized }
+        static var installClaudeCode: String { "action.installClaudeCode".localized }
+        static var installBun: String { "action.installBun".localized }
+        static var installNode: String { "action.installNode".localized }
+        static var checkAgain: String { "action.checkAgain".localized }
     }
 
     struct Error {
@@ -159,7 +163,19 @@ struct L10n {
         static var dataFetchFailed: String { "error.dataFetchFailed".localized }
         static var networkError: String { "error.networkError".localized }
         static var unknown: String { "error.unknown".localized }
-        static var serverNotRunning: String { "error.serverNotRunning".localized }
+        static func commandNotFound(command: String) -> String {
+            return "error.commandNotFound".localized(with: command)
+        }
+        static func commandExecutionFailed(message: String) -> String {
+            return "error.commandExecutionFailed".localized(with: message)
+        }
+        static var outputDecodingFailed: String { "error.outputDecodingFailed".localized }
+        
+        struct Recovery {
+            static var installNodeOrBun: String { "error.recovery.installNodeOrBun".localized }
+            static var checkCommandInstallation: String { "error.recovery.checkCommandInstallation".localized }
+            static var updateCcusage: String { "error.recovery.updateCcusage".localized }
+        }
     }
 
     struct Settings {
@@ -228,6 +244,18 @@ struct L10n {
     static var ok: String { "ok".localized }
     static var error: String { "error".localized }
     static var select: String { "select".localized }
+    
+    // Environment setup
+    struct Environment {
+        static var setupRequired: String { "environment.setupRequired".localized }
+        static var allRequirementsMet: String { "environment.allRequirementsMet".localized }
+        static var pleaseRestart: String { "environment.pleaseRestart".localized }
+        static var debugRestartNote: String { "environment.debugRestartNote".localized }
+        static var nodeOrBunRequired: String { "environment.nodeOrBunRequired".localized }
+        static var afterInstallation: String { "environment.afterInstallation".localized }
+        static var installed: String { "environment.installed".localized }
+        static var optional: String { "environment.optional".localized }
+    }
 
     // Claude Data Access
     static var selectClaudeDataFolder: String { "selectClaudeDataFolder".localized }
