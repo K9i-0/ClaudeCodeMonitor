@@ -6,7 +6,7 @@ struct ContentView: View {
     @State private var isRefreshing = false
     @State private var showCopiedFeedback = false
     @StateObject private var historyViewModel = HistoryViewModel()
-    
+
     @Environment(\.colorScheme)
     var colorScheme
 
@@ -48,7 +48,7 @@ struct ContentView: View {
                                 .keyboardShortcut("s", modifiers: .command)
                                 .accessibilityLabel("クリップボードにコピー")
                             }
-                            
+
                             Button(action: {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                     isRefreshing = true
@@ -177,12 +177,12 @@ struct ContentView: View {
         }
         .frame(width: 380, height: 480)
     }
-    
+
     private func shareScreenshot() {
         Task { @MainActor in
             // Create the content view to capture based on selected tab
             let contentToCapture: AnyView
-            
+
             switch selectedTab {
             case 0:
                 // Current session tab content
@@ -208,19 +208,19 @@ struct ContentView: View {
                 print("[Share] History data count: \(historyViewModel.dailyData.count)")
                 print("[Share] Monthly totals: \(String(describing: historyViewModel.monthlyTotals))")
                 print("[Share] Is loading: \(historyViewModel.isLoading)")
-                
+
                 // もしデータがまだ読み込まれていない場合は、読み込みを待つ
                 if historyViewModel.dailyData.isEmpty && !historyViewModel.isLoading {
                     await historyViewModel.fetchMonthlyData()
-                    
+
                     // データ取得後の状態を再度ログに出力
                     print("[Share] After fetch - data count: \(historyViewModel.dailyData.count)")
                     print("[Share] After fetch - monthly totals: \(String(describing: historyViewModel.monthlyTotals))")
                 }
-                
+
                 // 少し待機してUIの更新を確実にする
                 try? await Task.sleep(nanoseconds: 200_000_000) // 0.2秒
-                
+
                 // HistoryViewの中身を直接構築（ScrollViewを除外）
                 contentToCapture = AnyView(
                     VStack(spacing: 16) {
@@ -230,20 +230,20 @@ struct ContentView: View {
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(.secondary)
                                 .opacity(0.5)
-                            
+
                             Text(historyViewModel.monthDescription)
                                 .font(.system(size: 16, weight: .semibold))
                                 .frame(minWidth: 140)
-                            
+
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(.secondary)
                                 .opacity(0.5)
-                            
+
                             Spacer()
                         }
                         .padding(.horizontal, 4)
-                        
+
                         // コンテンツ部分
                         VStack(spacing: 12) {
                             if !historyViewModel.dailyData.isEmpty, let totals = historyViewModel.monthlyTotals {
@@ -252,7 +252,7 @@ struct ContentView: View {
                                     dailyData: historyViewModel.dailyData
                                 )
                             }
-                            
+
                             if historyViewModel.dailyData.isEmpty {
                                 EmptyStateView(
                                     message: L10n.History.noData
@@ -277,7 +277,7 @@ struct ContentView: View {
             default:
                 return
             }
-            
+
             // Generate text content based on selected tab
             let textContent: String
             switch selectedTab {
@@ -289,7 +289,7 @@ struct ContentView: View {
                     textContent = """
                     \(String(format: L10n.Share.CurrentSession.consuming, tokens, cost))
                     \(String(format: L10n.Share.CurrentSession.resetIn, remainingTime))
-                    
+
                     \(L10n.Share.hashtags)
                     """
                 } else {
@@ -299,50 +299,50 @@ struct ContentView: View {
                 let monthTokens = NumberFormatters.formatTokens(historyViewModel.monthlyTotalTokens)
                 let monthCost = String(format: "%.2f", historyViewModel.monthlyTotalCost)
                 let dailyAvg = String(format: "%.2f", historyViewModel.dailyAverage)
-                
+
                 var peakInfo = ""
                 if let peak = historyViewModel.peakDay {
                     let peakDate = formatShareDate(peak.date)
                     let peakCost = String(format: "%.2f", peak.totalCost)
                     peakInfo = "\nピーク: \(peakDate) - $\(peakCost)"
                 }
-                
+
                 textContent = """
                 \(historyViewModel.monthDescription)の使用状況
                 月間合計: \(monthTokens) tokens ($\(monthCost))
                 日次平均: $\(dailyAvg)\(peakInfo)
-                
+
                 \(L10n.Share.hashtags)
                 """
             default:
                 textContent = ""
             }
-            
+
             let success = await ScreenshotManager.shared.captureViewContent(contentToCapture, withText: textContent)
             if success {
                 // Show visual feedback
                 showCopiedFeedback = true
-                
+
                 // Reset after delay
                 try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
                 showCopiedFeedback = false
             }
         }
     }
-    
+
     private func formatShareDate(_ dateString: String) -> String {
         let inputFormatter = DateFormatter()
         inputFormatter.dateFormat = "yyyy-MM-dd"
-        
+
         let outputFormatter = DateFormatter()
         outputFormatter.dateFormat = "M/d"
-        
+
         if let date = inputFormatter.date(from: dateString) {
             return outputFormatter.string(from: date)
         }
         return dateString
     }
-    
+
     private func isToday(_ dateString: String) -> Bool {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
@@ -597,4 +597,3 @@ struct UsageDetailView: View {
             .capitalized
     }
 }
-

@@ -93,63 +93,63 @@ class HistoryViewModel: ObservableObject {
     @Published var dailyData: [DailyUsage] = []
     @Published var monthlyTotals: Totals?
     @Published var isLoading = false
-    
+
     private let commandExecutor = CommandExecutor.shared
-    
+
     private var monthFormatter: DateFormatter {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy年MM月"
         return formatter
     }
-    
+
     private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd"
         return formatter
     }
-    
+
     init() {
         Task {
             await fetchMonthlyData()
         }
     }
-    
+
     func previousMonth() {
         selectedMonth = Calendar.current.date(byAdding: .month, value: -1, to: selectedMonth) ?? selectedMonth
         Task {
             await fetchMonthlyData()
         }
     }
-    
+
     func nextMonth() {
         selectedMonth = Calendar.current.date(byAdding: .month, value: 1, to: selectedMonth) ?? selectedMonth
         Task {
             await fetchMonthlyData()
         }
     }
-    
+
     func fetchMonthlyData() async {
         isLoading = true
-        
+
         let calendar = Calendar.current
         let startOfMonth = calendar.dateInterval(of: .month, for: selectedMonth)?.start ?? selectedMonth
-        
+
         // endOfMonthは次月の最初の日なので、1日引いて当月の最終日を取得
         let endOfMonth = calendar.dateInterval(of: .month, for: selectedMonth)?.end ?? selectedMonth
         let lastDayOfMonth = calendar.date(byAdding: .day, value: -1, to: endOfMonth) ?? endOfMonth
-        
+
         let monthStart = dateFormatter.string(from: startOfMonth)
         let monthEnd = dateFormatter.string(from: lastDayOfMonth)
-        
+
         do {
             let result = try await commandExecutor.executeCcusageCommand(
                 subcommand: nil,
                 additionalArgs: ["--since", monthStart, "--until", monthEnd]
             )
-            
+
             let data = Data(result.utf8)
             let response = try JSONDecoder().decode(CcusageResponse.self, from: data)
-            
+
             withAnimation {
                 dailyData = response.daily
                 monthlyTotals = response.totals
@@ -159,28 +159,28 @@ class HistoryViewModel: ObservableObject {
             dailyData = []
             monthlyTotals = nil
         }
-        
+
         isLoading = false
     }
-    
+
     // For sharing
     var monthDescription: String {
         monthFormatter.string(from: selectedMonth)
     }
-    
+
     var monthlyTotalCost: Double {
         monthlyTotals?.totalCost ?? 0
     }
-    
+
     var monthlyTotalTokens: Int {
         monthlyTotals?.totalTokens ?? 0
     }
-    
+
     var dailyAverage: Double {
         guard !dailyData.isEmpty else { return 0 }
         return monthlyTotalCost / Double(dailyData.count)
     }
-    
+
     var peakDay: DailyUsage? {
         dailyData.max(by: { $0.totalCost < $1.totalCost })
     }

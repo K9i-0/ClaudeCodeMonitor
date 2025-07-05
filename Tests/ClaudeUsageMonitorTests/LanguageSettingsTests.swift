@@ -35,7 +35,7 @@ final class LanguageSettingsTests: XCTestCase {
         if ProcessInfo.processInfo.environment["CI"] != nil {
             return
         }
-        
+
         // Set to Japanese
         sut.currentLanguage = .japanese
 

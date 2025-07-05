@@ -4,11 +4,11 @@ import SwiftUI
 struct SkeletonView: View {
     @State private var isAnimating = false
     let cornerRadius: CGFloat
-    
+
     init(cornerRadius: CGFloat = 10) {
         self.cornerRadius = cornerRadius
     }
-    
+
     var body: some View {
         Rectangle()
             .fill(
@@ -60,29 +60,29 @@ struct DailyUsageSkeletonCard: View {
             HStack(spacing: 8) {
                 SkeletonView(cornerRadius: 4)
                     .frame(width: 32, height: 24)
-                
+
                 Divider()
                     .frame(height: 20)
                     .opacity(0.3)
-                
+
                 SkeletonView(cornerRadius: 4)
                     .frame(width: 20, height: 16)
             }
             .padding(.leading, 12)
-            
+
             // コスト情報
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     SkeletonView(cornerRadius: 4)
                         .frame(width: 80, height: 20)
-                    
+
                     Spacer()
                 }
-                
+
                 HStack {
                     SkeletonView(cornerRadius: 4)
                         .frame(width: 120, height: 16)
-                    
+
                     Spacer()
                 }
             }
@@ -103,7 +103,7 @@ struct MonthlySummarySkeletonCard: View {
         VStack(alignment: .leading, spacing: 12) {
             SkeletonView(cornerRadius: 4)
                 .frame(width: 100, height: 16)
-            
+
             VStack(spacing: 10) {
                 // 合計
                 HStack {
@@ -114,16 +114,16 @@ struct MonthlySummarySkeletonCard: View {
                         SkeletonView(cornerRadius: 4)
                             .frame(width: 40, height: 16)
                     }
-                    
+
                     Spacer()
-                    
+
                     SkeletonView(cornerRadius: 4)
                         .frame(width: 80, height: 20)
                 }
-                
+
                 Divider()
                     .opacity(0.5)
-                
+
                 // 日次平均
                 HStack {
                     HStack(spacing: 8) {
@@ -133,13 +133,13 @@ struct MonthlySummarySkeletonCard: View {
                         SkeletonView(cornerRadius: 4)
                             .frame(width: 60, height: 16)
                     }
-                    
+
                     Spacer()
-                    
+
                     SkeletonView(cornerRadius: 4)
                         .frame(width: 60, height: 16)
                 }
-                
+
                 // ピーク
                 HStack {
                     HStack(spacing: 8) {
@@ -149,9 +149,9 @@ struct MonthlySummarySkeletonCard: View {
                         SkeletonView(cornerRadius: 4)
                             .frame(width: 50, height: 16)
                     }
-                    
+
                     Spacer()
-                    
+
                     HStack(spacing: 8) {
                         SkeletonView(cornerRadius: 4)
                             .frame(width: 40, height: 14)

@@ -170,7 +170,7 @@ struct L10n {
             return "error.commandExecutionFailed".localized(with: message)
         }
         static var outputDecodingFailed: String { "error.outputDecodingFailed".localized }
-        
+
         struct Recovery {
             static var installNodeOrBun: String { "error.recovery.installNodeOrBun".localized }
             static var checkCommandInstallation: String { "error.recovery.checkCommandInstallation".localized }
@@ -244,7 +244,7 @@ struct L10n {
     static var ok: String { "ok".localized }
     static var error: String { "error".localized }
     static var select: String { "select".localized }
-    
+
     // Environment setup
     struct Environment {
         static var setupRequired: String { "environment.setupRequired".localized }
@@ -262,17 +262,17 @@ struct L10n {
     static var claudeDataFolderMessage: String { "claudeDataFolderMessage".localized }
     static var invalidClaudeFolder: String { "invalidClaudeFolder".localized }
     static var failedToSaveAccess: String { "failedToSaveAccess".localized }
-    
+
     // Share Text
     struct Share {
         static var hashtags: String { "share.hashtags".localized }
-        
+
         struct CurrentSession {
             static var consuming: String { "share.currentSession.consuming".localized }
             static var resetIn: String { "share.currentSession.resetIn".localized }
             static var noSession: String { "share.currentSession.noSession".localized }
         }
-        
+
         struct History {
             static var title: String { "share.history.title".localized }
             static var today: String { "share.history.today".localized }

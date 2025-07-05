@@ -5,33 +5,33 @@ struct EnvironmentSetupView: View {
     @State private var isChecking = false
     @State private var showRestartMessage = false
     @State private var environmentCheck = EnvironmentCheckResult()
-    
+
     private var setupURL: String {
         let langCode = languageSettings.currentLanguage == .japanese ? "ja" : "en"
         return "https://docs.anthropic.com/\(langCode)/docs/claude-code/setup"
     }
-    
+
     private var nodeInstallURL: String {
         "https://nodejs.org/"
     }
-    
+
     private var bunInstallURL: String {
         "https://bun.sh/"
     }
-    
+
     private func checkEnvironment() {
         isChecking = true
-        
+
         Task {
             let result = await CommandExecutor.shared.checkEnvironment()
-            
+
             await MainActor.run {
                 environmentCheck = result
-                
+
                 // If all requirements are met, show restart message
                 if result.isClaudeCodeInstalled && result.canExecuteCommands {
                     showRestartMessage = true
-                    
+
                     // Close the popover after a short delay
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         // Find and close the popover
@@ -40,12 +40,12 @@ struct EnvironmentSetupView: View {
                         }
                     }
                 }
-                
+
                 isChecking = false
             }
         }
     }
-    
+
     var body: some View {
         VStack(spacing: 20) {
             if showRestartMessage {
@@ -53,16 +53,16 @@ struct EnvironmentSetupView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 50))
                     .foregroundStyle(.green)
-                
+
                 Text(L10n.Environment.allRequirementsMet)
                     .font(.headline)
-                
+
                 Text(L10n.Environment.pleaseRestart)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
-                
+
                 Button(action: {
                     NSApplication.shared.terminate(nil)
                 }) {
@@ -70,7 +70,7 @@ struct EnvironmentSetupView: View {
                         .frame(minWidth: 120)
                 }
                 .buttonStyle(.borderedProminent)
-                
+
                 #if DEBUG
                 Text(L10n.Environment.debugRestartNote)
                     .font(.caption2)
@@ -82,10 +82,10 @@ struct EnvironmentSetupView: View {
                 Image(systemName: "exclamationmark.circle")
                     .font(.system(size: 50))
                     .foregroundStyle(.orange)
-                
+
                 Text(L10n.Environment.setupRequired)
                     .font(.headline)
-                
+
                 // Requirements list
                 VStack(alignment: .leading, spacing: 12) {
                     RequirementRow(
@@ -94,14 +94,14 @@ struct EnvironmentSetupView: View {
                         installURL: setupURL,
                         installButtonTitle: L10n.Action.installClaudeCode
                     )
-                    
+
                     Divider()
-                    
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text(L10n.Environment.nodeOrBunRequired)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        
+
                         RequirementRow(
                             title: "Bun (bunx)",
                             isInstalled: environmentCheck.isBunInstalled,
@@ -109,7 +109,7 @@ struct EnvironmentSetupView: View {
                             installButtonTitle: L10n.Action.installBun,
                             isOptional: true
                         )
-                        
+
                         RequirementRow(
                             title: "Node.js (npx)",
                             isInstalled: environmentCheck.isNpxInstalled,
@@ -121,15 +121,15 @@ struct EnvironmentSetupView: View {
                 }
                 .padding(.horizontal, 40)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                
+
                 Divider()
                     .padding(.horizontal, 40)
-                
+
                 VStack(spacing: 8) {
                     Text(L10n.Environment.afterInstallation)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    
+
                     HStack(spacing: 12) {
                         Button(action: {
                             checkEnvironment()
@@ -148,7 +148,7 @@ struct EnvironmentSetupView: View {
                         }
                         .buttonStyle(.bordered)
                         .disabled(isChecking)
-                        
+
                         Button(action: {
                             NSApplication.shared.terminate(nil)
                         }) {
@@ -174,17 +174,17 @@ struct RequirementRow: View {
     let installURL: String
     let installButtonTitle: String
     var isOptional: Bool = false
-    
+
     var body: some View {
         HStack {
             Image(systemName: isInstalled ? "checkmark.circle.fill" : "circle")
                 .foregroundStyle(isInstalled ? .green : .secondary)
                 .frame(width: 20)
-            
+
             Text(title)
                 .font(.system(.body, design: .monospaced))
                 .frame(width: 120, alignment: .leading)
-            
+
             if isInstalled {
                 Text(L10n.Environment.installed)
                     .font(.caption)
@@ -199,14 +199,14 @@ struct RequirementRow: View {
                         .font(.caption)
                 }
                 .buttonStyle(.link)
-                
+
                 if isOptional {
                     Text(L10n.Environment.optional)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
             }
-            
+
             Spacer()
         }
     }

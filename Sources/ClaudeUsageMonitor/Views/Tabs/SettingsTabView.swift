@@ -122,13 +122,13 @@ struct SettingsTabView: View {
 
             #if DEBUG
             Divider()
-            
+
             // Debug section
             VStack(alignment: .leading, spacing: 12) {
                 Text("Debug")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.orange)
-                
+
                 Button(action: {
                     // Show EnvironmentSetupView in a new window
                     let window = NSWindow(
@@ -156,7 +156,7 @@ struct SettingsTabView: View {
                 .buttonStyle(PlainButtonStyle())
             }
             #endif
-            
+
             Spacer()
         }
     }
