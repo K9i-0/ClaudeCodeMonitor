@@ -33,7 +33,8 @@ let package = Package(
         .testTarget(
             name: "ClaudeCodeMonitorTests",
             dependencies: ["ClaudeCodeMonitor"],
-            path: "Tests/ClaudeUsageMonitorTests"
+            path: "Tests/ClaudeUsageMonitorTests",
+            exclude: ["README.md"]
         )
     ]
 )
