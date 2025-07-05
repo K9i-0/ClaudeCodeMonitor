@@ -221,13 +221,56 @@ struct ContentView: View {
                 // 少し待機してUIの更新を確実にする
                 try? await Task.sleep(nanoseconds: 200_000_000) // 0.2秒
                 
-                // 実際のHistoryViewをそのまま使用
+                // HistoryViewの中身を直接構築（ScrollViewを除外）
                 contentToCapture = AnyView(
-                    ScrollView {
-                        HistoryView(viewModel: historyViewModel)
-                            .padding()
+                    VStack(spacing: 16) {
+                        // 月選択ヘッダー
+                        HStack {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .opacity(0.5)
+                            
+                            Text(historyViewModel.monthDescription)
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(minWidth: 140)
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .opacity(0.5)
+                            
+                            Spacer()
+                        }
+                        .padding(.horizontal, 4)
+                        
+                        // コンテンツ部分
+                        VStack(spacing: 12) {
+                            if !historyViewModel.dailyData.isEmpty, let totals = historyViewModel.monthlyTotals {
+                                MonthlySummaryCard(
+                                    totals: totals,
+                                    dailyData: historyViewModel.dailyData
+                                )
+                            }
+                            
+                            if historyViewModel.dailyData.isEmpty {
+                                EmptyStateView(
+                                    message: L10n.History.noData
+                                )
+                                .padding(.vertical, 60)
+                            } else {
+                                ForEach(historyViewModel.dailyData.sorted(by: { $0.date > $1.date }), id: \.date) { daily in
+                                    DailyUsageCard(
+                                        daily: daily,
+                                        isToday: isToday(daily.date)
+                                    )
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 4)
                     }
-                    .frame(width: 380, height: 400)
+                    .padding()
+                    .frame(width: 380)
                     .background(colorScheme == .dark ? Color.black : Color.white)
                     .environment(\.colorScheme, colorScheme)
                 )
@@ -298,6 +341,12 @@ struct ContentView: View {
             return outputFormatter.string(from: date)
         }
         return dateString
+    }
+    
+    private func isToday(_ dateString: String) -> Bool {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return dateString == formatter.string(from: Date())
     }
 }
 
