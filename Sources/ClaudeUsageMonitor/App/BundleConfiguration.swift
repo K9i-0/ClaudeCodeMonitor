@@ -8,7 +8,7 @@ enum BundleConfiguration {
         return "com.k9i.ClaudeCodeMonitor"
         #endif
     }
-    
+
     static var appName: String {
         #if DEBUG
         return "ClaudeCodeMonitor-Debug"

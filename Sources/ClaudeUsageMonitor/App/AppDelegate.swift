@@ -19,11 +19,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // This will be reflected in menu bar and other UI elements
         print("Running in DEBUG mode")
         #endif
-        
+
         // Perform synchronous environment check first
         environmentCheckResult = CommandExecutor.shared.checkEnvironmentSync()
         isEnvironmentValid = environmentCheckResult.isClaudeCodeInstalled && environmentCheckResult.canExecuteCommands
-        
+
         if isEnvironmentValid {
             print("[AppDelegate] All requirements met")
             setupMainInterface()
@@ -32,7 +32,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             setupEnvironmentCheckInterface()
         }
     }
-    
+
     @MainActor
     private func setupMainInterface() {
         usageMonitor = UsageMonitor()
@@ -45,13 +45,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         */
 
+        // Fetch exchange rates on startup
+        Task {
+            await CurrencySettings.shared.fetchExchangeRates()
+        }
+
         // Hide all windows for menubar-only app
         NSApp.windows.forEach { window in
             window.close()
         }
 
         setupStatusItem()
-        
+
         // Create popover
         popover = NSPopover()
         popover.contentSize = NSSize(width: 380, height: 480)
@@ -66,7 +71,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         updateStatusBarTitle()
         observeUsageDataChanges()
     }
-    
+
     @MainActor
     private func setupEnvironmentCheckInterface() {
         // Hide all windows for menubar-only app
@@ -75,7 +80,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         setupStatusItem()
-        
+
         // Create popover with environment setup view
         popover = NSPopover()
         popover.contentSize = NSSize(width: 480, height: 360)
@@ -87,7 +92,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         setupEventMonitor()
     }
-    
+
     private func setupStatusItem() {
         // Create status bar item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -105,7 +110,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.target = self
         }
     }
-    
+
     private func setupEventMonitor() {
         // Monitor for clicks outside the popover
         eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
@@ -114,11 +119,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
-    
+
     @MainActor
     private func observeUsageDataChanges() {
         guard let usageMonitor = usageMonitor else { return }
-        
+
         // Update status bar title when usage data changes
         updateStatusBarTitle()
 
@@ -188,12 +193,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let burnRateString = usageMonitor.usageData.sessionBurnRate
             let burnRate = Double(burnRateString) ?? 0.0
             let remaining = usageMonitor.usageData.sessionRemainingTime
-            button.toolTip = L10n.Status.usageFormat(
-                usage: percentage,
-                cost: cost,
-                burnRate: burnRate,
-                timeRemaining: remaining
-            )
+            let formattedCost = CurrencyConverter.formatCostWithFallback(cost, using: CurrencySettings.shared)
+            button.toolTip = L10n.Status.usageFormat(usage: percentage, cost: formattedCost, burnRate: burnRate, timeRemaining: remaining)
         } else {
             // 非アクティブ
             if let image = NSImage(systemSymbolName: "moon.zzz", accessibilityDescription: "Inactive") {
@@ -248,7 +249,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 Task { @MainActor in
                     environmentCheckResult = await CommandExecutor.shared.checkEnvironment()
                     isEnvironmentValid = environmentCheckResult.isClaudeCodeInstalled && environmentCheckResult.canExecuteCommands
-                    
+
                     if isEnvironmentValid {
                         // Environment is now valid, setup main interface
                         setupMainInterface()
@@ -284,7 +285,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         popover.performClose(nil)
         eventMonitor?.stop()
     }
-
 
     func applicationWillTerminate(_ notification: Notification) {
         usageMonitor?.stopMonitoring()

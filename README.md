@@ -1,7 +1,7 @@
 # ClaudeCodeMonitor
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/aa06a619-cac7-46c1-8acd-d446e41065af" />
+  <img src="https://github.com/user-attachments/assets/828fe558-4dca-4367-bd20-26f04f5128c8" />
 </p>
 
 <p align="center">

@@ -14,13 +14,18 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
     private let userPlanKey = "ClaudeUsageMonitor.userSelectedPlan"
     private lazy var notificationManager: NotificationManager? = {
         // バンドル環境でのみ通知マネージャーを初期化
-        guard Bundle.main.bundleIdentifier != nil else {
-            print("[DEBUG] Running outside of app bundle - notifications disabled")
+        guard Bundle.main.bundleIdentifier != nil &&
+              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil &&
+              !ProcessInfo.processInfo.arguments.contains("XCTRunner.app") &&
+              !Bundle.main.bundlePath.contains("Xcode") &&
+              !Bundle.main.bundlePath.contains("/usr/bin") else {
+            print("[DEBUG] Running outside of app bundle or in test environment - notifications disabled")
             return nil
         }
         return NotificationManager.shared
     }()
     private var lastSessionId: String?
+    private var cancellables = Set<AnyCancellable>()
 
     // エラーメッセージ（後方互換性のため）
     var errorMessage: String? {
@@ -33,7 +38,7 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         print("[DEBUG] userPlanKey: \(userPlanKey) = \(String(describing: userDefaults.string(forKey: userPlanKey)))")
         print("[DEBUG] detectedPlanKey: \(detectedPlanKey) = \(String(describing: userDefaults.string(forKey: detectedPlanKey)))")
         #endif
-        
+
         // ユーザーが手動選択したプランを優先的に読み込む
         if let userPlan = userDefaults.string(forKey: userPlanKey) {
             usageData.detectedPlanType = userPlan
@@ -46,6 +51,42 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
             print("No saved plan found, will auto-detect")
         }
         startMonitoring()
+        observeCurrencyChanges()
+    }
+    
+    private func observeCurrencyChanges() {
+        // Observe currency changes
+        CurrencySettings.shared.$selectedCurrency
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.updateFormattedCosts()
+                }
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func updateFormattedCosts() {
+        // Update daily cost
+        if let today = usageData.todayUsage {
+            usageData.formattedTodayCost = CurrencyConverter.formatCostWithFallback(today.totalCost, using: CurrencySettings.shared)
+        } else {
+            usageData.formattedTodayCost = CurrencyConverter.formatCostWithFallback(0.0, using: CurrencySettings.shared)
+        }
+        
+        // Update monthly cost
+        if let monthly = usageData.monthlyTotal {
+            usageData.formattedMonthlyCostValue = CurrencyConverter.formatCostWithFallback(monthly.totalCost, using: CurrencySettings.shared)
+        } else {
+            usageData.formattedMonthlyCostValue = CurrencyConverter.formatCostWithFallback(0.0, using: CurrencySettings.shared)
+        }
+        
+        // Update session cost per hour
+        if let session = usageData.activeSession,
+           let burnRate = session.burnRate {
+            usageData.formattedSessionCostPerHour = CurrencyConverter.formatCostWithFallback(burnRate.costPerHour, using: CurrencySettings.shared)
+        } else {
+            usageData.formattedSessionCostPerHour = CurrencyConverter.formatCostWithFallback(0.0, using: CurrencySettings.shared)
+        }
     }
 
     func startMonitoring() {
@@ -77,7 +118,23 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
         error = nil
 
         do {
-            let result = try await CommandExecutor.shared.executeCcusageCommand()
+            // Calculate the first day of current month
+            let calendar = Calendar.current
+            let now = Date()
+            let startOfMonth = calendar.dateInterval(of: .month, for: now)?.start ?? now
+
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyyMMdd"
+            let monthStart = dateFormatter.string(from: startOfMonth)
+            let today = dateFormatter.string(from: now)
+
+            print("Fetching usage data for current month: \(monthStart) to \(today)")
+
+            // Fetch usage data for current month only
+            let result = try await CommandExecutor.shared.executeCcusageCommand(
+                subcommand: nil,
+                additionalArgs: ["--since", monthStart, "--until", today]
+            )
             let data = Data(result.utf8)
             let ccusageResponse = try JSONDecoder().decode(CcusageResponse.self, from: data)
 
@@ -91,14 +148,14 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
             }
             print("Monthly total: $\(ccusageResponse.totals.totalCost)")
 
-            // Get today's date in YYYY-MM-DD format
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            let today = formatter.string(from: Date())
-            print("Looking for today's date: \(today)")
+            // Get today's date in YYYY-MM-DD format for matching
+            let dashFormatter = DateFormatter()
+            dashFormatter.dateFormat = "yyyy-MM-dd"
+            let todayWithDashes = dashFormatter.string(from: now)
+            print("Looking for today's date: \(todayWithDashes)")
 
             // Find today's usage from the array
-            if let todayData = ccusageResponse.daily.first(where: { $0.date == today }) {
+            if let todayData = ccusageResponse.daily.first(where: { $0.date == todayWithDashes }) {
                 print("Found today's data: cost=$\(todayData.totalCost)")
                 usageData.todayUsage = todayData
             } else {
@@ -109,11 +166,23 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
             // Store monthly total
             usageData.monthlyTotal = ccusageResponse.totals
             usageData.lastUpdated = Date()
+            
+            // Update formatted costs with currency conversion
+            if let today = usageData.todayUsage {
+                usageData.formattedTodayCost = CurrencyConverter.formatCostWithFallback(today.totalCost, using: CurrencySettings.shared)
+            } else {
+                usageData.formattedTodayCost = CurrencyConverter.formatCostWithFallback(0.0, using: CurrencySettings.shared)
+            }
+            
+            if let monthly = usageData.monthlyTotal {
+                usageData.formattedMonthlyCostValue = CurrencyConverter.formatCostWithFallback(monthly.totalCost, using: CurrencySettings.shared)
+            } else {
+                usageData.formattedMonthlyCostValue = CurrencyConverter.formatCostWithFallback(0.0, using: CurrencySettings.shared)
+            }
 
             // Debug final state
             print("Final state - Today's cost: $\(usageData.todayUsage?.totalCost ?? 0)")
             print("Final state - Monthly cost: $\(usageData.monthlyTotal?.totalCost ?? 0)")
-
         } catch let decodingError as DecodingError {
             self.error = ClaudeMonitorError.parsingError(decodingError.localizedDescription)
             print("Decoding error: \(decodingError)")
@@ -168,6 +237,13 @@ class UsageMonitor: ObservableObject, UsageMonitoring {
             if let activeBlock = blocksResponse.blocks.first(where: { $0.isActive }) {
                 usageData.activeSession = activeBlock
                 print("Active session: \(activeBlock.totalTokens) tokens")
+                
+                // Update session cost per hour with currency conversion
+                if let burnRate = activeBlock.burnRate {
+                    usageData.formattedSessionCostPerHour = CurrencyConverter.formatCostWithFallback(burnRate.costPerHour, using: CurrencySettings.shared)
+                } else {
+                    usageData.formattedSessionCostPerHour = CurrencyConverter.formatCostWithFallback(0.0, using: CurrencySettings.shared)
+                }
 
                 // セッションが変わったかチェック
                 checkSessionChange(activeBlock)

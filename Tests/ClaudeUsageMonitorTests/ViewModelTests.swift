@@ -95,7 +95,7 @@ final class ViewModelTests: XCTestCase {
             totalTokens: 1_500,
             costUSD: 1.00,
             models: ["claude-3.5-sonnet"],
-            burnRate: BurnRate(tokensPerMinute: 50.0, costPerHour: 3.00),
+            burnRate: BurnRate(tokensPerMinute: 50_000.0, costPerHour: 3.00),
             projection: nil
         )
 
@@ -111,58 +111,44 @@ final class ViewModelTests: XCTestCase {
     // MARK: - HistoryViewModel Tests
 
     func testHistoryViewModelInitialization() {
-        let mockMonitor = MockUsageMonitor()
+        let viewModel = HistoryViewModel()
 
-        let todayUsage = DailyUsage(
-            date: Date().ISO8601Format(),
-            inputTokens: 1_000,
-            outputTokens: 500,
-            cacheCreationTokens: 0,
-            cacheReadTokens: 0,
-            totalTokens: 1_500,
-            totalCost: 1.00,
-            modelsUsed: ["claude-3.5-sonnet"],
-            modelBreakdowns: []
-        )
-
-        let monthlyTotal = Totals(
-            inputTokens: 40_000,
-            outputTokens: 10_000,
-            cacheCreationTokens: 0,
-            cacheReadTokens: 0,
-            totalCost: 45.00,
-            totalTokens: 50_000
-        )
-
-        mockMonitor.usageData.todayUsage = todayUsage
-        mockMonitor.usageData.monthlyTotal = monthlyTotal
-
-        let viewModel = HistoryViewModel(monitor: mockMonitor)
-
-        XCTAssertEqual(viewModel.todayUsage?.totalTokens, 1_500)
-        XCTAssertEqual(viewModel.monthlyUsage?.totalCost, 45.00)
+        // 初期状態のテスト
+        XCTAssertEqual(viewModel.dailyData.count, 0)
+        XCTAssertNil(viewModel.monthlyTotals)
+        XCTAssertFalse(viewModel.isLoading)
+        XCTAssertNotNil(viewModel.selectedMonth)
     }
 
-    func testHistoryViewModelFormatting() {
-        let mockMonitor = MockUsageMonitor()
+    func testHistoryViewModelMonthNavigation() {
+        let viewModel = HistoryViewModel()
 
-        let todayUsage = DailyUsage(
-            date: Date().ISO8601Format(),
-            inputTokens: 1_000,
-            outputTokens: 500,
-            cacheCreationTokens: 0,
-            cacheReadTokens: 0,
-            totalTokens: 1_500,
-            totalCost: 3.45,
-            modelsUsed: ["claude-3.5-sonnet"],
-            modelBreakdowns: []
-        )
+        // 前月への移動
+        viewModel.previousMonth()
+        let previousMonth = viewModel.selectedMonth
 
-        mockMonitor.usageData.todayUsage = todayUsage
+        // 翌月への移動
+        viewModel.nextMonth()
+        let nextMonth = viewModel.selectedMonth
 
-        let viewModel = HistoryViewModel(monitor: mockMonitor)
+        // 月が正しく変更されているか確認
+        let calendar = Calendar.current
+        let monthsBetween = calendar.dateComponents([.month], from: previousMonth, to: nextMonth).month
+        XCTAssertEqual(monthsBetween, 1)
+    }
 
-        XCTAssertEqual(viewModel.formattedTodayCost, "$3.45")
-        XCTAssertEqual(viewModel.formattedTodayTokens, "1.5K")
+    func testHistoryViewModelComputedProperties() {
+        let viewModel = HistoryViewModel()
+
+        // 月の説明文字列が正しいフォーマットか確認
+        XCTAssertFalse(viewModel.monthDescription.isEmpty)
+        XCTAssertTrue(viewModel.monthDescription.contains("年"))
+        XCTAssertTrue(viewModel.monthDescription.contains("月"))
+
+        // 初期状態での計算プロパティ
+        XCTAssertEqual(viewModel.monthlyTotalCost, 0)
+        XCTAssertEqual(viewModel.monthlyTotalTokens, 0)
+        XCTAssertEqual(viewModel.dailyAverage, 0)
+        XCTAssertNil(viewModel.peakDay)
     }
 }

@@ -5,7 +5,8 @@ struct ContentView: View {
     @State private var selectedTab = 0
     @State private var isRefreshing = false
     @State private var showCopiedFeedback = false
-    
+    @StateObject private var historyViewModel = HistoryViewModel()
+
     @Environment(\.colorScheme)
     var colorScheme
 
@@ -47,7 +48,7 @@ struct ContentView: View {
                                 .keyboardShortcut("s", modifiers: .command)
                                 .accessibilityLabel("クリップボードにコピー")
                             }
-                            
+
                             Button(action: {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                     isRefreshing = true
@@ -117,7 +118,7 @@ struct ContentView: View {
                     case 1:
                         // History
                         ScrollView {
-                            HistoryView(monitor: monitor)
+                            HistoryView(viewModel: historyViewModel)
                                 .padding()
                         }
                         .transition(.asymmetric(
@@ -176,12 +177,13 @@ struct ContentView: View {
         }
         .frame(width: 380, height: 480)
     }
-    
+
+    // swiftlint:disable:next function_body_length
     private func shareScreenshot() {
         Task { @MainActor in
             // Create the content view to capture based on selected tab
             let contentToCapture: AnyView
-            
+
             switch selectedTab {
             case 0:
                 // Current session tab content
@@ -203,62 +205,234 @@ struct ContentView: View {
                     )
                 }
             case 1:
-                // History tab content
+                // History tab content - use actual HistoryView
+                print("[Share] History data count: \(historyViewModel.dailyData.count)")
+                print("[Share] Monthly totals: \(String(describing: historyViewModel.monthlyTotals))")
+                print("[Share] Is loading: \(historyViewModel.isLoading)")
+
+                // もしデータがまだ読み込まれていない場合は、読み込みを待つ
+                if historyViewModel.dailyData.isEmpty && !historyViewModel.isLoading {
+                    await historyViewModel.fetchMonthlyData()
+
+                    // データ取得後の状態を再度ログに出力
+                    print("[Share] After fetch - data count: \(historyViewModel.dailyData.count)")
+                    print("[Share] After fetch - monthly totals: \(String(describing: historyViewModel.monthlyTotals))")
+                }
+
+                // 少し待機してUIの更新を確実にする
+                try? await Task.sleep(nanoseconds: 200_000_000) // 0.2秒
+
+                // HistoryViewの中身を直接構築（ScrollViewを除外）
                 contentToCapture = AnyView(
-                    HistoryView(monitor: monitor)
-                        .padding()
-                        .frame(width: 380)
-                        .background(colorScheme == .dark ? Color.black : Color.white)
-                        .environment(\.colorScheme, colorScheme)
+                    VStack(spacing: 12) {
+                        // 月選択ヘッダー
+                        HStack {
+                            Button(action: {}) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(true)
+
+                            Text(historyViewModel.monthDescription)
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(minWidth: 140)
+
+                            Button(action: {}) {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(true)
+
+                            Spacer()
+                        }
+                        .padding(.horizontal, 4)
+                        
+                        // 月間サマリー（カラフルなカード）
+                        if !historyViewModel.dailyData.isEmpty, let totals = historyViewModel.monthlyTotals {
+                            HStack(spacing: 12) {
+                                // 合計
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.blue.opacity(0.15))
+                                        .frame(height: 100)
+                                    
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "dollarsign.circle.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(.blue)
+                                        
+                                        Text(L10n.History.total)
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                        
+                                        Text(CurrencyConverter.formatCostWithFallback(totals.totalCost, using: CurrencySettings.shared))
+                                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                            .foregroundStyle(.primary)
+                                        
+                                        Text(NumberFormatters.formatTokens(totals.totalTokens))
+                                            .font(.system(size: 9))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                                
+                                // 日次平均
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.green.opacity(0.15))
+                                        .frame(height: 100)
+                                    
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "chart.line.uptrend.xyaxis")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(.green)
+                                        
+                                        Text(L10n.History.dailyAverage)
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                        
+                                        Text(CurrencyConverter.formatCostWithFallback(totals.totalCost / Double(historyViewModel.dailyData.count), using: CurrencySettings.shared))
+                                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                            .foregroundStyle(.primary)
+                                        
+                                        Text(L10n.History.perDay)
+                                            .font(.system(size: 9))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                                
+                                // ピーク
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.orange.opacity(0.15))
+                                        .frame(height: 100)
+                                    
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "flame.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(.orange)
+                                        
+                                        Text(L10n.History.peak)
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                        
+                                        if let peak = historyViewModel.dailyData.max(by: { $0.totalCost < $1.totalCost }) {
+                                            Text(CurrencyConverter.formatCostWithFallback(peak.totalCost, using: CurrencySettings.shared))
+                                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                                .foregroundStyle(.primary)
+                                            
+                                            Text(formatShareDate(peak.date))
+                                                .font(.system(size: 9))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                            .padding(.horizontal, 4)
+                        }
+
+                        // コンテンツ部分
+                        VStack(spacing: 8) {
+                            if historyViewModel.dailyData.isEmpty {
+                                EmptyStateView(
+                                    message: L10n.History.noData
+                                )
+                                .padding(.vertical, 60)
+                            } else {
+                                ForEach(historyViewModel.dailyData.sorted(by: { $0.date > $1.date }), id: \.date) { daily in
+                                    CompactDailyUsageCard(
+                                        daily: daily,
+                                        isToday: isToday(daily.date)
+                                    )
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 4)
+                    }
+                    .padding()
+                    .frame(width: 380)
+                    .background(colorScheme == .dark ? Color.black : Color.white)
+                    .environment(\.colorScheme, colorScheme)
                 )
             default:
                 return
             }
-            
+
             // Generate text content based on selected tab
             let textContent: String
             switch selectedTab {
             case 0:
                 if let session = monitor.usageData.activeSession {
                     let tokens = monitor.formatTokens(session.totalTokens)
-                    let cost = String(format: "%.2f", session.costUSD)
+                    let cost = CurrencyConverter.formatCostWithFallback(session.costUSD, using: CurrencySettings.shared)
                     let remainingTime = monitor.usageData.sessionRemainingTimeForShare
                     textContent = """
                     \(String(format: L10n.Share.CurrentSession.consuming, tokens, cost))
                     \(String(format: L10n.Share.CurrentSession.resetIn, remainingTime))
-                    
+
                     \(L10n.Share.hashtags)
                     """
                 } else {
                     textContent = "\(L10n.Share.CurrentSession.noSession)\n\n\(L10n.Share.hashtags)"
                 }
             case 1:
-                let todayTokens = monitor.formatTokens(monitor.usageData.todayBillableTokens)
-                let todayCost = String(format: "%.2f", monitor.usageData.todayUsage?.totalCost ?? 0.0)
-                let monthTokens = monitor.formatTokens(monitor.usageData.monthlyBillableTokens)
-                let monthCost = String(format: "%.2f", monitor.usageData.monthlyTotal?.totalCost ?? 0.0)
-                
+                let monthTokens = NumberFormatters.formatTokens(historyViewModel.monthlyTotalTokens)
+                let monthCost = CurrencyConverter.formatCostWithFallback(historyViewModel.monthlyTotalCost, using: CurrencySettings.shared)
+                let dailyAvg = CurrencyConverter.formatCostWithFallback(historyViewModel.dailyAverage, using: CurrencySettings.shared)
+
+                var peakInfo = ""
+                if let peak = historyViewModel.peakDay {
+                    let peakDate = formatShareDate(peak.date)
+                    let peakCost = CurrencyConverter.formatCostWithFallback(peak.totalCost, using: CurrencySettings.shared)
+                    peakInfo = "\nピーク: \(peakDate) - \(peakCost)"
+                }
+
                 textContent = """
-                \(L10n.Share.History.title)
-                \(String(format: L10n.Share.History.today, todayTokens, todayCost))
-                \(String(format: L10n.Share.History.month, monthTokens, monthCost))
-                
+                \(historyViewModel.monthDescription)の使用状況
+                月間合計: \(monthTokens) tokens (\(monthCost))
+                日次平均: \(dailyAvg)\(peakInfo)
+
                 \(L10n.Share.hashtags)
                 """
             default:
                 textContent = ""
             }
-            
+
             let success = await ScreenshotManager.shared.captureViewContent(contentToCapture, withText: textContent)
             if success {
                 // Show visual feedback
                 showCopiedFeedback = true
-                
+
                 // Reset after delay
                 try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
                 showCopiedFeedback = false
             }
         }
+    }
+
+    private func formatShareDate(_ dateString: String) -> String {
+        let inputFormatter = DateFormatter()
+        inputFormatter.dateFormat = "yyyy-MM-dd"
+
+        let outputFormatter = DateFormatter()
+        outputFormatter.dateFormat = "M/d"
+
+        if let date = inputFormatter.date(from: dateString) {
+            return outputFormatter.string(from: date)
+        }
+        return dateString
+    }
+
+    private func isToday(_ dateString: String) -> Bool {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return dateString == formatter.string(from: Date())
     }
 }
 
@@ -509,4 +683,3 @@ struct UsageDetailView: View {
             .capitalized
     }
 }
-

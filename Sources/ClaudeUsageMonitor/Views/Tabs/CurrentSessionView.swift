@@ -5,6 +5,7 @@ struct CurrentSessionView: View {
     let monitor: UsageMonitor
     @Environment(\.colorScheme)
     var colorScheme
+    @StateObject private var currencySettings = CurrencySettings.shared
 
     var body: some View {
         VStack(spacing: 16) {
@@ -147,14 +148,9 @@ struct CurrentSessionView: View {
                     Text(L10n.Session.cost)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
-                    HStack(alignment: .lastTextBaseline, spacing: 2) {
-                        Text("$")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.green)
-                        Text(String(format: "%.2f", session.costUSD))
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .foregroundStyle(.primary)
-                    }
+                    Text(CurrencyConverter.formatCostWithFallback(session.costUSD, using: currencySettings))
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
                 }
 
                 Spacer()
@@ -191,7 +187,7 @@ struct CurrentSessionView: View {
     private func formatTime(_ timeString: String) -> String {
         return Date.formatTime(from: timeString)
     }
-    
+
     private func formatSessionEndTime(_ timeString: String) -> String {
         return Date.formatUserFriendlyDateTime(from: timeString)
     }

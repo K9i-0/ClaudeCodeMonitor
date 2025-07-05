@@ -1,6 +1,10 @@
 # ClaudeCodeMonitor
 
 <p align="center">
+  <img src="https://github.com/user-attachments/assets/828fe558-4dca-4367-bd20-26f04f5128c8" />
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Platform-macOS-blue.svg" alt="Platform">
   <img src="https://img.shields.io/badge/Swift-5.9+-orange.svg" alt="Swift">
   <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">

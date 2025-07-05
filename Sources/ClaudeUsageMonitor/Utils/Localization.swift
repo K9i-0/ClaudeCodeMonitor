@@ -37,8 +37,9 @@ struct ResourceBundle {
 // MARK: - Localization Helper
 extension String {
     var localized: String {
-        // In CI environment, return the key itself to avoid Bundle.module issues
-        guard ProcessInfo.processInfo.environment["CI"] == nil else {
+        // In CI or test environment, return the key itself to avoid Bundle.module issues
+        guard ProcessInfo.processInfo.environment["CI"] == nil &&
+              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
             return self
         }
 
@@ -56,8 +57,9 @@ extension String {
     }
 
     func localized(with arguments: CVarArg...) -> String {
-        // In CI environment, return formatted string with key to avoid Bundle.module issues
-        guard ProcessInfo.processInfo.environment["CI"] == nil else {
+        // In CI or test environment, return formatted string with key to avoid Bundle.module issues
+        guard ProcessInfo.processInfo.environment["CI"] == nil &&
+              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
             return String(format: self, arguments: arguments)
         }
 
@@ -128,6 +130,12 @@ struct L10n {
         static var time: String { "history.time".localized }
         static var tokens: String { "history.tokens".localized }
         static var noData: String { "history.noData".localized }
+        static var monthSummary: String { "history.monthSummary".localized }
+        static var total: String { "history.total".localized }
+        static var dailyAverage: String { "history.dailyAverage".localized }
+        static var peak: String { "history.peak".localized }
+        static var today: String { "history.today".localized }
+        static var perDay: String { "history.perDay".localized }
     }
 
     struct Plan {
@@ -170,7 +178,7 @@ struct L10n {
             return "error.commandExecutionFailed".localized(with: message)
         }
         static var outputDecodingFailed: String { "error.outputDecodingFailed".localized }
-        
+
         struct Recovery {
             static var installNodeOrBun: String { "error.recovery.installNodeOrBun".localized }
             static var checkCommandInstallation: String { "error.recovery.checkCommandInstallation".localized }
@@ -186,6 +194,11 @@ struct L10n {
         static var languageSettings: String { "settings.languageSettings".localized }
         static var useSystemLanguage: String { "settings.useSystemLanguage".localized }
         static var selectLanguage: String { "settings.selectLanguage".localized }
+        static var currencySettings: String { "settings.currencySettings".localized }
+        static func lastUpdated(date: String) -> String {
+            return "settings.lastUpdated".localized(with: date)
+        }
+        static var rateFetchFailed: String { "settings.rateFetchFailed".localized }
     }
 
     struct Language {
@@ -235,7 +248,7 @@ struct L10n {
         }
         static var loading: String { "status.loading".localized }
         static var noActiveSession: String { "status.noActiveSession".localized }
-        static func usageFormat(usage: Double, cost: Double, burnRate: Double, timeRemaining: String) -> String {
+        static func usageFormat(usage: Double, cost: String, burnRate: Double, timeRemaining: String) -> String {
             return "status.usageFormat".localized(with: usage, cost, burnRate, timeRemaining)
         }
     }
@@ -244,7 +257,7 @@ struct L10n {
     static var ok: String { "ok".localized }
     static var error: String { "error".localized }
     static var select: String { "select".localized }
-    
+
     // Environment setup
     struct Environment {
         static var setupRequired: String { "environment.setupRequired".localized }
@@ -262,17 +275,17 @@ struct L10n {
     static var claudeDataFolderMessage: String { "claudeDataFolderMessage".localized }
     static var invalidClaudeFolder: String { "invalidClaudeFolder".localized }
     static var failedToSaveAccess: String { "failedToSaveAccess".localized }
-    
+
     // Share Text
     struct Share {
         static var hashtags: String { "share.hashtags".localized }
-        
+
         struct CurrentSession {
             static var consuming: String { "share.currentSession.consuming".localized }
             static var resetIn: String { "share.currentSession.resetIn".localized }
             static var noSession: String { "share.currentSession.noSession".localized }
         }
-        
+
         struct History {
             static var title: String { "share.history.title".localized }
             static var today: String { "share.history.today".localized }
