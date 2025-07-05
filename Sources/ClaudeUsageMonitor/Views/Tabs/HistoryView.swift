@@ -4,8 +4,22 @@ struct HistoryView: View {
     @StateObject var viewModel: HistoryViewModel
     @Environment(\.colorScheme) var colorScheme
 
+    // formatPeakDate関数を定義
+    private func formatPeakDate(_ dateString: String) -> String {
+        let inputFormatter = DateFormatter()
+        inputFormatter.dateFormat = "yyyy-MM-dd"
+
+        let outputFormatter = DateFormatter()
+        outputFormatter.dateFormat = "M/d"
+
+        if let date = inputFormatter.date(from: dateString) {
+            return outputFormatter.string(from: date)
+        }
+        return dateString
+    }
+    
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             // 月選択ヘッダー
             HStack {
                 Button(action: {
@@ -40,33 +54,105 @@ struct HistoryView: View {
 
                 if viewModel.isLoading {
                     ProgressView()
-                        .scaleEffect(0.7)
+                        .scaleEffect(0.6)
                 }
             }
             .padding(.horizontal, 4)
+            
+            // 月間サマリー（常時表示）
+            if !viewModel.isLoading && !viewModel.dailyData.isEmpty, let totals = viewModel.monthlyTotals {
+                HStack(spacing: 12) {
+                    // 合計
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.blue.opacity(0.15))
+                            .frame(height: 100)
+                        
+                        VStack(spacing: 4) {
+                            Image(systemName: "dollarsign.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(.blue)
+                            
+                            Text(L10n.History.total)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.secondary)
+                            
+                            Text(String(format: "$%.2f", totals.totalCost))
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.primary)
+                            
+                            Text(NumberFormatters.formatTokens(totals.totalTokens))
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    
+                    // 日次平均
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.green.opacity(0.15))
+                            .frame(height: 100)
+                        
+                        VStack(spacing: 4) {
+                            Image(systemName: "chart.line.uptrend.xyaxis")
+                                .font(.system(size: 20))
+                                .foregroundStyle(.green)
+                            
+                            Text(L10n.History.dailyAverage)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.secondary)
+                            
+                            Text(String(format: "$%.2f", totals.totalCost / Double(viewModel.dailyData.count)))
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.primary)
+                            
+                            Text(L10n.History.perDay)
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    
+                    // ピーク
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.orange.opacity(0.15))
+                            .frame(height: 100)
+                        
+                        VStack(spacing: 4) {
+                            Image(systemName: "flame.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(.orange)
+                            
+                            Text(L10n.History.peak)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.secondary)
+                            
+                            if let peak = viewModel.dailyData.max(by: { $0.totalCost < $1.totalCost }) {
+                                Text(String(format: "$%.2f", peak.totalCost))
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.primary)
+                                
+                                Text(self.formatPeakDate(peak.date))
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .padding(.horizontal, 4)
+            }
 
             ScrollView {
-                VStack(spacing: 12) {
+                VStack(spacing: 8) {
                     if viewModel.isLoading {
                         // Skeleton loading state
-                        MonthlySummarySkeletonCard()
-
                         ForEach(0..<5) { _ in
                             DailyUsageSkeletonCard()
                         }
                     } else {
-                        // 月間サマリー
-                        if !viewModel.dailyData.isEmpty, let totals = viewModel.monthlyTotals {
-                            MonthlySummaryCard(
-                                totals: totals,
-                                dailyData: viewModel.dailyData
-                            )
-                                .transition(.asymmetric(
-                                    insertion: .opacity.combined(with: .move(edge: .top)),
-                                    removal: .opacity
-                                ))
-                        }
-
                         // 日次データ
                         if viewModel.dailyData.isEmpty {
                             EmptyStateView(
@@ -76,7 +162,7 @@ struct HistoryView: View {
                             .transition(.opacity)
                         } else {
                             ForEach(viewModel.dailyData.sorted(by: { $0.date > $1.date }), id: \.date) { daily in
-                                DailyUsageCard(
+                                CompactDailyUsageCard(
                                     daily: daily,
                                     isToday: isToday(daily.date)
                                 )
@@ -130,24 +216,42 @@ struct MonthlySummaryCard: View {
     private var peakDay: DailyUsage? {
         dailyData.max(by: { $0.totalCost < $1.totalCost })
     }
+    
+    private func formatPeakDate(_ dateString: String) -> String {
+        let inputFormatter = DateFormatter()
+        inputFormatter.dateFormat = "yyyy-MM-dd"
+
+        let outputFormatter = DateFormatter()
+        outputFormatter.dateFormat = "M/d"
+
+        if let date = inputFormatter.date(from: dateString) {
+            return outputFormatter.string(from: date)
+        }
+        return dateString
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("月間サマリー")
+            Text(L10n.History.monthSummary)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.secondary)
 
             VStack(spacing: 10) {
                 // 合計
                 HStack {
-                    Label("合計", systemImage: "yensign.circle.fill")
+                    Label(L10n.History.total, systemImage: "dollarsign.circle.fill")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.primary)
 
                     Spacer()
 
-                    Text(String(format: "$%.2f", totals.totalCost))
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(String(format: "$%.2f", totals.totalCost))
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        Text("\(NumberFormatters.formatTokens(totals.totalTokens)) tokens")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Divider()
@@ -155,7 +259,7 @@ struct MonthlySummaryCard: View {
 
                 // 日次平均
                 HStack {
-                    Label("日次平均", systemImage: "chart.bar.fill")
+                    Label(L10n.History.dailyAverage, systemImage: "chart.bar.fill")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.blue)
 
@@ -169,7 +273,7 @@ struct MonthlySummaryCard: View {
                 // ピーク日
                 if let peak = peakDay {
                     HStack {
-                        Label("ピーク", systemImage: "flame.fill")
+                        Label(L10n.History.peak, systemImage: "flame.fill")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(.orange)
 
@@ -196,22 +300,107 @@ struct MonthlySummaryCard: View {
             )
         }
     }
+}
 
-    private func formatPeakDate(_ dateString: String) -> String {
-        let inputFormatter = DateFormatter()
-        inputFormatter.dateFormat = "yyyy-MM-dd"
+// コンパクトな日次使用量カード
+struct CompactDailyUsageCard: View {
+    let daily: DailyUsage
+    let isToday: Bool
 
-        let outputFormatter = DateFormatter()
-        outputFormatter.dateFormat = "M/d"
+    private var date: Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: daily.date)
+    }
 
-        if let date = inputFormatter.date(from: dateString) {
-            return outputFormatter.string(from: date)
+    private var dayString: String {
+        guard let date = date else { return "" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd"
+        return formatter.string(from: date)
+    }
+
+    private var weekdayString: String {
+        guard let date = date else { return "" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "E"
+        formatter.locale = Locale(identifier: LanguageSettings.shared.effectiveLanguageCode() == "ja" ? "ja_JP" : "en_US")
+        return formatter.string(from: date)
+    }
+
+    private var totalTokens: Int {
+        daily.inputTokens + daily.outputTokens
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            // 日付部分（コンパクト化）
+            HStack(spacing: 4) {
+                Text(dayString)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .frame(width: 24, alignment: .trailing)
+
+                Text(weekdayString)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28)
+            }
+            .padding(.leading, 8)
+
+            // コスト情報（コンパクト化）
+            HStack {
+                Text(String(format: "$%.2f", daily.totalCost))
+                    .font(.system(size: 14, weight: .semibold))
+
+                Text("\(NumberFormatters.formatTokens(totalTokens)) • \(formatModels(daily.modelsUsed))")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                if isToday {
+                    Text(L10n.History.today)
+                        .font(.system(size: 10, weight: .medium))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(Color.blue)
+                        )
+                        .foregroundStyle(.white)
+                }
+            }
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity)
         }
-        return dateString
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(NSColor.controlBackgroundColor))
+                .opacity(isToday ? 1.0 : 0.6)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isToday ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 1)
+        )
+    }
+
+    private func formatModels(_ models: [String]) -> String {
+        let shortNames = models.map { model in
+            if model.contains("opus") {
+                return "Opus"
+            } else if model.contains("sonnet") {
+                return "Sonnet"
+            } else if model.contains("haiku") {
+                return "Haiku"
+            }
+            return "Other"
+        }
+        return shortNames.joined(separator: ", ")
     }
 }
 
-// 日次使用量カード
+// 日次使用量カード（元のバージョン）
 struct DailyUsageCard: View {
     let daily: DailyUsage
     let isToday: Bool
@@ -233,7 +422,7 @@ struct DailyUsageCard: View {
         guard let date = date else { return "" }
         let formatter = DateFormatter()
         formatter.dateFormat = "E"
-        formatter.locale = Locale(identifier: "ja_JP")
+        formatter.locale = Locale(identifier: LanguageSettings.shared.effectiveLanguageCode() == "ja" ? "ja_JP" : "en_US")
         return formatter.string(from: date)
     }
 
@@ -269,7 +458,7 @@ struct DailyUsageCard: View {
                     Spacer()
 
                     if isToday {
-                        Text("今日")
+                        Text(L10n.History.today)
                             .font(.system(size: 11, weight: .medium))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)

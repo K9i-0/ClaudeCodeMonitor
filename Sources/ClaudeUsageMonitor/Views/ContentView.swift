@@ -224,36 +224,121 @@ struct ContentView: View {
 
                 // HistoryViewの中身を直接構築（ScrollViewを除外）
                 contentToCapture = AnyView(
-                    VStack(spacing: 16) {
+                    VStack(spacing: 12) {
                         // 月選択ヘッダー
                         HStack {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.secondary)
-                                .opacity(0.5)
+                            Button(action: {}) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(true)
 
                             Text(historyViewModel.monthDescription)
                                 .font(.system(size: 16, weight: .semibold))
                                 .frame(minWidth: 140)
 
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.secondary)
-                                .opacity(0.5)
+                            Button(action: {}) {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(true)
 
                             Spacer()
                         }
                         .padding(.horizontal, 4)
+                        
+                        // 月間サマリー（カラフルなカード）
+                        if !historyViewModel.dailyData.isEmpty, let totals = historyViewModel.monthlyTotals {
+                            HStack(spacing: 12) {
+                                // 合計
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.blue.opacity(0.15))
+                                        .frame(height: 100)
+                                    
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "dollarsign.circle.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(.blue)
+                                        
+                                        Text(L10n.History.total)
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                        
+                                        Text(String(format: "$%.2f", totals.totalCost))
+                                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                            .foregroundStyle(.primary)
+                                        
+                                        Text(NumberFormatters.formatTokens(totals.totalTokens))
+                                            .font(.system(size: 9))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                                
+                                // 日次平均
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.green.opacity(0.15))
+                                        .frame(height: 100)
+                                    
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "chart.line.uptrend.xyaxis")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(.green)
+                                        
+                                        Text(L10n.History.dailyAverage)
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                        
+                                        Text(String(format: "$%.2f", totals.totalCost / Double(historyViewModel.dailyData.count)))
+                                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                            .foregroundStyle(.primary)
+                                        
+                                        Text(L10n.History.perDay)
+                                            .font(.system(size: 9))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                                
+                                // ピーク
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.orange.opacity(0.15))
+                                        .frame(height: 100)
+                                    
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "flame.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(.orange)
+                                        
+                                        Text(L10n.History.peak)
+                                            .font(.system(size: 10, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                        
+                                        if let peak = historyViewModel.dailyData.max(by: { $0.totalCost < $1.totalCost }) {
+                                            Text(String(format: "$%.2f", peak.totalCost))
+                                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                                .foregroundStyle(.primary)
+                                            
+                                            Text(formatShareDate(peak.date))
+                                                .font(.system(size: 9))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                            .padding(.horizontal, 4)
+                        }
 
                         // コンテンツ部分
-                        VStack(spacing: 12) {
-                            if !historyViewModel.dailyData.isEmpty, let totals = historyViewModel.monthlyTotals {
-                                MonthlySummaryCard(
-                                    totals: totals,
-                                    dailyData: historyViewModel.dailyData
-                                )
-                            }
-
+                        VStack(spacing: 8) {
                             if historyViewModel.dailyData.isEmpty {
                                 EmptyStateView(
                                     message: L10n.History.noData
@@ -261,7 +346,7 @@ struct ContentView: View {
                                 .padding(.vertical, 60)
                             } else {
                                 ForEach(historyViewModel.dailyData.sorted(by: { $0.date > $1.date }), id: \.date) { daily in
-                                    DailyUsageCard(
+                                    CompactDailyUsageCard(
                                         daily: daily,
                                         isToday: isToday(daily.date)
                                     )

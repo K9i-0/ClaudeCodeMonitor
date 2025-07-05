@@ -97,6 +97,14 @@
 "status.lastUpdated" = "Updated: %@";
 "status.loading" = "Loading usage data...";
 "status.noActiveSession" = "No active session";
+
+// History
+"history.monthSummary" = "Monthly Summary";
+"history.total" = "Total";
+"history.dailyAverage" = "Daily Average";
+"history.peak" = "Peak";
+"history.today" = "Today";
+"history.perDay" = "per day";
 "status.usageFormat" = "Usage: %.1f%%\nCost: $%.2f\nBurn rate: %.0f tokens/min\nTime remaining: %@";
 
 // Notifications
