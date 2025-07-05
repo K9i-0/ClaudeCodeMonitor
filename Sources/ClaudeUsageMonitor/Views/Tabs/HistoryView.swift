@@ -4,94 +4,53 @@ struct HistoryView: View {
     @StateObject var viewModel: HistoryViewModel
     @Environment(\.colorScheme) var colorScheme
 
+    @State private var selectedSummaryTab = 0
+    
+    // formatPeakDate関数を定義
+    private func formatPeakDate(_ dateString: String) -> String {
+        let inputFormatter = DateFormatter()
+        inputFormatter.dateFormat = "yyyy-MM-dd"
+
+        let outputFormatter = DateFormatter()
+        outputFormatter.dateFormat = "M/d"
+
+        if let date = inputFormatter.date(from: dateString) {
+            return outputFormatter.string(from: date)
+        }
+        return dateString
+    }
+    
     var body: some View {
         VStack(spacing: 12) {
-            // 月選択ヘッダーと月間サマリーを横並び
-            HStack(spacing: 12) {
-                // 月選択部分
-                HStack(spacing: 8) {
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            viewModel.previousMonth()
-                        }
-                    }) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.secondary)
+            // 月選択ヘッダー
+            HStack {
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.previousMonth()
                     }
-                    .buttonStyle(.plain)
-                    .disabled(isFirstAvailableMonth)
-
-                    Text(viewModel.monthDescription)
-                        .font(.system(size: 14, weight: .semibold))
-                        .frame(minWidth: 100)
-
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            viewModel.nextMonth()
-                        }
-                    }) {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(isCurrentMonth)
+                }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.secondary)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(NSColor.controlBackgroundColor))
-                )
+                .buttonStyle(.plain)
+                .disabled(isFirstAvailableMonth)
 
-                // 月間サマリー（インライン）
-                if !viewModel.isLoading && !viewModel.dailyData.isEmpty, let totals = viewModel.monthlyTotals {
-                    HStack(spacing: 16) {
-                        // 合計
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "dollarsign.circle.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(.secondary)
-                                Text(L10n.History.total)
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundStyle(.secondary)
-                            }
-                            Text(String(format: "$%.0f", totals.totalCost))
-                                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            Text("\(NumberFormatters.formatTokens(totals.totalTokens))")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
-                        }
-                        
-                        Divider()
-                            .frame(height: 36)
-                        
-                        // 日次平均
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "calendar.day.timeline.left")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(.secondary)
-                                Text(L10n.History.dailyAverage)
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundStyle(.secondary)
-                            }
-                            Text(String(format: "$%.0f", totals.totalCost / Double(viewModel.dailyData.count)))
-                                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            Text(L10n.History.perDay)
-                                .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
-                        }
+                Text(viewModel.monthDescription)
+                    .font(.system(size: 16, weight: .semibold))
+                    .frame(minWidth: 140)
+
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.nextMonth()
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color(NSColor.controlBackgroundColor))
-                    )
+                }) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.secondary)
                 }
+                .buttonStyle(.plain)
+                .disabled(isCurrentMonth)
 
                 Spacer()
 
@@ -101,6 +60,78 @@ struct HistoryView: View {
                 }
             }
             .padding(.horizontal, 4)
+            
+            // 月間サマリー（タブ形式）
+            if !viewModel.isLoading && !viewModel.dailyData.isEmpty, let totals = viewModel.monthlyTotals {
+                VStack(spacing: 0) {
+                    // タブセレクター
+                    HStack(spacing: 0) {
+                        ForEach(0..<3) { index in
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    selectedSummaryTab = index
+                                }
+                            }) {
+                                VStack(spacing: 4) {
+                                    Text(index == 0 ? L10n.History.total : (index == 1 ? L10n.History.dailyAverage : L10n.History.peak))
+                                        .font(.system(size: 12, weight: selectedSummaryTab == index ? .semibold : .regular))
+                                        .foregroundStyle(selectedSummaryTab == index ? .primary : .secondary)
+                                    
+                                    Rectangle()
+                                        .fill(selectedSummaryTab == index ? Color.accentColor : Color.clear)
+                                        .frame(height: 2)
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                    
+                    // コンテンツ
+                    Group {
+                        switch selectedSummaryTab {
+                        case 0: // 合計
+                            VStack(spacing: 8) {
+                                Text(String(format: "$%.2f", totals.totalCost))
+                                    .font(.system(size: 24, weight: .semibold, design: .rounded))
+                                Text("\(NumberFormatters.formatTokens(totals.totalTokens)) tokens")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(.secondary)
+                            }
+                        case 1: // 日次平均
+                            VStack(spacing: 8) {
+                                Text(String(format: "$%.2f", totals.totalCost / Double(viewModel.dailyData.count)))
+                                    .font(.system(size: 24, weight: .semibold, design: .rounded))
+                                Text(L10n.History.perDay)
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(.secondary)
+                            }
+                        case 2: // ピーク
+                            if let peak = viewModel.dailyData.max(by: { $0.totalCost < $1.totalCost }) {
+                                VStack(spacing: 8) {
+                                    Text(String(format: "$%.2f", peak.totalCost))
+                                        .font(.system(size: 24, weight: .semibold, design: .rounded))
+                                    Text(self.formatPeakDate(peak.date))
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        default:
+                            EmptyView()
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, 16)
+                    .animation(.easeInOut(duration: 0.2), value: selectedSummaryTab)
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color(NSColor.controlBackgroundColor))
+                )
+                .padding(.horizontal, 4)
+            }
 
             ScrollView {
                 VStack(spacing: 8) {
@@ -173,6 +204,19 @@ struct MonthlySummaryCard: View {
     private var peakDay: DailyUsage? {
         dailyData.max(by: { $0.totalCost < $1.totalCost })
     }
+    
+    private func formatPeakDate(_ dateString: String) -> String {
+        let inputFormatter = DateFormatter()
+        inputFormatter.dateFormat = "yyyy-MM-dd"
+
+        let outputFormatter = DateFormatter()
+        outputFormatter.dateFormat = "M/d"
+
+        if let date = inputFormatter.date(from: dateString) {
+            return outputFormatter.string(from: date)
+        }
+        return dateString
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -243,19 +287,6 @@ struct MonthlySummaryCard: View {
                     .fill(Color(NSColor.controlBackgroundColor))
             )
         }
-    }
-
-    private func formatPeakDate(_ dateString: String) -> String {
-        let inputFormatter = DateFormatter()
-        inputFormatter.dateFormat = "yyyy-MM-dd"
-
-        let outputFormatter = DateFormatter()
-        outputFormatter.dateFormat = "M/d"
-
-        if let date = inputFormatter.date(from: dateString) {
-            return outputFormatter.string(from: date)
-        }
-        return dateString
     }
 }
 
