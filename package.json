@@ -1,0 +1,12 @@
+{
+  "name": "claude-code-monitor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dependencies for ClaudeCodeMonitor macOS app",
+  "dependencies": {
+    "ccusage": "15.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

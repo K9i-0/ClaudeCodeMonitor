@@ -217,14 +217,14 @@ final class CommandExecutorMockTests: XCTestCase {
         XCTAssertEqual(commandPriority[1], "npx")
     }
     
-    func testCcusageArgumentsDifferBetweenBunxAndNpx() {
-        // Document the difference in arguments
-        let bunxArgs = ["ccusage"]
-        let npxArgs = ["ccusage@latest"]
+    func testCcusageArgumentsWithVersionPinning() {
+        // Both bunx and npx now use the same versioned package
+        let bunxArgs = ["ccusage@15.3.0"]
+        let npxArgs = ["ccusage@15.3.0"]
         
-        XCTAssertNotEqual(bunxArgs, npxArgs)
-        XCTAssertEqual(bunxArgs[0], "ccusage")
-        XCTAssertEqual(npxArgs[0], "ccusage@latest")
+        XCTAssertEqual(bunxArgs, npxArgs)
+        XCTAssertEqual(bunxArgs[0], "ccusage@15.3.0")
+        XCTAssertEqual(npxArgs[0], "ccusage@15.3.0")
     }
     
     func testOutputDecodingError() async throws {

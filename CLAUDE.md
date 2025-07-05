@@ -49,6 +49,24 @@ killall ClaudeCodeMonitor 2>/dev/null || true
 - Preference order: bunx > npx
 - Automatic fallback if preferred command is not available
 - Environment setup validation before app launch
+- **Version Pinning**: ccusage is pinned to version 15.3.0 to prevent breaking changes
+
+### Dependency Management
+- **package.json**: Defines ccusage version.
+- **Dependabot**: Configured to check for updates weekly.
+- **Info.plist**: The ccusage version is automatically inserted into Info.plist during the build process by the `scripts/update-ccusage-version.sh` script.
+- **Format Tests**: CcusageFormatTests.swift ensures output format compatibility.
+- **Xcode Build Phase**: A 'Run Script' phase in Xcode executes the update script. To set this up manually:
+  1. In Xcode, select the `ClaudeCodeMonitor` project, then the `ClaudeCodeMonitor` target.
+  2. Go to the `Build Phases` tab.
+  3. Click `+` and choose `New Run Script Phase`.
+  4. Name it "Update ccusage Version".
+  5. In the script area, add: `"$SRCROOT/scripts/update-ccusage-version.sh"`
+  6. Drag this new phase to be right after the `Dependencies` phase.
+- When updating ccusage version:
+  1. Dependabot will open a PR to update `package.json`.
+  2. After merging, the new version is automatically used in the next build.
+  3. Run CcusageFormatTests to verify compatibility.
 
 ### Environment Requirements
 - Claude Code installed (~/.claude/projects directory)

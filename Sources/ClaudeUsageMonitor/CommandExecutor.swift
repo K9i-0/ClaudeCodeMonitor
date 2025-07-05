@@ -79,13 +79,13 @@ class CommandExecutor {
         if let bunxPath = try await findCommand("bunx") {
             print("[CommandExecutor] Found bunx at: \(bunxPath)")
             command = bunxPath
-            ccusageArgs.append("ccusage")
+            ccusageArgs.append("ccusage@\(BundleConfiguration.ccusageVersion)")
         }
         // Fall back to npx
         else if let npxPath = try await findCommand("npx") {
             print("[CommandExecutor] Found npx at: \(npxPath)")
             command = npxPath
-            ccusageArgs.append("ccusage@latest")
+            ccusageArgs.append("ccusage@\(BundleConfiguration.ccusageVersion)")
         }
         // Neither found
         else {
