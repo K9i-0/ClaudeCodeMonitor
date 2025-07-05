@@ -178,6 +178,7 @@ struct ContentView: View {
         .frame(width: 380, height: 480)
     }
 
+    // swiftlint:disable:next function_body_length
     private func shareScreenshot() {
         Task { @MainActor in
             // Create the content view to capture based on selected tab
