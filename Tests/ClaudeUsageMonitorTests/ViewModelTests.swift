@@ -95,7 +95,7 @@ final class ViewModelTests: XCTestCase {
             totalTokens: 1_500,
             costUSD: 1.00,
             models: ["claude-3.5-sonnet"],
-            burnRate: BurnRate(tokensPerMinute: 50.0, costPerHour: 3.00),
+            burnRate: BurnRate(tokensPerMinute: 50000.0, costPerHour: 3.00),
             projection: nil
         )
 
