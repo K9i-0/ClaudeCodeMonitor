@@ -269,7 +269,7 @@ struct ContentView: View {
                                             .font(.system(size: 10, weight: .medium))
                                             .foregroundStyle(.secondary)
                                         
-                                        Text(String(format: "$%.2f", totals.totalCost))
+                                        Text(CurrencyConverter.formatCostWithFallback(totals.totalCost, using: CurrencySettings.shared))
                                             .font(.system(size: 16, weight: .semibold, design: .rounded))
                                             .foregroundStyle(.primary)
                                         
@@ -295,7 +295,7 @@ struct ContentView: View {
                                             .font(.system(size: 10, weight: .medium))
                                             .foregroundStyle(.secondary)
                                         
-                                        Text(String(format: "$%.2f", totals.totalCost / Double(historyViewModel.dailyData.count)))
+                                        Text(CurrencyConverter.formatCostWithFallback(totals.totalCost / Double(historyViewModel.dailyData.count), using: CurrencySettings.shared))
                                             .font(.system(size: 16, weight: .semibold, design: .rounded))
                                             .foregroundStyle(.primary)
                                         
@@ -322,7 +322,7 @@ struct ContentView: View {
                                             .foregroundStyle(.secondary)
                                         
                                         if let peak = historyViewModel.dailyData.max(by: { $0.totalCost < $1.totalCost }) {
-                                            Text(String(format: "$%.2f", peak.totalCost))
+                                            Text(CurrencyConverter.formatCostWithFallback(peak.totalCost, using: CurrencySettings.shared))
                                                 .font(.system(size: 16, weight: .semibold, design: .rounded))
                                                 .foregroundStyle(.primary)
                                             
@@ -370,7 +370,7 @@ struct ContentView: View {
             case 0:
                 if let session = monitor.usageData.activeSession {
                     let tokens = monitor.formatTokens(session.totalTokens)
-                    let cost = String(format: "%.2f", session.costUSD)
+                    let cost = CurrencyConverter.formatCostWithFallback(session.costUSD, using: CurrencySettings.shared)
                     let remainingTime = monitor.usageData.sessionRemainingTimeForShare
                     textContent = """
                     \(String(format: L10n.Share.CurrentSession.consuming, tokens, cost))
@@ -383,20 +383,20 @@ struct ContentView: View {
                 }
             case 1:
                 let monthTokens = NumberFormatters.formatTokens(historyViewModel.monthlyTotalTokens)
-                let monthCost = String(format: "%.2f", historyViewModel.monthlyTotalCost)
-                let dailyAvg = String(format: "%.2f", historyViewModel.dailyAverage)
+                let monthCost = CurrencyConverter.formatCostWithFallback(historyViewModel.monthlyTotalCost, using: CurrencySettings.shared)
+                let dailyAvg = CurrencyConverter.formatCostWithFallback(historyViewModel.dailyAverage, using: CurrencySettings.shared)
 
                 var peakInfo = ""
                 if let peak = historyViewModel.peakDay {
                     let peakDate = formatShareDate(peak.date)
-                    let peakCost = String(format: "%.2f", peak.totalCost)
-                    peakInfo = "\nピーク: \(peakDate) - $\(peakCost)"
+                    let peakCost = CurrencyConverter.formatCostWithFallback(peak.totalCost, using: CurrencySettings.shared)
+                    peakInfo = "\nピーク: \(peakDate) - \(peakCost)"
                 }
 
                 textContent = """
                 \(historyViewModel.monthDescription)の使用状況
-                月間合計: \(monthTokens) tokens ($\(monthCost))
-                日次平均: $\(dailyAvg)\(peakInfo)
+                月間合計: \(monthTokens) tokens (\(monthCost))
+                日次平均: \(dailyAvg)\(peakInfo)
 
                 \(L10n.Share.hashtags)
                 """

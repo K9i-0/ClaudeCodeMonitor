@@ -147,10 +147,10 @@
 
 
 // Share Text
-"share.currentSession.consuming" = "Currently consuming %@ tokens ($%@) 🔥";
+"share.currentSession.consuming" = "Currently consuming %@ tokens (%@) 🔥";
 "share.currentSession.resetIn" = "Reset in %@ ⏰";
 "share.currentSession.noSession" = "No active Claude Code session";
 "share.history.title" = "Claude Code Usage 📊";
-"share.history.today" = "Today: %@ tokens ($%@)";
-"share.history.month" = "Month: %@ tokens ($%@)";
+"share.history.today" = "Today: %@ tokens (%@)";
+"share.history.month" = "Month: %@ tokens (%@)";
 "share.hashtags" = "#ClaudeCodeMonitor";
