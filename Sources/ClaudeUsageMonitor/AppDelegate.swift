@@ -9,6 +9,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var eventMonitor: EventMonitor?
     private var usageMonitor: UsageMonitor!
     private var environmentCheckResult = EnvironmentCheckResult()
+    private var isEnvironmentValid = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Debug builds use different settings to avoid conflicts with release version
@@ -17,19 +18,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("Running in DEBUG mode")
         #endif
         
-        // Check environment
-        Task {
-            environmentCheckResult = await CommandExecutor.shared.checkEnvironment()
-            
-            await MainActor.run {
-                if environmentCheckResult.isClaudeCodeInstalled && environmentCheckResult.canExecuteCommands {
-                    print("[AppDelegate] All requirements met")
-                    setupMainInterface()
-                } else {
-                    print("[AppDelegate] Environment setup required")
-                    setupEnvironmentCheckInterface()
-                }
-            }
+        // Perform synchronous environment check first
+        environmentCheckResult = CommandExecutor.shared.checkEnvironmentSync()
+        isEnvironmentValid = environmentCheckResult.isClaudeCodeInstalled && environmentCheckResult.canExecuteCommands
+        
+        if isEnvironmentValid {
+            print("[AppDelegate] All requirements met")
+            setupMainInterface()
+        } else {
+            print("[AppDelegate] Environment setup required")
+            setupEnvironmentCheckInterface()
         }
     }
     
@@ -243,8 +241,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if popover.isShown {
             closePopover()
         } else {
-            Task { @MainActor in
-                showPopover()
+            // Re-check environment when opening popover if not valid
+            if !isEnvironmentValid {
+                Task { @MainActor in
+                    environmentCheckResult = await CommandExecutor.shared.checkEnvironment()
+                    isEnvironmentValid = environmentCheckResult.isClaudeCodeInstalled && environmentCheckResult.canExecuteCommands
+                    
+                    if isEnvironmentValid {
+                        // Environment is now valid, setup main interface
+                        setupMainInterface()
+                        // Update popover content
+                        popover.contentViewController = NSHostingController(
+                            rootView: ContentView()
+                                .environmentObject(usageMonitor)
+                        )
+                    }
+                    showPopover()
+                }
+            } else {
+                Task { @MainActor in
+                    showPopover()
+                }
             }
         }
     }
