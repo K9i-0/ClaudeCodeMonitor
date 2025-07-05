@@ -72,7 +72,6 @@
 "error.dataFetchFailed" = "データの取得に失敗しました";
 "error.networkError" = "ネットワークエラー";
 "error.unknown" = "不明なエラー";
-"error.serverNotRunning" = "ローカルサーバーが起動していません。serverディレクトリで'npm start'を実行してください。";
 
 // Time format
 "time.hoursMinutes" = "%d時間%d分";

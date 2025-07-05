@@ -163,7 +163,6 @@ struct L10n {
         static var dataFetchFailed: String { "error.dataFetchFailed".localized }
         static var networkError: String { "error.networkError".localized }
         static var unknown: String { "error.unknown".localized }
-        static var serverNotRunning: String { "error.serverNotRunning".localized }
         static func commandNotFound(command: String) -> String {
             return "error.commandNotFound".localized(with: command)
         }
