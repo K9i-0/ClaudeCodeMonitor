@@ -87,6 +87,9 @@
 "settings.languageSettings" = "Language";
 "settings.useSystemLanguage" = "Use system language";
 "settings.selectLanguage" = "Select language";
+"settings.currencySettings" = "Currency";
+"settings.lastUpdated" = "Last updated: %@";
+"settings.rateFetchFailed" = "Rate fetch failed (showing USD)";
 
 // Language options
 "language.system" = "System";
@@ -105,7 +108,7 @@
 "history.peak" = "Peak";
 "history.today" = "Today";
 "history.perDay" = "per day";
-"status.usageFormat" = "Usage: %.1f%%\nCost: $%.2f\nBurn rate: %.0f tokens/min\nTime remaining: %@";
+"status.usageFormat" = "Usage: %.1f%%\nCost: %@\nBurn rate: %.0f tokens/min\nTime remaining: %@";
 
 // Notifications
 "notification.highUsage.title" = "High Usage Warning";

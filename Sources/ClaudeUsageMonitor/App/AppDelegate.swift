@@ -43,6 +43,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         */
 
+        // Fetch exchange rates on startup
+        Task {
+            await CurrencySettings.shared.fetchExchangeRates()
+        }
+
         // Hide all windows for menubar-only app
         NSApp.windows.forEach { window in
             window.close()
@@ -186,12 +191,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let burnRateString = usageMonitor.usageData.sessionBurnRate
             let burnRate = Double(burnRateString) ?? 0.0
             let remaining = usageMonitor.usageData.sessionRemainingTime
-            button.toolTip = L10n.Status.usageFormat(
-                usage: percentage,
-                cost: cost,
-                burnRate: burnRate,
-                timeRemaining: remaining
-            )
+            let formattedCost = CurrencyConverter.formatCostWithFallback(cost, using: CurrencySettings.shared)
+            button.toolTip = L10n.Status.usageFormat(usage: percentage, cost: formattedCost, burnRate: burnRate, timeRemaining: remaining)
         } else {
             // 非アクティブ
             if let image = NSImage(systemSymbolName: "moon.zzz", accessibilityDescription: "Inactive") {
