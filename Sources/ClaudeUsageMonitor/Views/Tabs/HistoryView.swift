@@ -281,15 +281,15 @@ struct CompactDailyUsageCard: View {
     var body: some View {
         HStack(spacing: 0) {
             // 日付部分（コンパクト化）
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 Text(dayString)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .frame(width: 24, alignment: .trailing)
 
                 Text(weekdayString)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
-                    .frame(width: 16)
+                    .frame(width: 28)
             }
             .padding(.leading, 8)
 
