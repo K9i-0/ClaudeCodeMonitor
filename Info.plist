@@ -30,5 +30,13 @@
 	<true/>
 	<key>NSUserNotificationAlertStyle</key>
 	<string>banner</string>
+	<key>SUFeedURL</key>
+	<string>https://github.com/K9i-0/ClaudeCodeMonitor/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>PLACEHOLDER_PUBLIC_KEY</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 </dict>
 </plist>

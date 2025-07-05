@@ -1,9 +1,11 @@
 import SwiftUI
+import Sparkle
 
 struct SettingsTabView: View {
     @EnvironmentObject var monitor: UsageMonitor
     @StateObject private var languageSettings = LanguageSettings.shared
     // @State private var notificationEnabled = Bundle.main.bundleIdentifier != nil ? NotificationManager.shared.isNotificationEnabled : false
+    private let updater = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil).updater
 
     let plans = [
         ("Pro", "7,000 tokens/session", L10n.Plan.pro),
@@ -119,6 +121,55 @@ struct SettingsTabView: View {
                 }
             }
             */
+
+            Divider()
+
+            // Update settings section
+            VStack(alignment: .leading, spacing: 12) {
+                Text(L10n.Update.settings)
+                    .font(.system(size: 16, weight: .semibold))
+
+                // Current version
+                HStack {
+                    Text(L10n.Update.currentVersion(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"))
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .padding(.bottom, 4)
+
+                // Check for updates button
+                Button(action: {
+                    updater.checkForUpdates()
+                }) {
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 14))
+                        Text(L10n.Update.checkForUpdates)
+                            .font(.system(size: 14))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(Color.accentColor.opacity(0.1))
+                    .cornerRadius(6)
+                }
+                .buttonStyle(PlainButtonStyle())
+
+                // Automatic updates toggle
+                Toggle(isOn: .init(
+                    get: { updater.automaticallyChecksForUpdates },
+                    set: { updater.automaticallyChecksForUpdates = $0 }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.Update.automaticUpdates)
+                            .font(.system(size: 14))
+                        Text(L10n.Update.automaticUpdatesDescription)
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .toggleStyle(SwitchToggleStyle(tint: .accentColor))
+            }
 
             #if DEBUG
             Divider()

@@ -299,6 +299,23 @@ jobs:
         xcrun stapler staple "$DMG_PATH"
         xcrun stapler validate "$DMG_PATH"
     
+    # Generate Sparkle appcast.xml
+    - name: Generate Sparkle appcast.xml
+      if: env.SPARKLE_PRIVATE_KEY != ''
+      env:
+        SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        VERSION: ${{ steps.version.outputs.version }}
+      run: |
+        echo "🔏 Generating Sparkle appcast.xml..."
+        ./scripts/generate-appcast.sh
+        
+        if [ -f "appcast.xml" ]; then
+          echo "✅ Successfully generated appcast.xml"
+        else
+          echo "❌ Failed to generate appcast.xml"
+          exit 1
+        fi
+    
     # Generate changelog
     - name: Generate changelog
       id: changelog
@@ -343,7 +360,9 @@ jobs:
         body: ${{ steps.changelog.outputs.changelog }}
         draft: false
         prerelease: false
-        files: ${{ env.DMG_PATH }}
+        files: |
+          ${{ env.DMG_PATH }}
+          appcast.xml
     
     # Cleanup
     - name: Clean up keychain

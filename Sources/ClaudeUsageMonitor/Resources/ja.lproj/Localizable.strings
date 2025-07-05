@@ -143,3 +143,14 @@
 "share.history.today" = "今日: %@トークン ($%@)";
 "share.history.month" = "今月: %@トークン ($%@)";
 "share.hashtags" = "#ClaudeCodeMonitor";
+
+// Updates
+"update.settings" = "アップデート設定";
+"update.checkForUpdates" = "アップデートを確認";
+"update.automaticUpdates" = "自動アップデート";
+"update.automaticUpdatesDescription" = "アップデートを自動的に確認する";
+"update.currentVersion" = "現在のバージョン: %@";
+"update.checking" = "アップデートを確認中...";
+"update.upToDate" = "最新の状態です！";
+"update.available" = "アップデートがあります";
+"update.failed" = "アップデート確認に失敗しました";

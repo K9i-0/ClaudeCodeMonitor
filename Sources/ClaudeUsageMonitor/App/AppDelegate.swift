@@ -2,6 +2,7 @@ import Cocoa
 import SwiftUI
 import Combine
 import UserNotifications
+import Sparkle
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
@@ -10,6 +11,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var usageMonitor: UsageMonitor!
     private var environmentCheckResult = EnvironmentCheckResult()
     private var isEnvironmentValid = false
+    private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Debug builds use different settings to avoid conflicts with release version
