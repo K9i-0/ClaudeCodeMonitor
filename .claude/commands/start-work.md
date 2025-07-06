@@ -1,6 +1,6 @@
 ---
 description: 作業環境をセットアップしてClaude Codeを起動
-allowed-tools: Bash(git *), Bash(tmux *), Read, Write
+allowed-tools: Bash(git *), Bash(tmux *), Bash(osascript *), Read, Write
 ---
 
 ## 環境確認
@@ -37,10 +37,25 @@ git worktree add -b [ブランチタイプ]/[ブランチ名] ../worktrees/[ブ�
 
 # tmuxセッションを作成してClaude Codeを起動
 tmux new-session -d -s claude-[ブランチ名] -c ../worktrees/[ブランチ名] "claude code"
+
+# iTermで新しい垂直ペインを開いてtmuxセッションに接続
+osascript -e '
+tell application "iTerm"
+    tell current window
+        tell current session
+            split vertically with default profile
+        end tell
+        tell current session
+            write text "tmux attach -t claude-[ブランチ名]"
+        end tell
+    end tell
+end tell
+'
 ```
 
 4. セッション作成後、以下の情報を表示してください：
-   - 接続方法: `tmux attach -t claude-[ブランチ名]`
+   - 新しいペインでtmuxセッションに自動接続されました
+   - 手動で接続する場合: `tmux attach -t claude-[ブランチ名]`
    - 片付け方法:
      - `tmux kill-session -t claude-[ブランチ名]`
      - `git worktree remove ../worktrees/[ブランチ名]`
