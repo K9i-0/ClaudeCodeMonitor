@@ -188,8 +188,18 @@ jobs:
         echo "=== App bundle root after cleanup ==="
         ls -la "ClaudeCodeMonitor.app/"
         
-        # Try signing (without --deep to preserve Node.js signature)
-        echo "=== Attempting to sign ==="
+        # Sign Sparkle.framework first if it exists
+        if [ -d "ClaudeCodeMonitor.app/Contents/Frameworks/Sparkle.framework" ]; then
+          echo "=== Signing Sparkle.framework ==="
+          codesign --force --strict \
+            --options runtime \
+            --sign "$CERT_NAME" \
+            --timestamp \
+            "ClaudeCodeMonitor.app/Contents/Frameworks/Sparkle.framework"
+        fi
+        
+        # Try signing (without --deep to preserve framework signatures)
+        echo "=== Attempting to sign app ==="
         codesign --force --strict \
           --options runtime \
           --entitlements ClaudeCodeMonitor.entitlements \

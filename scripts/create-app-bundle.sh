@@ -79,6 +79,10 @@ mkdir -p "$APP_PATH/Contents/"{MacOS,Resources}
 echo "  Copying executable..."
 cp "$UNIVERSAL_PATH" "$APP_PATH/Contents/MacOS/ClaudeCodeMonitor"
 
+# Add rpath for Frameworks directory
+echo "  Adding rpath for Frameworks..."
+install_name_tool -add_rpath "@loader_path/../Frameworks" "$APP_PATH/Contents/MacOS/ClaudeCodeMonitor"
+
 # Copy Info.plist and update version
 echo "  Copying Info.plist..."
 cp Info.plist "$APP_PATH/Contents/Info.plist"
@@ -86,6 +90,20 @@ cp Info.plist "$APP_PATH/Contents/Info.plist"
 echo "  Updating version to $VERSION..."
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP_PATH/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$APP_PATH/Contents/Info.plist"
+
+# Create Frameworks directory
+mkdir -p "$APP_PATH/Contents/Frameworks"
+
+# Copy Sparkle.framework
+echo "  Looking for Sparkle.framework..."
+SPARKLE_FRAMEWORK=$(find .build -path "*/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework" -type d | head -1)
+if [ -n "$SPARKLE_FRAMEWORK" ] && [ -d "$SPARKLE_FRAMEWORK" ]; then
+    echo "    Found Sparkle.framework: $SPARKLE_FRAMEWORK"
+    cp -R "$SPARKLE_FRAMEWORK" "$APP_PATH/Contents/Frameworks/"
+    echo "    Sparkle.framework copied"
+else
+    echo "    ⚠️  Sparkle.framework not found"
+fi
 
 # Copy resource bundles from arm64 build (they are identical across architectures)
 echo "  Looking for resource bundles..."
