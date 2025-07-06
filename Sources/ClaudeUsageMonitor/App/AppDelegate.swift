@@ -55,9 +55,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Set up the status item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
-            updateStatusItemTitle("bolt.fill", percentage: 0)
             button.action = #selector(togglePopover(_:))
         }
+        
+        // Set initial status bar title
+        updateStatusBarTitle()
         
         // Configure popover
         popover = NSPopover()
@@ -80,7 +82,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             usageMonitor.$usageData
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] _ in
-                    self?.usageDataUpdated()
+                    self?.updateStatusBarTitle()
                 }
                 .store(in: &cancellables)
             
@@ -105,7 +107,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    private func usageDataUpdated() {
+    private func updateStatusBarTitle() {
+        guard let button = statusItem.button else { return }
+        
         let data = usageMonitor.usageData
         guard let activeSession = data.activeSession else {
             updateStatusItemTitle("bolt.fill", percentage: 0)
