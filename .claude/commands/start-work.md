@@ -43,10 +43,10 @@ osascript -e '
 tell application "iTerm"
     tell current window
         tell current session
-            split vertically with default profile
+            set newSession to (split vertically with default profile)
         end tell
-        tell current session
-            write text "tmux attach -t claude-[ブランチ名]"
+        tell newSession
+            write text "cd ../worktrees/[ブランチ名] && tmux attach -t claude-[ブランチ名]"
         end tell
     end tell
 end tell
