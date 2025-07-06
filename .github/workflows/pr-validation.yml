@@ -5,6 +5,10 @@ on:
     branches: [develop, main]
     types: [opened, synchronize]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   validate-version:
     name: Validate Version Update
@@ -25,6 +29,7 @@ jobs:
     # Validation for all branches -> develop PRs (except hotfix)
     - name: Validate branch to develop
       if: github.base_ref == 'develop' && github.head_ref != 'develop' && !startsWith(github.head_ref, 'hotfix/')
+      id: version_check
       run: |
         echo "## Validating ${{ github.head_ref }} → develop PR"
         
@@ -37,6 +42,10 @@ jobs:
         PR_VERSION=$(grep -A1 "CFBundleShortVersionString" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
         echo "PR branch version: $PR_VERSION"
         
+        # Save versions to outputs
+        echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
+        echo "pr_version=$PR_VERSION" >> $GITHUB_OUTPUT
+        
         # Check if version was updated
         if [ "$BASE_VERSION" = "$PR_VERSION" ]; then
           echo "❌ Error: Version not updated in Info.plist"
@@ -44,6 +53,7 @@ jobs:
           echo ""
           echo "Current version: $BASE_VERSION"
           echo "Expected: A higher version number"
+          echo "validation_failed=true" >> $GITHUB_OUTPUT
           exit 1
         fi
         
@@ -52,10 +62,67 @@ jobs:
           echo "❌ Error: Invalid version format"
           echo "Version should be in format: x.y.z (e.g., 1.2.3)"
           echo "Found: $PR_VERSION"
+          echo "validation_failed=true" >> $GITHUB_OUTPUT
           exit 1
         fi
         
         echo "✅ Version updated: $BASE_VERSION → $PR_VERSION"
+        echo "validation_failed=false" >> $GITHUB_OUTPUT
+    
+    # Comment on PR if validation failed
+    - name: Comment on PR about version update
+      if: always() && github.base_ref == 'develop' && github.head_ref != 'develop' && !startsWith(github.head_ref, 'hotfix/') && steps.version_check.outcome == 'failure'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const baseVersion = '${{ steps.version_check.outputs.base_version }}';
+          const prVersion = '${{ steps.version_check.outputs.pr_version }}';
+          
+          const comment = `## ❌ Version Update Required
+          
+          This PR is merging to \`develop\` but the version in \`Info.plist\` has not been updated.
+          
+          **Current version:** \`${baseVersion}\`
+          **PR version:** \`${prVersion}\`
+          
+          Please update the version number in \`Info.plist\` before this PR can be merged.
+          
+          ### How to update:
+          1. Edit \`Info.plist\`
+          2. Update the \`CFBundleShortVersionString\` value
+          3. Commit and push the changes
+          
+          The version should follow semantic versioning (x.y.z format).`;
+          
+          // Check if we already commented
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const botComment = comments.find(comment => 
+            comment.user.type === 'Bot' && 
+            comment.body.includes('Version Update Required')
+          );
+          
+          if (botComment) {
+            // Update existing comment
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: comment,
+            });
+          } else {
+            // Create new comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment,
+            });
+          }
     
     # Validation for develop -> main PRs
     - name: Validate develop to main
