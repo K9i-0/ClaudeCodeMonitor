@@ -33,7 +33,7 @@
 	<key>SUFeedURL</key>
 	<string>https://github.com/K9i-0/ClaudeCodeMonitor/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>PLACEHOLDER_PUBLIC_KEY</string>
+	<string>HIY9t036dJwnFg9au6m1/J67nyCgIL4YsjCZxyL0Nbw=</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUScheduledCheckInterval</key>
