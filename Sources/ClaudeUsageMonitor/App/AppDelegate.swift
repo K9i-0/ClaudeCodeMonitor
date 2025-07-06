@@ -4,10 +4,6 @@ import Sparkle
 import Combine
 import UserNotifications
 
-extension Notification.Name {
-    static let usageDataUpdated = Notification.Name("ClaudeMonitor.usageDataUpdated")
-}
-
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     @IBOutlet weak var window: NSWindow!
@@ -108,32 +104,101 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func updateStatusBarTitle() {
-        guard statusItem.button != nil else { return }
-        
-        let data = usageMonitor.usageData
-        guard let activeSession = data.activeSession else {
-            updateStatusItemTitle("bolt.fill", percentage: 0)
+        guard let button = statusItem.button else { return }
+        guard let usageMonitor = usageMonitor else {
+            // Environment setup mode
+            if let image = NSImage(systemSymbolName: "exclamationmark.circle", accessibilityDescription: "Setup Required") {
+                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+                button.image = image.withSymbolConfiguration(config)
+                button.title = ""
+                button.toolTip = L10n.Environment.setupRequired
+            }
             return
         }
-        
-        // Calculate percentage based on the detected plan limit
-        let limit = data.sessionTokenLimit
-        let percentage = (Double(activeSession.totalTokens) / Double(limit)) * 100.0
-        updateStatusItemTitle("bolt.fill", percentage: Int(percentage))
-    }
-    
-    private func updateStatusItemTitle(_ iconName: String, percentage: Int) {
-        if let button = statusItem.button {
-            let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
-            if let image = NSImage(systemSymbolName: iconName, accessibilityDescription: nil) {
+
+        if usageMonitor.isLoading && usageMonitor.usageData.activeSession == nil {
+            // ローディング中
+            if let image = NSImage(systemSymbolName: "hourglass", accessibilityDescription: "Loading") {
+                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+                button.image = image.withSymbolConfiguration(config)
+                button.title = ""
+                button.toolTip = L10n.Status.loading
+            }
+        } else if let session = usageMonitor.usageData.activeSession {
+            // アクティブセッション
+            let percentage = usageMonitor.usageData.sessionUsagePercentage
+            let cost = session.costUSD
+
+            // SF Symbolを使用したアイコン表示
+            let symbolName = getStatusSymbol(percentage: percentage)
+            let tintColor = getStatusColor(percentage: percentage)
+
+            if let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Usage Status") {
+                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+                    .applying(.init(paletteColors: [tintColor]))
                 button.image = image.withSymbolConfiguration(config)
             }
-            
+
+            // パーセンテージのみ表示（HIGに準拠した簡潔な表示）
             #if DEBUG
-            button.title = " [D] \(percentage)%"
+            button.title = String(format: "%.0f%% [D]", percentage)
             #else
-            button.title = " \(percentage)%"
+            button.title = String(format: "%.0f%%", percentage)
             #endif
+            button.attributedTitle = NSAttributedString(
+                string: button.title,
+                attributes: [
+                    .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium),
+                    .foregroundColor: tintColor
+                ]
+            )
+
+            // 詳細情報はツールチップで表示
+            let burnRateString = usageMonitor.usageData.sessionBurnRate
+            let burnRate = Double(burnRateString) ?? 0.0
+            let remaining = usageMonitor.usageData.sessionRemainingTime
+            let formattedCost = CurrencyConverter.formatCostWithFallback(cost, using: CurrencySettings.shared)
+            button.toolTip = L10n.Status.usageFormat(usage: percentage, cost: formattedCost, burnRate: burnRate, timeRemaining: remaining)
+        } else {
+            // 非アクティブ
+            if let image = NSImage(systemSymbolName: "moon.zzz", accessibilityDescription: "Inactive") {
+                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+                button.image = image.withSymbolConfiguration(config)
+                button.title = ""
+                button.toolTip = L10n.Status.noActiveSession
+            }
+        }
+    }
+    
+    private func getStatusSymbol(percentage: Double) -> String {
+        switch percentage {
+        case 90...:
+            return "exclamationmark.triangle.fill"  // 危険
+        case 70..<90:
+            return "bolt.fill"  // 注意
+        case 50..<70:
+            return "flame.fill"  // 高使用率
+        case 30..<50:
+            return "speedometer"  // 中使用率
+        case 10..<30:
+            return "circle.lefthalf.filled"  // 低使用率
+        default:
+            return "circle.fill"  // 最小使用率
+        }
+    }
+
+    private func getStatusColor(percentage: Double) -> NSColor {
+        switch percentage {
+        case 90...:
+            return NSColor.systemRed  // 危険
+        case 70..<90:
+            return NSColor.systemOrange  // 警告
+        case 50..<70:
+            return NSColor.systemYellow  // 注意
+        case 30..<50:
+            return NSColor.systemBlue  // 標準
+        default:
+            return NSColor.systemGreen  // 良好
         }
     }
     
