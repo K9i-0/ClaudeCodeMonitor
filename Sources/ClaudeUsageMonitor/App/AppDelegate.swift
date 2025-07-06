@@ -4,6 +4,10 @@ import Sparkle
 import Combine
 import UserNotifications
 
+extension Notification.Name {
+    static let usageDataUpdated = Notification.Name("ClaudeMonitor.usageDataUpdated")
+}
+
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     @IBOutlet weak var window: NSWindow!
@@ -14,6 +18,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var usageMonitor: UsageMonitor!
     private var environmentCheckResult = EnvironmentCheckResult()
     private var isEnvironmentValid = false
+    private var cancellables = Set<AnyCancellable>()
     
     // Sparkle configuration based on build type
     #if DEBUG
@@ -71,12 +76,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Subscribe to usage updates only if environment is valid
         if isEnvironmentValid {
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(usageDataUpdated),
-                name: .usageDataUpdated,
-                object: nil
-            )
+            // Subscribe to usage data changes
+            usageMonitor.$usageData
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    self?.usageDataUpdated()
+                }
+                .store(in: &cancellables)
             
             // Start monitoring
             usageMonitor.startMonitoring()
@@ -99,7 +105,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    @objc private func usageDataUpdated() {
+    private func usageDataUpdated() {
         let data = usageMonitor.usageData
         guard let activeSession = data.activeSession else {
             updateStatusItemTitle("bolt.fill", percentage: 0)
