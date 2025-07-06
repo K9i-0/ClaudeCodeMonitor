@@ -108,7 +108,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func updateStatusBarTitle() {
-        guard let button = statusItem.button else { return }
+        guard statusItem.button != nil else { return }
         
         let data = usageMonitor.usageData
         guard let activeSession = data.activeSession else {
@@ -186,8 +186,4 @@ class EventMonitor {
             self.monitor = nil
         }
     }
-}
-
-extension Notification.Name {
-    static let usageDataUpdated = Notification.Name("usageDataUpdated")
 }
