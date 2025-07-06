@@ -1,4 +1,4 @@
-name: Beta Release
+name: Development Release (Beta)
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   beta:
-    name: Build Beta Release
+    name: Build Development Release
     runs-on: macos-latest
     
     steps:
