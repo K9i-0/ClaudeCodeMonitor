@@ -17,6 +17,15 @@ All notable changes to this project will be documented in this file.
 
 
 
+
+## [0.7.14] - 2025-07-06
+
+### Fixed
+- Staple notarization失敗を修正
+  - Sparkle.framework内のすべてのバイナリ（Autoupdate、Sparkle、Updater.app、XPCServices）を個別に署名
+  - アプリ全体の署名に--deepオプションを追加
+  - 署名検証とデバッグ情報を強化
+
 ## [0.7.13] - 2025-07-06
 
 ### Fixed
