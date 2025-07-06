@@ -30,7 +30,7 @@ let package = Package(
                 .copy("AppIcon.icns")
             ],
             swiftSettings: [
-                .define("TEST", .when(configuration: .test))
+                .define("SWIFT_PACKAGE")
             ]
         ),
         .testTarget(

@@ -41,7 +41,7 @@ curl -L -o "$TEMP_DIR/sparkle.tar.xz" "$SPARKLE_TOOLS_URL"
 tar -xf "$TEMP_DIR/sparkle.tar.xz" -C "$TEMP_DIR"
 
 # Path to sign_update tool
-SIGN_UPDATE="$TEMP_DIR/bin/sign_update"
+SIGN_UPDATE="$TEMP_DIR/Sparkle.framework/Versions/Current/Resources/sign_update"
 
 if [ ! -f "$SIGN_UPDATE" ]; then
     echo "Error: sign_update tool not found at $SIGN_UPDATE"

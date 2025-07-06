@@ -2,7 +2,7 @@ import Cocoa
 import SwiftUI
 import Combine
 import UserNotifications
-#if !TEST
+#if canImport(Sparkle)
 import Sparkle
 #endif
 
@@ -19,7 +19,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
     
     // Sparkle configuration based on build type
-    #if !TEST
+    #if canImport(Sparkle)
         #if DEBUG
         // Allow testing Sparkle in debug builds with TEST_SPARKLE environment variable
         private let updaterController: SPUStandardUpdaterController? = {
@@ -33,7 +33,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
         #endif
     #else
-    private let updaterController: SPUStandardUpdaterController? = nil
+    private let updaterController: AnyObject? = nil
     #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {
