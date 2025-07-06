@@ -83,11 +83,21 @@ jobs:
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
           VERSION: ${{ needs.prepare.outputs.version }}
+          DMG_PATH: ClaudeCodeMonitor-${{ needs.prepare.outputs.version }}.dmg
         run: |
           set -euo pipefail
 
+          # Check if DMG file exists
+          if [ ! -f "$DMG_PATH" ]; then
+            echo "❌ DMG file not found: $DMG_PATH"
+            echo "📁 Current directory contents:"
+            ls -la
+            exit 1
+          fi
+
           if [ -n "$SPARKLE_PRIVATE_KEY" ]; then
             echo "✅ Generating Sparkle appcast.xml..."
+            echo "📦 DMG file: $DMG_PATH"
             ./scripts/generate-appcast.sh
           else
             echo "⚠️ No Sparkle private key, creating empty appcast.xml"
