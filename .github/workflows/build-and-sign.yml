@@ -46,7 +46,7 @@ jobs:
     
     - name: Select Xcode
       env:
-        XCODE_VERSION: '16.0'
+        XCODE_VERSION: '16.2'
       run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
     
     # Check if we have signing certificates
