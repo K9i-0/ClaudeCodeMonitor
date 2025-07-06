@@ -188,28 +188,61 @@ jobs:
         echo "=== App bundle root after cleanup ==="
         ls -la "ClaudeCodeMonitor.app/"
         
-        # Sign Sparkle.framework first if it exists
+        # Sign Sparkle.framework components if it exists
         if [ -d "ClaudeCodeMonitor.app/Contents/Frameworks/Sparkle.framework" ]; then
-          echo "=== Signing Sparkle.framework ==="
-          codesign --force --strict \
-            --options runtime \
-            --sign "$CERT_NAME" \
-            --timestamp \
+          echo "=== Signing Sparkle.framework components ==="
+          
+          # Sign individual binaries first
+          if [ -f "ClaudeCodeMonitor.app/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate" ]; then
+            echo "  Signing Autoupdate binary..."
+            codesign --force --options runtime --sign "$CERT_NAME" --timestamp \
+              "ClaudeCodeMonitor.app/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate"
+          fi
+          
+          if [ -f "ClaudeCodeMonitor.app/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle" ]; then
+            echo "  Signing Sparkle binary..."
+            codesign --force --options runtime --sign "$CERT_NAME" --timestamp \
+              "ClaudeCodeMonitor.app/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle"
+          fi
+          
+          # Sign Updater.app
+          if [ -d "ClaudeCodeMonitor.app/Contents/Frameworks/Sparkle.framework/Versions/B/Updater.app" ]; then
+            echo "  Signing Updater.app..."
+            codesign --force --deep --options runtime --sign "$CERT_NAME" --timestamp \
+              "ClaudeCodeMonitor.app/Contents/Frameworks/Sparkle.framework/Versions/B/Updater.app"
+          fi
+          
+          # Sign XPCServices
+          if [ -d "ClaudeCodeMonitor.app/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices" ]; then
+            echo "  Signing XPC Services..."
+            find "ClaudeCodeMonitor.app/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices" \
+              -name "*.xpc" -exec codesign --force --deep --options runtime --sign "$CERT_NAME" --timestamp {} \;
+          fi
+          
+          # Finally sign the framework itself
+          echo "  Signing Sparkle.framework..."
+          codesign --force --options runtime --sign "$CERT_NAME" --timestamp \
             "ClaudeCodeMonitor.app/Contents/Frameworks/Sparkle.framework"
         fi
         
-        # Try signing (without --deep to preserve framework signatures)
-        echo "=== Attempting to sign app ==="
-        codesign --force --strict \
+        # Sign the app with --deep to ensure all components are signed
+        echo "=== Attempting to sign app with --deep ==="
+        codesign --force --deep --strict \
           --options runtime \
           --entitlements ClaudeCodeMonitor.entitlements \
           --sign "$CERT_NAME" \
           --timestamp \
           "ClaudeCodeMonitor.app"
         
-        # Verify signature
-        codesign --verify --deep --strict --verbose=2 "ClaudeCodeMonitor.app"
+        # Verify signature with detailed output
+        echo "=== Verifying signature ==="
+        codesign --verify --deep --strict --verbose=4 "ClaudeCodeMonitor.app"
+        
+        echo "=== Signature details ==="
         codesign -dvvv "ClaudeCodeMonitor.app"
+        
+        echo "=== Verifying with spctl ==="
+        spctl -a -vvv -t install "ClaudeCodeMonitor.app" || echo "Note: spctl check may fail in CI environment"
     
     # Ad-hoc sign if no certificates
     - name: Ad-hoc sign app bundle
@@ -278,8 +311,26 @@ jobs:
       if: steps.check_signing.outputs.has_signing_cert == 'true' && steps.check_signing.outputs.has_notarization == 'true'
       run: |
         echo "📎 Stapling notarization..."
-        xcrun stapler staple "$DMG_PATH"
-        xcrun stapler validate "$DMG_PATH"
+        echo "DMG_PATH: $DMG_PATH"
+        
+        # Check if DMG exists
+        if [ ! -f "$DMG_PATH" ]; then
+          echo "❌ DMG file not found at: $DMG_PATH"
+          ls -la
+          exit 1
+        fi
+        
+        # Verify DMG signature before stapling
+        echo "=== Verifying DMG signature before stapling ==="
+        codesign --verify --verbose=2 "$DMG_PATH"
+        
+        # Attempt to staple
+        echo "=== Stapling notarization ticket ==="
+        xcrun stapler staple -v "$DMG_PATH"
+        
+        # Validate the staple
+        echo "=== Validating stapled notarization ==="
+        xcrun stapler validate -v "$DMG_PATH"
     
     # Generate changelog for development releases
     - name: Generate changelog
