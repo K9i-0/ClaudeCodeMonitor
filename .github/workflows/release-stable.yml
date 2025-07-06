@@ -1,8 +1,7 @@
-name: Release
+name: Stable Release
 
 on:
-  pull_request:
-    types: [closed]
+  push:
     branches:
       - main
 
@@ -10,10 +9,9 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build and Release
+  stable-release:
+    name: Build Stable Release
     runs-on: macos-latest
-    if: github.event.pull_request.merged == true
     
     steps:
     - uses: actions/checkout@v4
@@ -23,82 +21,33 @@ jobs:
     - name: Select Xcode
       run: sudo xcode-select -s /Applications/Xcode_15.2.app
     
-    - name: Determine version bump type
-      id: version_type
-      run: |
-        # Check PR labels for version type
-        LABELS="${{ join(github.event.pull_request.labels.*.name, ',') }}"
-        echo "PR Labels: $LABELS"
-        
-        if [[ "$LABELS" == *"version:major"* ]]; then
-          echo "type=major" >> $GITHUB_OUTPUT
-        elif [[ "$LABELS" == *"version:minor"* ]]; then
-          echo "type=minor" >> $GITHUB_OUTPUT
-        else
-          echo "type=patch" >> $GITHUB_OUTPUT
-        fi
-    
-    - name: Determine next version
+    - name: Get version from Info.plist
       id: version
       run: |
-        VERSION_TYPE="${{ steps.version_type.outputs.type }}"
-        echo "Determining next version: $VERSION_TYPE"
+        # Extract version from Info.plist
+        VERSION_LINE=$(grep -A1 "CFBundleShortVersionString" Info.plist | tail -1)
+        VERSION=$(echo "$VERSION_LINE" | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
         
-        # Check if get-next-version.sh exists and is executable
-        if [ -f "./scripts/get-next-version.sh" ] && [ -x "./scripts/get-next-version.sh" ]; then
-          echo "Using get-next-version.sh"
-          # Get next version from git tags and output to GITHUB_OUTPUT
-          ./scripts/get-next-version.sh "$VERSION_TYPE"
-        else
-          echo "Warning: get-next-version.sh not found or not executable"
-          echo "Falling back to manual version calculation"
-          
-          # Fallback: Calculate version manually
-          LATEST_TAG=$(git tag -l "v*.*.*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -1)
-          if [ -z "$LATEST_TAG" ]; then
-            CURRENT_VERSION="0.0.0"
-          else
-            CURRENT_VERSION=${LATEST_TAG#v}
-          fi
-          
-          # Parse and increment version
-          IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
-          MAJOR="${VERSION_PARTS[0]:-0}"
-          MINOR="${VERSION_PARTS[1]:-0}"
-          PATCH="${VERSION_PARTS[2]:-0}"
-          
-          case "$VERSION_TYPE" in
-            major)
-              MAJOR=$((MAJOR + 1))
-              MINOR=0
-              PATCH=0
-              ;;
-            minor)
-              MINOR=$((MINOR + 1))
-              PATCH=0
-              ;;
-            patch|*)
-              PATCH=$((PATCH + 1))
-              ;;
-          esac
-          
-          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
-          
-          # Validate version
-          if [ -z "$NEW_VERSION" ] || [ "$NEW_VERSION" = "0.0.0-dev" ]; then
-            echo "Error: Failed to determine version"
-            echo "Latest tags:"
-            git tag -l "v*.*.*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -5
-            exit 1
-          fi
-          
-          echo "New version: $NEW_VERSION"
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+        if [ -z "$VERSION" ]; then
+          echo "❌ Failed to extract version from Info.plist"
+          exit 1
         fi
+        
+        # Check if this version tag already exists
+        if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+          echo "⚠️ Version v$VERSION already exists. Skipping release."
+          echo "skip_release=true" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+        echo "skip_release=false" >> $GITHUB_OUTPUT
+        echo "✅ Stable version: $VERSION"
     
-    # Check if we have signing certificates
+    # Check signing prerequisites
     - name: Check signing prerequisites
+      if: steps.version.outputs.skip_release != 'true'
       id: check_signing
       env:
         CERT_P12: ${{ secrets.CERTIFICATES_P12 }}
@@ -125,32 +74,27 @@ jobs:
     
     # Setup keychain if we have certificates
     - name: Set up keychain
-      if: steps.check_signing.outputs.has_signing_cert == 'true'
+      if: steps.version.outputs.skip_release != 'true' && steps.check_signing.outputs.has_signing_cert == 'true'
       run: |
-        # Create a temporary keychain
         KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
         KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
         
         security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
         security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-        
-        # Add to search list
         security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed 's/"//g')
         security default-keychain -s "$KEYCHAIN_PATH"
         
-        # Store for later use
         echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
         echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
     
     # Import certificates
     - name: Import certificates
-      if: steps.check_signing.outputs.has_signing_cert == 'true'
+      if: steps.version.outputs.skip_release != 'true' && steps.check_signing.outputs.has_signing_cert == 'true'
       env:
         CERTIFICATES_P12: ${{ secrets.CERTIFICATES_P12 }}
         CERTIFICATES_PASSWORD: ${{ secrets.CERTIFICATES_PASSWORD }}
       run: |
-        # Decode and import certificate
         echo "$CERTIFICATES_P12" | base64 --decode > certificate.p12
         
         security import certificate.p12 \
@@ -164,15 +108,7 @@ jobs:
           -s -k "$KEYCHAIN_PASSWORD" \
           "$KEYCHAIN_PATH"
         
-        # Find the certificate name dynamically
-        echo "=== Looking for certificates ==="
-        security find-identity -v -p codesigning "$KEYCHAIN_PATH"
-        
-        # Extract certificate name more carefully
         CERT_LINE=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1)
-        echo "Certificate line: $CERT_LINE"
-        
-        # Extract the name between quotes
         CERT_NAME=$(echo "$CERT_LINE" | cut -d'"' -f2)
         
         if [ -n "$CERT_NAME" ] && [ "$CERT_NAME" != "" ]; then
@@ -180,8 +116,6 @@ jobs:
           echo "CERT_NAME=$CERT_NAME" >> $GITHUB_ENV
         else
           echo "❌ No Developer ID Application certificate found"
-          echo "Available certificates:"
-          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
           exit 1
         fi
         
@@ -189,44 +123,20 @@ jobs:
     
     # Build the app
     - name: Create app bundle
+      if: steps.version.outputs.skip_release != 'true'
       run: |
-        # Use the create-app-bundle.sh script
         ./scripts/create-app-bundle.sh "${{ steps.version.outputs.version }}"
     
     # Sign the app
     - name: Sign app bundle
-      if: steps.check_signing.outputs.has_signing_cert == 'true'
+      if: steps.version.outputs.skip_release != 'true' && steps.check_signing.outputs.has_signing_cert == 'true'
       run: |
         echo "🔏 Signing app with: $CERT_NAME"
         
-        # Debug: Check certificate availability
-        echo "=== Available certificates in keychain ==="
-        security find-identity -v -p codesigning "$KEYCHAIN_PATH"
-        
-        # Debug: Check if CERT_NAME is properly set
-        if [ -z "$CERT_NAME" ]; then
-          echo "❌ CERT_NAME is empty!"
-          exit 1
-        fi
-        
-        # Debug: Check entitlements file
-        if [ ! -f "ClaudeCodeMonitor.entitlements" ]; then
-          echo "❌ Entitlements file not found!"
-          ls -la
-          exit 1
-        fi
-        
-        # Clean up app bundle root (just in case)
-        echo "=== Cleaning app bundle root ==="
+        # Clean up app bundle root
         find "ClaudeCodeMonitor.app" -maxdepth 1 -type f -delete 2>/dev/null || true
         find "ClaudeCodeMonitor.app" -maxdepth 1 -name "*.bundle" -type d -exec rm -rf {} + 2>/dev/null || true
         
-        # Verify clean structure before signing
-        echo "=== App bundle root after cleanup ==="
-        ls -la "ClaudeCodeMonitor.app/"
-        
-        # Try signing (without --deep to preserve Node.js signature)
-        echo "=== Attempting to sign ==="
         codesign --force --strict \
           --options runtime \
           --entitlements ClaudeCodeMonitor.entitlements \
@@ -234,28 +144,25 @@ jobs:
           --timestamp \
           "ClaudeCodeMonitor.app"
         
-        # Verify signature
         codesign --verify --deep --strict --verbose=2 "ClaudeCodeMonitor.app"
-        codesign -dvvv "ClaudeCodeMonitor.app"
     
     # Ad-hoc sign if no certificates
     - name: Ad-hoc sign app bundle
-      if: steps.check_signing.outputs.has_signing_cert != 'true'
+      if: steps.version.outputs.skip_release != 'true' && steps.check_signing.outputs.has_signing_cert != 'true'
       run: |
         echo "⚠️ Ad-hoc signing app (no Developer ID certificate)"
         codesign --force --deep --sign - "ClaudeCodeMonitor.app"
     
     # Create DMG
     - name: Create DMG
+      if: steps.version.outputs.skip_release != 'true'
       run: |
-        # Install create-dmg if needed
         if ! command -v create-dmg &> /dev/null; then
           brew install create-dmg
         fi
         
         DMG_NAME="ClaudeCodeMonitor-${{ steps.version.outputs.version }}.dmg"
         
-        # Create DMG
         create-dmg \
           --volname "Claude Code Monitor" \
           --window-pos 200 120 \
@@ -274,15 +181,15 @@ jobs:
     
     # Sign DMG
     - name: Sign DMG
-      if: steps.check_signing.outputs.has_signing_cert == 'true'
+      if: steps.version.outputs.skip_release != 'true' && steps.check_signing.outputs.has_signing_cert == 'true'
       run: |
         echo "🔏 Signing DMG..."
         codesign --force --sign "$CERT_NAME" --timestamp "$DMG_PATH"
         codesign --verify --verbose=2 "$DMG_PATH"
     
-    # Notarize using action
+    # Notarize
     - name: Notarize app
-      if: steps.check_signing.outputs.has_signing_cert == 'true' && steps.check_signing.outputs.has_notarization == 'true'
+      if: steps.version.outputs.skip_release != 'true' && steps.check_signing.outputs.has_signing_cert == 'true' && steps.check_signing.outputs.has_notarization == 'true'
       uses: lando/notarize-action@v2
       with:
         product-path: ${{ env.DMG_PATH }}
@@ -293,7 +200,7 @@ jobs:
     
     # Staple notarization
     - name: Staple notarization
-      if: steps.check_signing.outputs.has_signing_cert == 'true' && steps.check_signing.outputs.has_notarization == 'true'
+      if: steps.version.outputs.skip_release != 'true' && steps.check_signing.outputs.has_signing_cert == 'true' && steps.check_signing.outputs.has_notarization == 'true'
       run: |
         echo "📎 Stapling notarization..."
         xcrun stapler staple "$DMG_PATH"
@@ -301,33 +208,71 @@ jobs:
     
     # Generate changelog
     - name: Generate changelog
+      if: steps.version.outputs.skip_release != 'true'
       id: changelog
       run: |
-        # Get previous tag
-        PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        echo "## 🎉 Release ${{ steps.version.outputs.version }}" > changelog.md
+        echo "" >> changelog.md
         
-        if [ -z "$PREV_TAG" ]; then
-          echo "## 🎉 Initial Release" > changelog.md
-          echo "" >> changelog.md
-          echo "First release of Claude Code Monitor!" >> changelog.md
-        else
-          echo "## What's Changed" > changelog.md
-          echo "" >> changelog.md
-          git log --pretty=format:"* %s (%h)" $PREV_TAG..HEAD >> changelog.md
-          echo "" >> changelog.md
-          echo "" >> changelog.md
-          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV_TAG...${{ steps.version.outputs.tag }}" >> changelog.md
+        # Extract release notes from CHANGELOG.md if exists
+        if [ -f "CHANGELOG.md" ]; then
+          # Try to extract the section for this version
+          awk -v ver="${{ steps.version.outputs.version }}" '
+            /^## \[/ && match($0, ver) { flag=1; next }
+            /^## \[/ && flag { exit }
+            flag { print }
+          ' CHANGELOG.md >> changelog.md
         fi
         
-        # Set output
+        # If no specific changelog, generate from commits
+        if [ $(wc -l < changelog.md) -le 2 ]; then
+          echo "### What's Changed" >> changelog.md
+          echo "" >> changelog.md
+          
+          # Get previous stable tag (excluding dev tags)
+          PREV_TAG=$(git tag -l "v*.*.*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -2 | head -1)
+          
+          if [ -n "$PREV_TAG" ]; then
+            git log --pretty=format:"* %s (%h)" $PREV_TAG..HEAD >> changelog.md
+          else
+            git log --pretty=format:"* %s (%h)" -20 >> changelog.md
+          fi
+          
+          echo "" >> changelog.md
+          echo "" >> changelog.md
+          
+          if [ -n "$PREV_TAG" ]; then
+            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV_TAG...v${{ steps.version.outputs.version }}" >> changelog.md
+          fi
+        fi
+        
         {
           echo "changelog<<EOF"
           cat changelog.md
           echo "EOF"
         } >> $GITHUB_OUTPUT
     
+    # Generate Sparkle appcast.xml
+    - name: Generate Sparkle appcast.xml
+      if: steps.version.outputs.skip_release != 'true' && env.SPARKLE_PRIVATE_KEY != ''
+      env:
+        SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        VERSION: ${{ steps.version.outputs.version }}
+      run: |
+        echo "🔏 Generating Sparkle appcast.xml..."
+        ./scripts/generate-appcast.sh
+        
+        if [ -f "appcast.xml" ]; then
+          echo "✅ Successfully generated appcast.xml"
+          cat appcast.xml
+        else
+          echo "❌ Failed to generate appcast.xml"
+          exit 1
+        fi
+    
     # Create and push tag
     - name: Create and push tag
+      if: steps.version.outputs.skip_release != 'true'
       run: |
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
@@ -336,6 +281,7 @@ jobs:
     
     # Create release
     - name: Create Release
+      if: steps.version.outputs.skip_release != 'true'
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ steps.version.outputs.tag }}
@@ -343,17 +289,14 @@ jobs:
         body: ${{ steps.changelog.outputs.changelog }}
         draft: false
         prerelease: false
-        files: ${{ env.DMG_PATH }}
+        files: |
+          ${{ env.DMG_PATH }}
+          appcast.xml
     
     # Cleanup
     - name: Clean up keychain
-      if: always() && steps.check_signing.outputs.has_signing_cert == 'true'
+      if: always() && steps.version.outputs.skip_release != 'true' && steps.check_signing.outputs.has_signing_cert == 'true'
       run: |
         if [ -n "$KEYCHAIN_PATH" ]; then
           security delete-keychain "$KEYCHAIN_PATH" || true
         fi
-    
-    # TODO: Update Homebrew formula
-    - name: Update Homebrew Formula
-      run: |
-        echo "ℹ️ Homebrew formula update not implemented yet"

@@ -13,21 +13,31 @@ let package = Package(
             targets: ["ClaudeCodeMonitor"]
         )
     ],
+    dependencies: [
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.5.2")
+    ],
     targets: [
         .executableTarget(
             name: "ClaudeCodeMonitor",
+            dependencies: [
+                .product(name: "Sparkle", package: "Sparkle", condition: .when(platforms: [.macOS]))
+            ],
             path: "Sources/ClaudeUsageMonitor",
             resources: [
                 .process("Resources/en.lproj"),
                 .process("Resources/ja.lproj"),
                 .process("Resources/Assets.xcassets"),
                 .copy("AppIcon.icns")
+            ],
+            swiftSettings: [
+                .define("SWIFT_PACKAGE")
             ]
         ),
         .testTarget(
             name: "ClaudeCodeMonitorTests",
             dependencies: ["ClaudeCodeMonitor"],
-            path: "Tests/ClaudeUsageMonitorTests"
+            path: "Tests/ClaudeUsageMonitorTests",
+            exclude: ["README.md"]
         )
     ]
 )

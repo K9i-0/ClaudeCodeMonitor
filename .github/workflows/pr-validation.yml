@@ -1,0 +1,151 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [develop, main]
+    types: [opened, synchronize]
+
+jobs:
+  validate-version:
+    name: Validate Version Update
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Check which branch we're merging to
+      id: target
+      run: |
+        echo "base_branch=${{ github.base_ref }}" >> $GITHUB_OUTPUT
+        echo "head_branch=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+        echo "Merging from ${{ github.head_ref }} to ${{ github.base_ref }}"
+    
+    # Validation for feature -> develop PRs
+    - name: Validate feature to develop
+      if: github.base_ref == 'develop' && startsWith(github.head_ref, 'feature/')
+      run: |
+        echo "## Validating feature → develop PR"
+        
+        # Get version from base branch (develop)
+        git fetch origin develop
+        BASE_VERSION=$(git show origin/develop:Info.plist | grep -A1 "CFBundleShortVersionString" | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        echo "Develop branch version: $BASE_VERSION"
+        
+        # Get version from PR branch
+        PR_VERSION=$(grep -A1 "CFBundleShortVersionString" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        echo "PR branch version: $PR_VERSION"
+        
+        # Check if version was updated
+        if [ "$BASE_VERSION" = "$PR_VERSION" ]; then
+          echo "❌ Error: Version not updated in Info.plist"
+          echo "Please update the version number when merging features to develop"
+          echo ""
+          echo "Current version: $BASE_VERSION"
+          echo "Expected: A higher version number"
+          exit 1
+        fi
+        
+        # Validate version format (should be x.y.z)
+        if ! echo "$PR_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          echo "❌ Error: Invalid version format"
+          echo "Version should be in format: x.y.z (e.g., 1.2.3)"
+          echo "Found: $PR_VERSION"
+          exit 1
+        fi
+        
+        echo "✅ Version updated: $BASE_VERSION → $PR_VERSION"
+    
+    # Validation for develop -> main PRs
+    - name: Validate develop to main
+      if: github.base_ref == 'main' && github.head_ref == 'develop'
+      run: |
+        echo "## Validating develop → main PR"
+        
+        # Check if CHANGELOG.md was updated
+        if ! git diff origin/main --name-only | grep -q "CHANGELOG.md"; then
+          echo "❌ Error: CHANGELOG.md not updated"
+          echo "Please update CHANGELOG.md with release notes before merging to main"
+          exit 1
+        fi
+        
+        echo "✅ CHANGELOG.md has been updated"
+        
+        # Get current version
+        VERSION=$(grep -A1 "CFBundleShortVersionString" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        echo "Release version: $VERSION"
+        
+        # Check if this version already exists as a tag
+        if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+          echo "⚠️ Warning: Version v$VERSION already exists as a tag"
+          echo "The release workflow will skip creating a new release"
+        fi
+    
+    # Validation for hotfix -> main PRs
+    - name: Validate hotfix to main
+      if: github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/')
+      run: |
+        echo "## Validating hotfix → main PR"
+        
+        # Get version from main branch
+        git fetch origin main
+        MAIN_VERSION=$(git show origin/main:Info.plist | grep -A1 "CFBundleShortVersionString" | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        echo "Main branch version: $MAIN_VERSION"
+        
+        # Get version from PR branch
+        PR_VERSION=$(grep -A1 "CFBundleShortVersionString" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        echo "Hotfix version: $PR_VERSION"
+        
+        # Check if version was updated
+        if [ "$MAIN_VERSION" = "$PR_VERSION" ]; then
+          echo "❌ Error: Version not updated in Info.plist"
+          echo "Hotfixes must increment the version number"
+          exit 1
+        fi
+        
+        # Check CHANGELOG update
+        if ! git diff origin/main --name-only | grep -q "CHANGELOG.md"; then
+          echo "❌ Error: CHANGELOG.md not updated"
+          echo "Please document the hotfix in CHANGELOG.md"
+          exit 1
+        fi
+        
+        echo "✅ Hotfix validation passed"
+    
+  check-conventional-commits:
+    name: Check Commit Messages
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Check commit format
+      run: |
+        echo "## Checking commit message format"
+        
+        # Get commits in this PR
+        COMMITS=$(git log --format="%s" origin/${{ github.base_ref }}..HEAD)
+        
+        # Check if commits follow conventional format
+        INVALID_COMMITS=""
+        while IFS= read -r commit; do
+          if ! echo "$commit" | grep -qE '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: .+' && \
+             ! echo "$commit" | grep -qE '^Merge '; then
+            INVALID_COMMITS="${INVALID_COMMITS}❌ $commit\n"
+          fi
+        done <<< "$COMMITS"
+        
+        if [ -n "$INVALID_COMMITS" ]; then
+          echo "⚠️ Warning: Some commits don't follow Conventional Commits format:"
+          echo -e "$INVALID_COMMITS"
+          echo ""
+          echo "Expected format: type(scope): description"
+          echo "Valid types: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert"
+          echo ""
+          echo "This is a warning only - not blocking the PR"
+        else
+          echo "✅ All commits follow Conventional Commits format"
+        fi

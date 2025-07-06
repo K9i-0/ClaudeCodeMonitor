@@ -1,10 +1,27 @@
 import SwiftUI
+#if canImport(Sparkle)
+import Sparkle
+#endif
 
 struct SettingsTabView: View {
     @EnvironmentObject var monitor: UsageMonitor
     @StateObject private var languageSettings = LanguageSettings.shared
     @StateObject private var currencySettings = CurrencySettings.shared
     // @State private var notificationEnabled = Bundle.main.bundleIdentifier != nil ? NotificationManager.shared.isNotificationEnabled : false
+    #if canImport(Sparkle)
+        #if DEBUG
+        // Sparkle is disabled in debug builds
+        private var updater: SPUUpdater? {
+            return nil
+        }
+        #else
+        private let updater = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil).updater
+        #endif
+    #else
+    private var updater: AnyObject? {
+        return nil
+    }
+    #endif
 
     let plans = [
         ("Pro", "7,000 tokens/session", L10n.Plan.pro),
@@ -189,6 +206,125 @@ struct SettingsTabView: View {
                 }
             }
             */
+
+            // Show update settings in release builds or when testing Sparkle
+            #if DEBUG
+            if updater != nil {
+                Divider()
+                
+                // Update settings section
+                VStack(alignment: .leading, spacing: 12) {
+                Text(L10n.Update.settings)
+                    .font(.system(size: 16, weight: .semibold))
+
+                // Current version
+                HStack {
+                    Text(L10n.Update.currentVersion(version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"))
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .padding(.bottom, 4)
+
+                // Check for updates button
+                Button(action: {
+                    #if DEBUG
+                    updater?.checkForUpdates()
+                    #else
+                    updater.checkForUpdates()
+                    #endif
+                }) {
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 14))
+                        Text(L10n.Update.checkForUpdates)
+                            .font(.system(size: 14))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(Color.accentColor.opacity(0.1))
+                    .cornerRadius(6)
+                }
+                .buttonStyle(PlainButtonStyle())
+
+                // Automatic updates toggle
+                Toggle(isOn: .init(
+                    get: { 
+                        #if DEBUG
+                        updater?.automaticallyChecksForUpdates ?? false
+                        #else
+                        updater.automaticallyChecksForUpdates
+                        #endif
+                    },
+                    set: { 
+                        #if DEBUG
+                        updater?.automaticallyChecksForUpdates = $0
+                        #else
+                        updater.automaticallyChecksForUpdates = $0
+                        #endif
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.Update.automaticUpdates)
+                            .font(.system(size: 14))
+                        Text(L10n.Update.automaticUpdatesDescription)
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .toggleStyle(SwitchToggleStyle(tint: .accentColor))
+                }
+            }
+            #else
+            Divider()
+            
+            // Update settings section
+            VStack(alignment: .leading, spacing: 12) {
+                Text(L10n.Update.settings)
+                    .font(.system(size: 16, weight: .semibold))
+
+                // Current version
+                HStack {
+                    Text(L10n.Update.currentVersion(version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"))
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .padding(.bottom, 4)
+
+                // Check for updates button
+                Button(action: {
+                    updater.checkForUpdates()
+                }) {
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 14))
+                        Text(L10n.Update.checkForUpdates)
+                            .font(.system(size: 14))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(Color.accentColor.opacity(0.1))
+                    .cornerRadius(6)
+                }
+                .buttonStyle(PlainButtonStyle())
+
+                // Automatic updates toggle
+                Toggle(isOn: .init(
+                    get: { updater.automaticallyChecksForUpdates },
+                    set: { updater.automaticallyChecksForUpdates = $0 }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.Update.automaticUpdates)
+                            .font(.system(size: 14))
+                        Text(L10n.Update.automaticUpdatesDescription)
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .toggleStyle(SwitchToggleStyle(tint: .accentColor))
+            }
+            #endif
 
             #if DEBUG
             Divider()
