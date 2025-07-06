@@ -6,6 +6,19 @@ All notable changes to this project will be documented in this file.
 
 
 
+
+## [0.7.3] - 2025-07-06
+
+### Added
+- 
+
+### Changed
+- Simplified download instructions in README (removed unnecessary developer verification warnings)
+
+### Fixed
+- Fixed EOF delimiter error in development release workflow changelog generation
+- Simplified release-dev workflow by removing unnecessary job separation
+
 ## [0.7.2] - 2025-07-06
 
 ### Added
