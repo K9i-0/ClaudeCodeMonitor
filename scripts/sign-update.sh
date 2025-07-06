@@ -49,7 +49,7 @@ echo "Generating signature for $FILE_TO_SIGN..."
 # Write private key to temporary file with secure permissions
 PRIVATE_KEY_FILE="$TEMP_DIR/private_key.txt"
 (umask 077 && echo "$SPARKLE_PRIVATE_KEY" > "$PRIVATE_KEY_FILE")
-SIGNATURE=$("$SIGN_UPDATE" -f "$PRIVATE_KEY_FILE" "$FILE_TO_SIGN" | tail -1)
+SIGNATURE=$("$SIGN_UPDATE" -f "$PRIVATE_KEY_FILE" -p "$FILE_TO_SIGN")
 # Immediately remove the private key file after use
 rm -f "$PRIVATE_KEY_FILE"
 
