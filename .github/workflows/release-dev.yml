@@ -9,17 +9,17 @@ permissions:
   contents: write
 
 jobs:
-  dev:
-    name: Build Development Release
+  prepare:
+    name: Prepare Development Release
     runs-on: macos-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
     
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
-    - name: Select Xcode
-      run: sudo xcode-select -s /Applications/Xcode_15.2.app
     
     - name: Get latest version
       id: version
@@ -33,162 +33,43 @@ jobs:
         echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
         echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
         echo "✅ Development version: $NEW_VERSION"
+
+  build:
+    needs: prepare
+    name: Build and Sign
+    uses: ./.github/workflows/build-and-sign.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      is_dev_build: true
+    secrets:
+      CERTIFICATES_P12: ${{ secrets.CERTIFICATES_P12 }}
+      CERTIFICATES_PASSWORD: ${{ secrets.CERTIFICATES_PASSWORD }}
+      NOTARIZATION_APPLE_ID: ${{ secrets.NOTARIZATION_APPLE_ID }}
+      NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
+      NOTARIZATION_TEAM_ID: ${{ secrets.NOTARIZATION_TEAM_ID }}
+
+  release:
+    needs: [prepare, build]
+    name: Create Development Release
+    runs-on: macos-latest
     
-    # Check for signing certificate
-    - name: Check for signing certificate
-      id: check_signing
-      env:
-        CERTIFICATES_P12: ${{ secrets.CERTIFICATES_P12 }}
-        NOTARIZATION_APPLE_ID: ${{ secrets.NOTARIZATION_APPLE_ID }}
-        NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
-        NOTARIZATION_TEAM_ID: ${{ secrets.NOTARIZATION_TEAM_ID }}
-      run: |
-        if [ -n "$CERTIFICATES_P12" ]; then
-          echo "has_signing_cert=true" >> $GITHUB_OUTPUT
-          echo "✅ Signing certificate available"
-          
-          # Check for notarization credentials
-          if [ -n "$NOTARIZATION_APPLE_ID" ] && [ -n "$NOTARIZATION_PASSWORD" ] && [ -n "$NOTARIZATION_TEAM_ID" ]; then
-            echo "has_notarization=true" >> $GITHUB_OUTPUT
-            echo "✅ Notarization credentials available"
-          else
-            echo "has_notarization=false" >> $GITHUB_OUTPUT
-            echo "⚠️ Notarization credentials not available"
-          fi
-        else
-          echo "has_signing_cert=false" >> $GITHUB_OUTPUT
-          echo "has_notarization=false" >> $GITHUB_OUTPUT
-          echo "⚠️ No signing certificate available, will use ad-hoc signing"
-        fi
-    
-    # Import certificates if available
-    - name: Import certificates
-      if: steps.check_signing.outputs.has_signing_cert == 'true'
-      env:
-        CERTIFICATES_P12: ${{ secrets.CERTIFICATES_P12 }}
-        CERTIFICATES_PASSWORD: ${{ secrets.CERTIFICATES_PASSWORD }}
-      run: |
-        echo "$CERTIFICATES_P12" | base64 --decode > certificate.p12
-        
-        KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-        KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
-        
-        security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-        security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-        security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-        
-        security import certificate.p12 \
-          -k "$KEYCHAIN_PATH" \
-          -P "$CERTIFICATES_PASSWORD" \
-          -T /usr/bin/codesign \
-          -T /usr/bin/xcrun
-        
-        security set-key-partition-list \
-          -S apple-tool:,apple:,codesign: \
-          -s -k "$KEYCHAIN_PASSWORD" \
-          "$KEYCHAIN_PATH"
-        
-        CERT_LINE=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1)
-        CERT_NAME=$(echo "$CERT_LINE" | cut -d'"' -f2)
-        
-        if [ -n "$CERT_NAME" ] && [ "$CERT_NAME" != "" ]; then
-          echo "✅ Found certificate: '$CERT_NAME'"
-          echo "CERT_NAME=$CERT_NAME" >> $GITHUB_ENV
-        else
-          echo "❌ No Developer ID Application certificate found"
-          exit 1
-        fi
-        
-        rm certificate.p12
-    
-    # Build the app
-    - name: Create app bundle
-      run: |
-        ./scripts/create-app-bundle.sh "${{ steps.version.outputs.version }}"
-    
-    # Sign with Developer ID if available
-    - name: Sign app bundle with Developer ID
-      if: steps.check_signing.outputs.has_signing_cert == 'true'
-      run: |
-        echo "🔏 Signing app with: $CERT_NAME"
-        
-        # Clean up app bundle root
-        find "ClaudeCodeMonitor.app" -maxdepth 1 -type f -delete 2>/dev/null || true
-        find "ClaudeCodeMonitor.app" -maxdepth 1 -name "*.bundle" -type d -exec rm -rf {} + 2>/dev/null || true
-        
-        codesign --force --strict \
-          --options runtime \
-          --entitlements ClaudeCodeMonitor.entitlements \
-          --sign "$CERT_NAME" \
-          --timestamp \
-          "ClaudeCodeMonitor.app"
-        
-        codesign --verify --deep --strict --verbose=2 "ClaudeCodeMonitor.app"
-    
-    # Ad-hoc sign if no certificates
-    - name: Ad-hoc sign app bundle
-      if: steps.check_signing.outputs.has_signing_cert != 'true'
-      run: |
-        echo "⚠️ Ad-hoc signing development build (no Developer ID certificate)"
-        codesign --force --deep --sign - "ClaudeCodeMonitor.app"
-    
-    # Create DMG
-    - name: Create DMG
-      run: |
-        if ! command -v create-dmg &> /dev/null; then
-          brew install create-dmg
-        fi
-        
-        DMG_NAME="ClaudeCodeMonitor-${{ steps.version.outputs.version }}.dmg"
-        
-        create-dmg \
-          --volname "Claude Code Monitor Dev" \
-          --window-pos 200 120 \
-          --window-size 600 400 \
-          --icon-size 100 \
-          --icon "ClaudeCodeMonitor.app" 150 185 \
-          --hide-extension "ClaudeCodeMonitor.app" \
-          --app-drop-link 450 185 \
-          --no-internet-enable \
-          --hdiutil-quiet \
-          "$DMG_NAME" \
-          "ClaudeCodeMonitor.app"
-        
-        echo "DMG_PATH=$DMG_NAME" >> $GITHUB_ENV
-        echo "✅ Created DMG: $DMG_NAME"
-    
-    # Sign DMG
-    - name: Sign DMG
-      if: steps.check_signing.outputs.has_signing_cert == 'true'
-      run: |
-        echo "🔏 Signing DMG..."
-        codesign --force --sign "$CERT_NAME" --timestamp "$DMG_PATH"
-        codesign --verify --verbose=2 "$DMG_PATH"
-    
-    # Notarize (optional for dev builds)
-    - name: Notarize app
-      if: steps.check_signing.outputs.has_signing_cert == 'true' && steps.check_signing.outputs.has_notarization == 'true'
-      uses: lando/notarize-action@v2
+    steps:
+    - uses: actions/checkout@v4
       with:
-        product-path: ${{ env.DMG_PATH }}
-        appstore-connect-username: ${{ secrets.NOTARIZATION_APPLE_ID }}
-        appstore-connect-password: ${{ secrets.NOTARIZATION_PASSWORD }}
-        appstore-connect-team-id: ${{ secrets.NOTARIZATION_TEAM_ID }}
-        verbose: true
+        fetch-depth: 0
     
-    # Staple notarization
-    - name: Staple notarization
-      if: steps.check_signing.outputs.has_signing_cert == 'true' && steps.check_signing.outputs.has_notarization == 'true'
-      run: |
-        echo "📎 Stapling notarization..."
-        xcrun stapler staple "$DMG_PATH"
-        xcrun stapler validate "$DMG_PATH"
+    # Download DMG artifact from build job
+    - name: Download DMG
+      uses: actions/download-artifact@v4
+      with:
+        name: dmg-artifact
+        path: .
     
     # Generate simple changelog
     - name: Generate changelog
       id: changelog
       run: |
-        echo "## 🚧 Development Release ${{ steps.version.outputs.version }}" > changelog.md
+        echo "## 🚧 Development Release ${{ needs.prepare.outputs.version }}" > changelog.md
         echo "" >> changelog.md
         echo "This is an automated development release from the develop branch." >> changelog.md
         echo "For testing purposes only. Not recommended for production use." >> changelog.md
@@ -210,14 +91,14 @@ jobs:
           echo "EOF"
         } >> $GITHUB_OUTPUT
     
-    # Create release (without tag)
+    # Create release (without tag push to avoid conflicts)
     - name: Create Development Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ steps.version.outputs.tag }}
-        name: Development Build ${{ steps.version.outputs.version }}
+        tag_name: ${{ needs.prepare.outputs.tag }}
+        name: Development Build ${{ needs.prepare.outputs.version }}
         body: ${{ steps.changelog.outputs.changelog }}
         draft: false
         prerelease: true
         files: |
-          ${{ env.DMG_PATH }}
+          ClaudeCodeMonitor-${{ needs.prepare.outputs.version }}.dmg

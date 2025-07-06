@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 
 
+
+## [0.7.2] - 2025-07-06
+
+### Added
+- 
+
+### Changed
+- 
+
+### Fixed
+- Fixed code signing issue in release-dev workflow by adding proper keychain configuration
+- Unified release workflows with reusable build-and-sign workflow
+- Improved certificate handling and error logging in signing process
+
 ## [0.7.1] - 2025-07-06
 
 ### Added
