@@ -165,3 +165,8 @@
 "update.upToDate" = "You're up to date!";
 "update.available" = "Update available";
 "update.failed" = "Failed to check for updates";
+"update.updateChannel" = "Update Channel";
+"update.stableChannel" = "Stable";
+"update.devChannel" = "Development";
+"update.stableChannelDescription" = "Stable releases only";
+"update.devChannelDescription" = "Development builds and stable releases";

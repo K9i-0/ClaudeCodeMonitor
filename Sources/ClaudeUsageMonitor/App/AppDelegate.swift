@@ -22,15 +22,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     #if canImport(Sparkle)
         #if DEBUG
         // Allow testing Sparkle in debug builds with TEST_SPARKLE environment variable
-        private let updaterController: SPUStandardUpdaterController? = {
+        private lazy var updaterController: SPUStandardUpdaterController? = {
             if ProcessInfo.processInfo.environment["TEST_SPARKLE"] != nil {
                 print("⚠️ Sparkle enabled in DEBUG mode for testing")
-                return SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+                return SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: self, userDriverDelegate: nil)
             }
             return nil
         }()
         #else
-        private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        private lazy var updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: self, userDriverDelegate: nil)
         #endif
     #else
     private let updaterController: AnyObject? = nil
@@ -45,6 +45,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             print("Sparkle testing mode enabled")
         }
         #endif
+        
+        // Configure Sparkle update channel
+        configureUpdateChannel()
 
         // Perform synchronous environment check first
         environmentCheckResult = CommandExecutor.shared.checkEnvironmentSync()
@@ -231,7 +234,35 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         usageMonitor.stopMonitoring()
     }
+    
+    private func configureUpdateChannel() {
+        #if canImport(Sparkle)
+        let channel = UserDefaults.standard.updateChannel
+        print("Sparkle configured for \(channel.rawValue) channel: \(channel.appcastURL)")
+        #endif
+    }
+    
+    func updateChannelChanged(to newChannel: UpdateChannel) {
+        #if canImport(Sparkle)
+        guard let updater = updaterController?.updater else { return }
+        
+        print("Sparkle channel changed to \(newChannel.rawValue): \(newChannel.appcastURL)")
+        
+        // Check for updates with new channel
+        updater.checkForUpdates()
+        #endif
+    }
 }
+
+// MARK: - SPUUpdaterDelegate
+#if canImport(Sparkle)
+extension AppDelegate: SPUUpdaterDelegate {
+    nonisolated func feedURLString(for updater: SPUUpdater) -> String? {
+        let channel = UserDefaults.standard.updateChannel
+        return channel.appcastURL
+    }
+}
+#endif
 
 class EventMonitor {
     private var monitor: Any?

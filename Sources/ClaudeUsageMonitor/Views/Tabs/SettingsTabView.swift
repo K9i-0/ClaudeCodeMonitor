@@ -225,6 +225,40 @@ struct SettingsTabView: View {
                     Spacer()
                 }
                 .padding(.bottom, 4)
+                
+                // Update channel selection
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L10n.Update.updateChannel)
+                        .font(.system(size: 14, weight: .medium))
+                    
+                    ForEach(UpdateChannel.allCases, id: \.self) { channel in
+                        Button(action: {
+                            selectUpdateChannel(channel)
+                        }) {
+                            HStack {
+                                Image(systemName: UserDefaults.standard.updateChannel == channel ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(UserDefaults.standard.updateChannel == channel ? .accentColor : .secondary)
+                                    .frame(width: 20)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(channel.displayName)
+                                        .font(.system(size: 14, weight: .medium))
+                                    Text(channel.description)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(UserDefaults.standard.updateChannel == channel ? Color.accentColor.opacity(0.1) : Color.clear)
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+                .padding(.bottom, 8)
 
                 // Check for updates button
                 Button(action: {
@@ -291,6 +325,40 @@ struct SettingsTabView: View {
                     Spacer()
                 }
                 .padding(.bottom, 4)
+                
+                // Update channel selection
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L10n.Update.updateChannel)
+                        .font(.system(size: 14, weight: .medium))
+                    
+                    ForEach(UpdateChannel.allCases, id: \.self) { channel in
+                        Button(action: {
+                            selectUpdateChannel(channel)
+                        }) {
+                            HStack {
+                                Image(systemName: UserDefaults.standard.updateChannel == channel ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(UserDefaults.standard.updateChannel == channel ? .accentColor : .secondary)
+                                    .frame(width: 20)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(channel.displayName)
+                                        .font(.system(size: 14, weight: .medium))
+                                    Text(channel.description)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(UserDefaults.standard.updateChannel == channel ? Color.accentColor.opacity(0.1) : Color.clear)
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+                .padding(.bottom, 8)
 
                 // Check for updates button
                 Button(action: {
@@ -364,6 +432,15 @@ struct SettingsTabView: View {
             #endif
 
             Spacer()
+        }
+    }
+    
+    private func selectUpdateChannel(_ channel: UpdateChannel) {
+        UserDefaults.standard.updateChannel = channel
+        
+        // Notify AppDelegate to update Sparkle configuration
+        if let appDelegate = NSApplication.shared.delegate as? AppDelegate {
+            appDelegate.updateChannelChanged(to: channel)
         }
     }
 }

@@ -125,17 +125,26 @@ jobs:
               -o appcast.xml \
               appcast/
             
+            # Determine which appcast file to create based on build type
+            if [ "${{ inputs.is_dev_build }}" == "true" ]; then
+              # For dev builds, create appcast-dev.xml
+              mv appcast.xml appcast-dev.xml
+              echo "✅ Successfully generated appcast-dev.xml"
+            else
+              # For stable builds, keep appcast.xml
+              echo "✅ Successfully generated appcast.xml"
+            fi
+            
             # Clean up
             rm -rf sparkle appcast
-            
-            if [ -f "appcast.xml" ]; then
-              echo "✅ Successfully generated appcast.xml"
-            else
-              echo "❌ Failed to generate appcast.xml"
-              exit 1
-            fi
           else
-            echo "⚠️ No Sparkle private key, creating empty appcast.xml"
+            if [ "${{ inputs.is_dev_build }}" == "true" ]; then
+              echo "⚠️ No Sparkle private key, creating empty appcast-dev.xml"
+              APPCAST_FILE="appcast-dev.xml"
+            else
+              echo "⚠️ No Sparkle private key, creating empty appcast.xml"
+              APPCAST_FILE="appcast.xml"
+            fi
             {
               echo '<?xml version="1.0" encoding="utf-8"?>'
               echo '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">'
@@ -144,7 +153,7 @@ jobs:
               echo '    <description>No Sparkle key configured</description>'
               echo '  </channel>'
               echo '</rss>'
-            } > appcast.xml
+            } > "$APPCAST_FILE"
           fi
 
       - name: Create and push tag
@@ -209,4 +218,4 @@ jobs:
           prerelease: ${{ inputs.is_dev_build }}
           files: |
             *.dmg
-            appcast.xml
+            appcast*.xml
