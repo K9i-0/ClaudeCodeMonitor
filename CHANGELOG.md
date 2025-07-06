@@ -6,6 +6,23 @@ All notable changes to this project will be documented in this file.
 
 
 
+
+## [0.7.3] - 2025-07-06
+
+### Added
+- Common reusable workflow for unified release processes
+
+### Changed
+- Simplified download instructions in README (removed unnecessary developer verification warnings)
+- Unified release workflows - dev and stable now use the same workflow with parameters
+- Both dev and stable releases now support Sparkle auto-update
+
+### Fixed
+- Fixed EOF delimiter error in development release workflow changelog generation
+- Simplified release-dev workflow by removing unnecessary job separation
+- Fixed command injection vulnerability in certificate name extraction
+- Added secure cleanup for certificate files using trap
+
 ## [0.7.2] - 2025-07-06
 
 ### Added

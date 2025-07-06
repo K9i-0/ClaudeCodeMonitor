@@ -1,0 +1,167 @@
+name: Common Release Workflow
+
+on:
+  workflow_call:
+    inputs:
+      is_dev_build:
+        required: true
+        type: boolean
+      branch_name:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Prepare Release
+    runs-on: macos-latest
+    outputs:
+      skip_release: ${{ steps.version.outputs.skip_release }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Determine version
+      id: version
+      run: |
+        set -euo pipefail
+        
+        BASE_VERSION=$(defaults read "$PWD/Info.plist" CFBundleShortVersionString)
+        
+        if [ "${{ inputs.is_dev_build }}" == "true" ]; then
+          VERSION="${BASE_VERSION}-dev"
+        else
+          VERSION="${BASE_VERSION}"
+        fi
+        
+        TAG="v${VERSION}"
+        
+        # Check if this version tag already exists
+        if git rev-parse "$TAG" >/dev/null 2>&1; then
+          echo "⚠️ Version $TAG already exists. Skipping release."
+          echo "skip_release=true" >> $GITHUB_OUTPUT
+        else
+          echo "skip_release=false" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "✅ Preparing release for version: $VERSION"
+        fi
+
+  build:
+    needs: prepare
+    if: needs.prepare.outputs.skip_release != 'true'
+    uses: ./.github/workflows/build-and-sign.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      is_dev_build: ${{ inputs.is_dev_build }}
+      create_release: false  # Always create release in the release job
+    secrets: inherit
+
+  release:
+    needs: [prepare, build]
+    if: needs.prepare.outputs.skip_release != 'true'
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Download DMG
+      uses: actions/download-artifact@v4
+      with:
+        name: dmg-artifact
+        path: .
+    
+    - name: Generate Sparkle appcast
+      env:
+        SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        VERSION: ${{ needs.prepare.outputs.version }}
+      run: |
+        set -euo pipefail
+        
+        if [ -n "$SPARKLE_PRIVATE_KEY" ]; then
+          echo "✅ Generating Sparkle appcast.xml..."
+          ./scripts/generate-appcast.sh
+        else
+          echo "⚠️ No Sparkle private key, creating empty appcast.xml"
+          cat > appcast.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Claude Code Monitor</title>
+    <description>No Sparkle key configured</description>
+  </channel>
+</rss>
+EOF
+        fi
+    
+    - name: Create and push tag
+      run: |
+        set -euo pipefail
+        
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git tag -a "${{ needs.prepare.outputs.tag }}" -m "Release ${{ needs.prepare.outputs.tag }}"
+        git push origin "${{ needs.prepare.outputs.tag }}"
+    
+    - name: Generate changelog
+      id: changelog
+      run: |
+        set -euo pipefail
+        
+        # Create changelog file
+        if [ "${{ inputs.is_dev_build }}" == "true" ]; then
+          {
+            echo "## 🚧 Development Release ${{ needs.prepare.outputs.version }}"
+            echo ""
+            echo "This is an automated development release from the develop branch."
+            echo "For testing purposes only. Not recommended for production use."
+          } > changelog.md
+        else
+          {
+            echo "## 🎉 Release ${{ needs.prepare.outputs.version }}"
+            echo ""
+            echo "### What's Changed"
+          } > changelog.md
+        fi
+        
+        echo "" >> changelog.md
+        
+        # Get commits since last tag
+        LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        if [ -n "$LAST_TAG" ]; then
+          echo "### Recent Changes" >> changelog.md
+          echo "" >> changelog.md
+          git log --pretty=format:"* %s (%h)" "$LAST_TAG"..HEAD >> changelog.md
+        else
+          echo "### All Changes" >> changelog.md
+          echo "" >> changelog.md
+          git log --pretty=format:"* %s (%h)" -20 >> changelog.md
+        fi
+        
+        echo "" >> changelog.md
+        
+        # Add full changelog link for stable releases
+        if [ "${{ inputs.is_dev_build }}" != "true" ] && [ -n "$LAST_TAG" ]; then
+          echo "" >> changelog.md
+          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$LAST_TAG...${{ needs.prepare.outputs.tag }}" >> changelog.md
+        fi
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ needs.prepare.outputs.tag }}
+        name: ${{ inputs.is_dev_build == true && format('Development Build {0}', needs.prepare.outputs.version) || format('Release {0}', needs.prepare.outputs.version) }}
+        body_path: changelog.md
+        draft: false
+        prerelease: ${{ inputs.is_dev_build }}
+        files: |
+          *.dmg
+          appcast.xml

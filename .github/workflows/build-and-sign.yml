@@ -10,6 +10,14 @@ on:
         required: false
         type: boolean
         default: false
+      create_release:
+        required: false
+        type: boolean
+        default: false
+      release_tag:
+        required: false
+        type: string
+        default: ''
     secrets:
       CERTIFICATES_P12:
         required: false
@@ -20,6 +28,8 @@ on:
       NOTARIZATION_PASSWORD:
         required: false
       NOTARIZATION_TEAM_ID:
+        required: false
+      GITHUB_TOKEN:
         required: false
     outputs:
       dmg_path:
@@ -37,7 +47,9 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Select Xcode
-      run: sudo xcode-select -s /Applications/Xcode_15.2.app
+      env:
+        XCODE_VERSION: '15.2'
+      run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
     
     # Check if we have signing certificates
     - name: Check signing prerequisites
@@ -69,6 +81,8 @@ jobs:
     - name: Set up keychain
       if: steps.check_signing.outputs.has_signing_cert == 'true'
       run: |
+        set -euo pipefail
+        
         # Create a temporary keychain
         KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
         KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
@@ -82,8 +96,8 @@ jobs:
         security default-keychain -s "$KEYCHAIN_PATH"
         
         # Store for later use
-        echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
-        echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
+        echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+        echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> "$GITHUB_ENV"
     
     # Import certificates
     - name: Import certificates
@@ -92,10 +106,16 @@ jobs:
         CERTIFICATES_P12: ${{ secrets.CERTIFICATES_P12 }}
         CERTIFICATES_PASSWORD: ${{ secrets.CERTIFICATES_PASSWORD }}
       run: |
-        # Decode and import certificate
-        echo "$CERTIFICATES_P12" | base64 --decode > certificate.p12
+        set -euo pipefail
         
-        security import certificate.p12 \
+        # Setup cleanup trap
+        CERT_FILE="certificate.p12"
+        trap 'rm -f "$CERT_FILE"' EXIT
+        
+        # Decode and import certificate
+        echo "$CERTIFICATES_P12" | base64 --decode > "$CERT_FILE"
+        
+        security import "$CERT_FILE" \
           -k "$KEYCHAIN_PATH" \
           -P "$CERTIFICATES_PASSWORD" \
           -T /usr/bin/codesign \
@@ -110,24 +130,27 @@ jobs:
         echo "=== Looking for certificates ==="
         security find-identity -v -p codesigning "$KEYCHAIN_PATH"
         
-        # Extract certificate name more carefully
-        CERT_LINE=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1)
-        echo "Certificate line: $CERT_LINE"
+        # Extract certificate name safely
+        CERT_INFO=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1)
         
-        # Extract the name between quotes
-        CERT_NAME=$(echo "$CERT_LINE" | cut -d'"' -f2)
-        
-        if [ -n "$CERT_NAME" ] && [ "$CERT_NAME" != "" ]; then
-          echo "✅ Found certificate: '$CERT_NAME'"
-          echo "CERT_NAME=$CERT_NAME" >> $GITHUB_ENV
-        else
+        if [ -z "$CERT_INFO" ]; then
           echo "❌ No Developer ID Application certificate found"
           echo "Available certificates:"
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
           exit 1
         fi
         
-        rm certificate.p12
+        # Safe extraction of certificate name using awk to avoid command injection
+        CERT_NAME=$(echo "$CERT_INFO" | awk -F'"' '{print $2}')
+        
+        if [ -n "$CERT_NAME" ]; then
+          echo "✅ Found certificate: '$CERT_NAME'"
+          # Sanitize certificate name before setting as env var
+          printf '%s\n' "CERT_NAME=$CERT_NAME" >> "$GITHUB_ENV"
+        else
+          echo "❌ Failed to extract certificate name"
+          exit 1
+        fi
     
     # Build the app
     - name: Create app bundle
@@ -250,7 +273,47 @@ jobs:
         xcrun stapler staple "$DMG_PATH"
         xcrun stapler validate "$DMG_PATH"
     
-    # Upload DMG as artifact
+    # Generate changelog for development releases
+    - name: Generate changelog
+      if: inputs.create_release == true && inputs.is_dev_build == true
+      id: changelog
+      run: |
+        {
+          echo "body<<CHANGELOG_EOF"
+          echo "## 🚧 Development Release ${{ inputs.version }}"
+          echo ""
+          echo "This is an automated development release from the develop branch."
+          echo "For testing purposes only. Not recommended for production use."
+          echo ""
+          echo "### Recent Changes"
+          echo ""
+          
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            git log --pretty=format:"* %s (%h)" $LAST_TAG..HEAD | head -20
+          else
+            git log --pretty=format:"* %s (%h)" -20
+          fi
+          
+          echo ""
+          echo "CHANGELOG_EOF"
+        } >> $GITHUB_OUTPUT
+    
+    # Create GitHub Release if requested
+    - name: Create Release
+      if: inputs.create_release == true
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ inputs.release_tag }}
+        name: ${{ inputs.is_dev_build == true && format('Development Build {0}', inputs.version) || format('Release {0}', inputs.version) }}
+        body: ${{ steps.changelog.outputs.body || '' }}
+        draft: false
+        prerelease: ${{ inputs.is_dev_build }}
+        files: ${{ env.DMG_PATH }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    # Always upload DMG as artifact for downstream jobs
     - name: Upload DMG artifact
       uses: actions/upload-artifact@v4
       with:
