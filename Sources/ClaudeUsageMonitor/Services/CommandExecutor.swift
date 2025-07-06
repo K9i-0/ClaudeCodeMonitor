@@ -236,4 +236,9 @@ struct EnvironmentCheckResult {
     var isBunInstalled = false
     var isNpxInstalled = false
     var canExecuteCommands = false
+    
+    // Convenience properties for backward compatibility
+    var hasClaudeCode: Bool { isClaudeCodeInstalled }
+    var hasBun: Bool { isBunInstalled }
+    var hasNode: Bool { isNpxInstalled }
 }

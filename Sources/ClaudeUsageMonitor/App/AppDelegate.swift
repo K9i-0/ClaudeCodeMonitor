@@ -1,4 +1,5 @@
 import Cocoa
+import SwiftUI
 import Sparkle
 
 @MainActor
@@ -81,18 +82,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func updatePopoverContent() {
-        let contentView = ContentView(
-            usageMonitor: usageMonitor,
-            environmentCheckResult: environmentCheckResult,
-            isEnvironmentValid: isEnvironmentValid,
-            updater: updaterController?.updater
-        )
-        popover.contentViewController = NSHostingController(rootView: contentView)
+        if isEnvironmentValid {
+            let contentView = ContentView()
+                .environmentObject(usageMonitor)
+            popover.contentViewController = NSHostingController(rootView: contentView)
+        } else {
+            let setupView = EnvironmentSetupView()
+            popover.contentViewController = NSHostingController(rootView: setupView)
+        }
     }
     
     @objc private func usageDataUpdated() {
-        guard let data = usageMonitor.latestData,
-              let activeSession = data.activeSession else {
+        let data = usageMonitor.usageData
+        guard let activeSession = data.activeSession else {
             updateStatusItemTitle("bolt.fill", percentage: 0)
             return
         }
