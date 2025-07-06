@@ -10,6 +10,14 @@ on:
         required: false
         type: boolean
         default: false
+      create_release:
+        required: false
+        type: boolean
+        default: false
+      release_tag:
+        required: false
+        type: string
+        default: ''
     secrets:
       CERTIFICATES_P12:
         required: false
@@ -20,6 +28,8 @@ on:
       NOTARIZATION_PASSWORD:
         required: false
       NOTARIZATION_TEAM_ID:
+        required: false
+      GITHUB_TOKEN:
         required: false
     outputs:
       dmg_path:
@@ -250,8 +260,49 @@ jobs:
         xcrun stapler staple "$DMG_PATH"
         xcrun stapler validate "$DMG_PATH"
     
-    # Upload DMG as artifact
+    # Generate changelog for development releases
+    - name: Generate changelog
+      if: inputs.create_release == true && inputs.is_dev_build == true
+      id: changelog
+      run: |
+        {
+          echo "body<<CHANGELOG_EOF"
+          echo "## 🚧 Development Release ${{ inputs.version }}"
+          echo ""
+          echo "This is an automated development release from the develop branch."
+          echo "For testing purposes only. Not recommended for production use."
+          echo ""
+          echo "### Recent Changes"
+          echo ""
+          
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            git log --pretty=format:"* %s (%h)" $LAST_TAG..HEAD | head -20
+          else
+            git log --pretty=format:"* %s (%h)" -20
+          fi
+          
+          echo ""
+          echo "CHANGELOG_EOF"
+        } >> $GITHUB_OUTPUT
+    
+    # Create GitHub Release if requested
+    - name: Create Release
+      if: inputs.create_release == true
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ inputs.release_tag }}
+        name: ${{ inputs.is_dev_build == true && format('Development Build {0}', inputs.version) || format('Release {0}', inputs.version) }}
+        body: ${{ steps.changelog.outputs.body || '' }}
+        draft: false
+        prerelease: ${{ inputs.is_dev_build }}
+        files: ${{ env.DMG_PATH }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    # Upload DMG as artifact (only if not creating release)
     - name: Upload DMG artifact
+      if: inputs.create_release != true
       uses: actions/upload-artifact@v4
       with:
         name: dmg-artifact
