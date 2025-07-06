@@ -24,19 +24,16 @@ print_info() {
 # Check if version argument is provided
 if [ $# -eq 0 ]; then
     print_error "No version specified"
-    echo "Usage: $0 <version>"
-    echo "Example: $0 1.2.3"
+    echo "Usage: $0 <version|patch|minor|major>"
+    echo "Examples:"
+    echo "  $0 1.2.3    # Set specific version"
+    echo "  $0 patch    # Increment patch version (0.7.0 → 0.7.1)"
+    echo "  $0 minor    # Increment minor version (0.7.0 → 0.8.0)"
+    echo "  $0 major    # Increment major version (0.7.0 → 1.0.0)"
     exit 1
 fi
 
-NEW_VERSION=$1
-
-# Validate version format (x.y.z)
-if ! echo "$NEW_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-    print_error "Invalid version format: $NEW_VERSION"
-    echo "Version must be in format x.y.z (e.g., 1.2.3)"
-    exit 1
-fi
+VERSION_ARG=$1
 
 # Get current version from Info.plist
 CURRENT_VERSION=$(grep -A1 "CFBundleShortVersionString" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
@@ -44,6 +41,41 @@ CURRENT_VERSION=$(grep -A1 "CFBundleShortVersionString" Info.plist | tail -1 | s
 if [ -z "$CURRENT_VERSION" ]; then
     print_error "Failed to get current version from Info.plist"
     exit 1
+fi
+
+# Check if argument is an increment type
+if [[ "$VERSION_ARG" =~ ^(patch|minor|major)$ ]]; then
+    # Parse current version
+    IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+    
+    # Calculate new version based on increment type
+    case "$VERSION_ARG" in
+        "patch")
+            patch=$((patch + 1))
+            ;;
+        "minor")
+            minor=$((minor + 1))
+            patch=0
+            ;;
+        "major")
+            major=$((major + 1))
+            minor=0
+            patch=0
+            ;;
+    esac
+    
+    NEW_VERSION="${major}.${minor}.${patch}"
+    print_info "Incrementing $VERSION_ARG version: $CURRENT_VERSION → $NEW_VERSION"
+else
+    # Use the provided version directly
+    NEW_VERSION=$VERSION_ARG
+    
+    # Validate version format (x.y.z)
+    if ! echo "$NEW_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+        print_error "Invalid version format: $NEW_VERSION"
+        echo "Version must be in format x.y.z (e.g., 1.2.3)"
+        exit 1
+    fi
 fi
 
 print_info "Current version: $CURRENT_VERSION"
