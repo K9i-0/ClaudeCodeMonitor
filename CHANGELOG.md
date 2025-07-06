@@ -8,6 +8,12 @@ All notable changes to this project will be documented in this file.
 
 
 
+
+## [0.7.5] - 2025-07-06
+
+### Fixed
+- Remove GITHUB_TOKEN from workflow_call secrets (reserved name conflict)
+
 ## [0.7.4] - 2025-07-06
 
 ### Fixed
