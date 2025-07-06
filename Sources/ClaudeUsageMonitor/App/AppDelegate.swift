@@ -118,7 +118,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if let image = NSImage(systemSymbolName: iconName, accessibilityDescription: nil) {
                 button.image = image.withSymbolConfiguration(config)
             }
+            
+            #if DEBUG
+            button.title = " [D] \(percentage)%"
+            #else
             button.title = " \(percentage)%"
+            #endif
         }
     }
     
