@@ -7,6 +7,15 @@ All notable changes to this project will be documented in this file.
 
 
 
+
+## [0.7.4] - 2025-07-06
+
+### Fixed
+- CI/CD workflow syntax errors in release-common.yml (heredoc issue)
+- YAML indentation issues in all workflow files
+- Security warnings for github.head_ref usage in pr-validation.yml and version-helper.yml
+- ShellCheck warnings for unquoted GITHUB_OUTPUT variables
+
 ## [0.7.3] - 2025-07-06
 
 ### Added

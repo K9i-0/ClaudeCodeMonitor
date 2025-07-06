@@ -62,18 +62,18 @@ jobs:
         NOTARIZE_TEAM: ${{ secrets.NOTARIZATION_TEAM_ID }}
       run: |
         if [ -n "$CERT_P12" ] && [ -n "$CERT_PWD" ]; then
-          echo "has_signing_cert=true" >> $GITHUB_OUTPUT
+          echo "has_signing_cert=true" >> "$GITHUB_OUTPUT"
           echo "✅ Signing certificates found"
         else
-          echo "has_signing_cert=false" >> $GITHUB_OUTPUT
+          echo "has_signing_cert=false" >> "$GITHUB_OUTPUT"
           echo "⚠️ No signing certificates configured"
         fi
         
         if [ -n "$NOTARIZE_ID" ] && [ -n "$NOTARIZE_PWD" ] && [ -n "$NOTARIZE_TEAM" ]; then
-          echo "has_notarization=true" >> $GITHUB_OUTPUT
+          echo "has_notarization=true" >> "$GITHUB_OUTPUT"
           echo "✅ Notarization credentials found"
         else
-          echo "has_notarization=false" >> $GITHUB_OUTPUT
+          echo "has_notarization=false" >> "$GITHUB_OUTPUT"
           echo "⚠️ No notarization credentials configured"
         fi
     
@@ -92,7 +92,7 @@ jobs:
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
         
         # Add to search list
-        security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed 's/"//g')
+        security list-keychains -d user -s "$KEYCHAIN_PATH" "$(security list-keychains -d user | sed 's/"//g')"
         security default-keychain -s "$KEYCHAIN_PATH"
         
         # Store for later use
@@ -242,8 +242,8 @@ jobs:
           "$DMG_NAME" \
           "ClaudeCodeMonitor.app"
         
-        echo "DMG_PATH=$DMG_NAME" >> $GITHUB_ENV
-        echo "dmg_path=$DMG_NAME" >> $GITHUB_OUTPUT
+        echo "DMG_PATH=$DMG_NAME" >> "$GITHUB_ENV"
+        echo "dmg_path=$DMG_NAME" >> "$GITHUB_OUTPUT"
         echo "✅ Created DMG: $DMG_NAME"
     
     # Sign DMG
@@ -291,14 +291,14 @@ jobs:
           # Get commits since last tag
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           if [ -n "$LAST_TAG" ]; then
-            git log --pretty=format:"* %s (%h)" $LAST_TAG..HEAD | head -20
+            git log --pretty=format:"* %s (%h)" "$LAST_TAG"..HEAD | head -20
           else
             git log --pretty=format:"* %s (%h)" -20
           fi
           
           echo ""
           echo "CHANGELOG_EOF"
-        } >> $GITHUB_OUTPUT
+        } >> "$GITHUB_OUTPUT"
     
     # Create GitHub Release if requested
     - name: Create Release
