@@ -105,7 +105,7 @@ jobs:
             # Download and extract Sparkle
             echo "Downloading Sparkle tools..."
             cd sparkle
-            curl -Lo sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.6.4/Sparkle-2.6.4.tar.xz
+            curl -Lo sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.7.1/Sparkle-2.7.1.tar.xz
             tar xzf sparkle.tar.xz
             cd ..
             
