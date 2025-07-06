@@ -105,7 +105,7 @@ jobs:
             # Download and extract Sparkle
             echo "Downloading Sparkle tools..."
             cd sparkle
-            curl -Lo sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.6.2/Sparkle-2.6.2.tar.xz
+            curl -Lo sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.6.4/Sparkle-2.6.4.tar.xz
             tar xzf sparkle.tar.xz
             cd ..
             
@@ -115,7 +115,7 @@ jobs:
             # Create temporary file for private key
             PRIVATE_KEY_FILE=$(mktemp)
             trap "rm -f $PRIVATE_KEY_FILE" EXIT
-            (umask 077 && echo "$SPARKLE_PRIVATE_KEY" > "$PRIVATE_KEY_FILE")
+            (umask 077 && echo -n "$SPARKLE_PRIVATE_KEY" > "$PRIVATE_KEY_FILE")
             
             # Generate appcast
             DOWNLOAD_URL_PREFIX="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/"
