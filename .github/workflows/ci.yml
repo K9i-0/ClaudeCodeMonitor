@@ -15,7 +15,9 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Select Xcode
-      run: sudo xcode-select -s /Applications/Xcode_16.2.app
+      env:
+        XCODE_VERSION: '16.2'
+      run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
     
     - name: Build Debug
       run: swift build -v
@@ -39,7 +41,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Select Xcode
-      run: sudo xcode-select -s /Applications/Xcode_${{ matrix.xcode }}.app
+      run: sudo xcode-select -s "/Applications/Xcode_${{ matrix.xcode }}.app"
     
     - name: Show Swift version
       run: swift --version
@@ -62,7 +64,7 @@ jobs:
         swift test --filter ViewModelTests -v)
     
     - name: Generate coverage report
-      if: matrix.xcode == '15.2'
+      if: matrix.xcode == '16.2'
       run: |
         xcrun llvm-cov export \
           .build/debug/ClaudeCodeMonitorPackageTests.xctest/Contents/MacOS/ClaudeCodeMonitorPackageTests \
@@ -70,7 +72,7 @@ jobs:
           -format="lcov" > coverage.lcov
     
     - name: Upload coverage to Codecov
-      if: matrix.xcode == '15.2'
+      if: matrix.xcode == '16.2'
       uses: codecov/codecov-action@v4
       with:
         file: ./coverage.lcov

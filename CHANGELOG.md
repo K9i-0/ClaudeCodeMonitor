@@ -16,6 +16,15 @@ All notable changes to this project will be documented in this file.
 
 
 
+
+## [0.7.13] - 2025-07-06
+
+### Fixed
+- GitHub ActionsでのXcodeバージョン指定を修正
+  - Xcode 16.0はmacOS 14ランナーで利用不可のため、16.2を使用
+  - CI設定の一貫性を改善（環境変数方式で統一）
+  - テストカバレッジ生成条件を最新のXcodeバージョンに更新
+
 ## [0.7.12] - 2025-07-06
 
 ### Fixed
