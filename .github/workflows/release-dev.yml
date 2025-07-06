@@ -6,7 +6,8 @@ on:
       - develop
 
 permissions:
-  contents: write
+  contents: write  # Required for creating releases
+  actions: read    # Required for workflow_call
 
 jobs:
   prepare:

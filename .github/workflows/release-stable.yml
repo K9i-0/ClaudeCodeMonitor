@@ -6,7 +6,7 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: write  # Required for creating releases and tags
 
 jobs:
   stable-release:
@@ -19,7 +19,9 @@ jobs:
         fetch-depth: 0
     
     - name: Select Xcode
-      run: sudo xcode-select -s /Applications/Xcode_15.2.app
+      env:
+        XCODE_VERSION: '15.2'
+      run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
     
     - name: Get version from Info.plist
       id: version
@@ -95,10 +97,16 @@ jobs:
         CERTIFICATES_P12: ${{ secrets.CERTIFICATES_P12 }}
         CERTIFICATES_PASSWORD: ${{ secrets.CERTIFICATES_PASSWORD }}
       run: |
-        # Decode and import certificate
-        echo "$CERTIFICATES_P12" | base64 --decode > certificate.p12
+        set -euo pipefail
         
-        security import certificate.p12 \
+        # Setup cleanup trap
+        CERT_FILE="certificate.p12"
+        trap 'rm -f "$CERT_FILE"' EXIT
+        
+        # Decode and import certificate
+        echo "$CERTIFICATES_P12" | base64 --decode > "$CERT_FILE"
+        
+        security import "$CERT_FILE" \
           -k "$KEYCHAIN_PATH" \
           -P "$CERTIFICATES_PASSWORD" \
           -T /usr/bin/codesign \
@@ -113,24 +121,27 @@ jobs:
         echo "=== Looking for certificates ==="
         security find-identity -v -p codesigning "$KEYCHAIN_PATH"
         
-        # Extract certificate name more carefully
-        CERT_LINE=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1)
-        echo "Certificate line: $CERT_LINE"
+        # Extract certificate name safely
+        CERT_INFO=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1)
         
-        # Extract the name between quotes
-        CERT_NAME=$(echo "$CERT_LINE" | cut -d'"' -f2)
-        
-        if [ -n "$CERT_NAME" ] && [ "$CERT_NAME" != "" ]; then
-          echo "✅ Found certificate: '$CERT_NAME'"
-          echo "CERT_NAME=$CERT_NAME" >> $GITHUB_ENV
-        else
+        if [ -z "$CERT_INFO" ]; then
           echo "❌ No Developer ID Application certificate found"
           echo "Available certificates:"
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
           exit 1
         fi
         
-        rm certificate.p12
+        # Safe extraction of certificate name using awk to avoid command injection
+        CERT_NAME=$(echo "$CERT_INFO" | awk -F'"' '{print $2}')
+        
+        if [ -n "$CERT_NAME" ]; then
+          echo "✅ Found certificate: '$CERT_NAME'"
+          # Sanitize certificate name before setting as env var
+          printf '%s\n' "CERT_NAME=$CERT_NAME" >> "$GITHUB_ENV"
+        else
+          echo "❌ Failed to extract certificate name"
+          exit 1
+        fi
     
     # Build the app
     - name: Create app bundle

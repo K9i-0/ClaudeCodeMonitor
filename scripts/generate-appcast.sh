@@ -50,9 +50,9 @@ fi
 
 # Generate EdDSA signature
 echo "Generating signature for $DMG_PATH..."
-# Write private key to temporary file
+# Write private key to temporary file with secure permissions
 PRIVATE_KEY_FILE="$TEMP_DIR/private_key.txt"
-echo "$SPARKLE_PRIVATE_KEY" > "$PRIVATE_KEY_FILE"
+(umask 077 && echo "$SPARKLE_PRIVATE_KEY" > "$PRIVATE_KEY_FILE")
 SIGNATURE=$("$SIGN_UPDATE" -s "$PRIVATE_KEY_FILE" "$DMG_PATH" | awk '/sparkle:edSignature=/ {print $2}' | tr -d '"')
 
 if [ -z "$SIGNATURE" ]; then
