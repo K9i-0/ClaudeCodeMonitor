@@ -1,6 +1,8 @@
 import Cocoa
 import SwiftUI
 import Sparkle
+import Combine
+import UserNotifications
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -78,6 +80,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             // Start monitoring
             usageMonitor.startMonitoring()
+            
+            // Fetch exchange rates
+            Task {
+                await CurrencySettings.shared.fetchExchangeRates()
+            }
         }
     }
     
