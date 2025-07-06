@@ -1,5 +1,5 @@
 import SwiftUI
-#if !TEST
+#if canImport(Sparkle)
 import Sparkle
 #endif
 
@@ -8,7 +8,7 @@ struct SettingsTabView: View {
     @StateObject private var languageSettings = LanguageSettings.shared
     @StateObject private var currencySettings = CurrencySettings.shared
     // @State private var notificationEnabled = Bundle.main.bundleIdentifier != nil ? NotificationManager.shared.isNotificationEnabled : false
-    #if !TEST
+    #if canImport(Sparkle)
         #if DEBUG
         // Sparkle is disabled in debug builds
         private var updater: SPUUpdater? {
