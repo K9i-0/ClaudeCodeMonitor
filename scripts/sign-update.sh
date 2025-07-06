@@ -46,7 +46,12 @@ fi
 
 # Generate EdDSA signature
 echo "Generating signature for $FILE_TO_SIGN..."
-SIGNATURE=$("$SIGN_UPDATE" -f "$SPARKLE_PRIVATE_KEY" "$FILE_TO_SIGN" | tail -1)
+# Write private key to temporary file with secure permissions
+PRIVATE_KEY_FILE="$TEMP_DIR/private_key.txt"
+(umask 077 && echo "$SPARKLE_PRIVATE_KEY" > "$PRIVATE_KEY_FILE")
+SIGNATURE=$("$SIGN_UPDATE" -f "$PRIVATE_KEY_FILE" "$FILE_TO_SIGN" | tail -1)
+# Immediately remove the private key file after use
+rm -f "$PRIVATE_KEY_FILE"
 
 if [ -z "$SIGNATURE" ]; then
     echo "Error: Failed to generate signature"

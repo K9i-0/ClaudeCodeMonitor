@@ -53,7 +53,7 @@ echo "Generating signature for $DMG_PATH..."
 # Write private key to temporary file with secure permissions
 PRIVATE_KEY_FILE="$TEMP_DIR/private_key.txt"
 (umask 077 && echo "$SPARKLE_PRIVATE_KEY" > "$PRIVATE_KEY_FILE")
-SIGNATURE=$("$SIGN_UPDATE" -s "$PRIVATE_KEY_FILE" "$DMG_PATH" | awk '/sparkle:edSignature=/ {print $2}' | tr -d '"')
+SIGNATURE=$("$SIGN_UPDATE" -f "$PRIVATE_KEY_FILE" "$DMG_PATH" | awk '/sparkle:edSignature=/ {print $2}' | tr -d '"')
 
 # Immediately remove the private key file after use
 rm -f "$PRIVATE_KEY_FILE"
