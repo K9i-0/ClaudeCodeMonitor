@@ -79,11 +79,6 @@ jobs:
           name: dmg-artifact
           path: .
 
-      - name: Setup Sparkle
-        uses: jozefizso/setup-sparkle@v1
-        with:
-          version: 2.6.2
-
       - name: Generate Sparkle appcast
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
