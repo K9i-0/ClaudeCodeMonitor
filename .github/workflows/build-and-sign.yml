@@ -29,8 +29,6 @@ on:
         required: false
       NOTARIZATION_TEAM_ID:
         required: false
-      GITHUB_TOKEN:
-        required: false
     outputs:
       dmg_path:
         description: "Path to the created DMG file"
@@ -311,7 +309,6 @@ jobs:
         draft: false
         prerelease: ${{ inputs.is_dev_build }}
         files: ${{ env.DMG_PATH }}
-        token: ${{ secrets.GITHUB_TOKEN }}
     
     # Always upload DMG as artifact for downstream jobs
     - name: Upload DMG artifact
