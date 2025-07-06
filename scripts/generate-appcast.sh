@@ -41,7 +41,7 @@ curl -L -o "$TEMP_DIR/sparkle.tar.xz" "$SPARKLE_TOOLS_URL"
 tar -xf "$TEMP_DIR/sparkle.tar.xz" -C "$TEMP_DIR"
 
 # Path to sign_update tool
-SIGN_UPDATE="$TEMP_DIR/Sparkle.framework/Versions/Current/Resources/sign_update"
+SIGN_UPDATE="$TEMP_DIR/bin/sign_update"
 
 if [ ! -f "$SIGN_UPDATE" ]; then
     echo "Error: sign_update tool not found at $SIGN_UPDATE"
@@ -50,7 +50,10 @@ fi
 
 # Generate EdDSA signature
 echo "Generating signature for $DMG_PATH..."
-SIGNATURE=$("$SIGN_UPDATE" -f "$SPARKLE_PRIVATE_KEY" "$DMG_PATH" | tail -1)
+# Write private key to temporary file
+PRIVATE_KEY_FILE="$TEMP_DIR/private_key.txt"
+echo "$SPARKLE_PRIVATE_KEY" > "$PRIVATE_KEY_FILE"
+SIGNATURE=$("$SIGN_UPDATE" -s "$PRIVATE_KEY_FILE" "$DMG_PATH" | awk '/sparkle:edSignature=/ {print $2}' | tr -d '"')
 
 if [ -z "$SIGNATURE" ]; then
     echo "Error: Failed to generate signature"

@@ -252,6 +252,24 @@ jobs:
           echo "EOF"
         } >> $GITHUB_OUTPUT
     
+    # Generate Sparkle appcast.xml
+    - name: Generate Sparkle appcast.xml
+      if: steps.version.outputs.skip_release != 'true' && env.SPARKLE_PRIVATE_KEY != ''
+      env:
+        SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        VERSION: ${{ steps.version.outputs.version }}
+      run: |
+        echo "🔏 Generating Sparkle appcast.xml..."
+        ./scripts/generate-appcast.sh
+        
+        if [ -f "appcast.xml" ]; then
+          echo "✅ Successfully generated appcast.xml"
+          cat appcast.xml
+        else
+          echo "❌ Failed to generate appcast.xml"
+          exit 1
+        fi
+    
     # Create and push tag
     - name: Create and push tag
       if: steps.version.outputs.skip_release != 'true'
@@ -273,6 +291,7 @@ jobs:
         prerelease: false
         files: |
           ${{ env.DMG_PATH }}
+          appcast.xml
     
     # Cleanup
     - name: Clean up keychain
