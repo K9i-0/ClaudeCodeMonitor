@@ -99,7 +99,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         
-        let percentage = activeSession.usagePercentage
+        // Calculate percentage based on the detected plan limit
+        let limit = data.sessionTokenLimit
+        let percentage = (Double(activeSession.totalTokens) / Double(limit)) * 100.0
         updateStatusItemTitle("bolt.fill", percentage: Int(percentage))
     }
     
