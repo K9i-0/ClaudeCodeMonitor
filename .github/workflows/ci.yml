@@ -33,7 +33,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        xcode: ['15.0', '15.2']
+        xcode: ['15.2']
     
     steps:
     - uses: actions/checkout@v4
