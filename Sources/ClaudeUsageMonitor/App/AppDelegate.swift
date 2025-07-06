@@ -21,14 +21,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // Sparkle configuration based on build type
     #if canImport(Sparkle)
         #if DEBUG
-        // Allow testing Sparkle in debug builds with TEST_SPARKLE environment variable
-        private lazy var updaterController: SPUStandardUpdaterController? = {
-            if ProcessInfo.processInfo.environment["TEST_SPARKLE"] != nil {
-                print("⚠️ Sparkle enabled in DEBUG mode for testing")
-                return SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: self, userDriverDelegate: nil)
-            }
-            return nil
-        }()
+        // Enable Sparkle in debug builds for testing update UI
+        private lazy var updaterController = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: self, userDriverDelegate: nil)
         #else
         private lazy var updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: self, userDriverDelegate: nil)
         #endif
@@ -41,9 +35,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         #if DEBUG
         // This will be reflected in menu bar and other UI elements
         print("Running in DEBUG mode")
-        if ProcessInfo.processInfo.environment["TEST_SPARKLE"] != nil {
-            print("Sparkle testing mode enabled")
-        }
+        print("Sparkle is enabled for UI testing (auto-updates disabled)")
         #endif
         
         // Configure Sparkle update channel
@@ -244,7 +236,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func updateChannelChanged(to newChannel: UpdateChannel) {
         #if canImport(Sparkle)
-        guard let updater = updaterController?.updater else { return }
+        let updater = updaterController.updater
         
         print("Sparkle channel changed to \(newChannel.rawValue): \(newChannel.appcastURL)")
         

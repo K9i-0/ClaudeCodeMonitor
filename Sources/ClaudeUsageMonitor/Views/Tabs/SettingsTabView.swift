@@ -8,10 +8,17 @@ struct SettingsTabView: View {
     @StateObject private var languageSettings = LanguageSettings.shared
     @StateObject private var currencySettings = CurrencySettings.shared
     // @State private var notificationEnabled = Bundle.main.bundleIdentifier != nil ? NotificationManager.shared.isNotificationEnabled : false
+    @State private var latestVersion: String?
+    @State private var isCheckingForUpdates = false
+    @State private var updateCheckError: String?
     #if canImport(Sparkle)
         #if DEBUG
-        // Sparkle is disabled in debug builds
+        // Get updater from AppDelegate in debug builds
         private var updater: SPUUpdater? {
+            if let appDelegate = NSApplication.shared.delegate as? AppDelegate,
+               let controller = appDelegate.value(forKey: "updaterController") as? SPUStandardUpdaterController {
+                return controller.updater
+            }
             return nil
         }
         #else
@@ -209,11 +216,10 @@ struct SettingsTabView: View {
 
             // Show update settings in release builds or when testing Sparkle
             #if DEBUG
-            if updater != nil {
-                Divider()
-                
-                // Update settings section
-                VStack(alignment: .leading, spacing: 12) {
+            Divider()
+            
+            // Update settings section
+            VStack(alignment: .leading, spacing: 12) {
                 Text(L10n.Update.settings)
                     .font(.system(size: 16, weight: .semibold))
 
@@ -224,7 +230,38 @@ struct SettingsTabView: View {
                         .foregroundColor(.secondary)
                     Spacer()
                 }
-                .padding(.bottom, 4)
+                
+                // Latest version info
+                if isCheckingForUpdates {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                        Text("Checking for updates...")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                } else if let error = updateCheckError {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 11))
+                            .foregroundColor(.orange)
+                        Text(error)
+                            .font(.system(size: 12))
+                            .foregroundColor(.orange)
+                        Spacer()
+                    }
+                } else if let latest = latestVersion {
+                    HStack {
+                        Text("Latest: \(latest)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                }
+                
+                Spacer()
+                    .frame(height: 4)
                 
                 // Update channel selection
                 VStack(alignment: .leading, spacing: 8) {
@@ -263,7 +300,12 @@ struct SettingsTabView: View {
                 // Check for updates button
                 Button(action: {
                     #if DEBUG
-                    updater?.checkForUpdates()
+                    if let updater = updater {
+                        updater.checkForUpdates()
+                    } else {
+                        // In Debug mode without updater, manually check appcast
+                        checkLatestVersion()
+                    }
                     #else
                     updater.checkForUpdates()
                     #endif
@@ -307,7 +349,6 @@ struct SettingsTabView: View {
                     }
                 }
                 .toggleStyle(SwitchToggleStyle(tint: .accentColor))
-                }
             }
             #else
             Divider()
@@ -324,7 +365,38 @@ struct SettingsTabView: View {
                         .foregroundColor(.secondary)
                     Spacer()
                 }
-                .padding(.bottom, 4)
+                
+                // Latest version info
+                if isCheckingForUpdates {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                        Text("Checking for updates...")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                } else if let error = updateCheckError {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 11))
+                            .foregroundColor(.orange)
+                        Text(error)
+                            .font(.system(size: 12))
+                            .foregroundColor(.orange)
+                        Spacer()
+                    }
+                } else if let latest = latestVersion {
+                    HStack {
+                        Text("Latest: \(latest)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                }
+                
+                Spacer()
+                    .frame(height: 4)
                 
                 // Update channel selection
                 VStack(alignment: .leading, spacing: 8) {
@@ -362,7 +434,12 @@ struct SettingsTabView: View {
 
                 // Check for updates button
                 Button(action: {
-                    updater.checkForUpdates()
+                    if updater != nil {
+                        updater.checkForUpdates()
+                    } else {
+                        // Fallback: manually check appcast
+                        checkLatestVersion()
+                    }
                 }) {
                     HStack {
                         Image(systemName: "arrow.triangle.2.circlepath")
@@ -441,6 +518,68 @@ struct SettingsTabView: View {
         // Notify AppDelegate to update Sparkle configuration
         if let appDelegate = NSApplication.shared.delegate as? AppDelegate {
             appDelegate.updateChannelChanged(to: channel)
+        }
+    }
+    
+    private func checkLatestVersion() {
+        isCheckingForUpdates = true
+        updateCheckError = nil
+        latestVersion = nil
+        
+        let channel = UserDefaults.standard.updateChannel
+        guard let url = URL(string: channel.appcastURL) else {
+            updateCheckError = "Invalid feed URL"
+            isCheckingForUpdates = false
+            return
+        }
+        
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                
+                // Parse XML to find latest version
+                let parser = XMLParser(data: data)
+                let delegate = AppcastParserDelegate()
+                parser.delegate = delegate
+                
+                if parser.parse(), let version = delegate.latestVersion {
+                    await MainActor.run {
+                        self.latestVersion = version
+                        self.isCheckingForUpdates = false
+                    }
+                } else {
+                    await MainActor.run {
+                        self.updateCheckError = "Failed to parse update feed"
+                        self.isCheckingForUpdates = false
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.updateCheckError = "Network error"
+                    self.isCheckingForUpdates = false
+                }
+            }
+        }
+    }
+}
+
+// Simple XML parser to extract version from appcast
+private class AppcastParserDelegate: NSObject, XMLParserDelegate {
+    var latestVersion: String?
+    private var currentElement = ""
+    private var foundItem = false
+    
+    func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String] = [:]) {
+        currentElement = elementName
+        
+        if elementName == "item" {
+            foundItem = true
+        } else if elementName == "enclosure" && foundItem {
+            // Extract version from sparkle:shortVersionString or sparkle:version
+            if let version = attributeDict["sparkle:shortVersionString"] ?? attributeDict["sparkle:version"] {
+                latestVersion = version
+                parser.abortParsing() // Stop after finding first item
+            }
         }
     }
 }
