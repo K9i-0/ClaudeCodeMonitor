@@ -15,6 +15,14 @@ All notable changes to this project will be documented in this file.
 
 
 
+
+## [0.7.12] - 2025-07-06
+
+### Fixed
+- CI/CDパイプラインのビルドエラーを修正
+  - GitHub ActionsのmacOS-latestランナーでXcode 15.xが利用不可になったため、Xcode 16.0に更新
+  - Sparkleフレームワークとツールを最新の2.7.1に統一
+
 ## [0.7.11] - 2025-07-06
 
 ### Added
