@@ -10,6 +10,12 @@ All notable changes to this project will be documented in this file.
 
 
 
+
+## [0.7.7] - 2025-07-06
+
+### Fixed
+- Update /start-work slash command to properly execute bash commands instead of pre-execution format
+
 ## [0.7.6] - 2025-07-06
 
 ### Fixed
