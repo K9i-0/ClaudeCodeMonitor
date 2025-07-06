@@ -12,6 +12,14 @@ All notable changes to this project will be documented in this file.
 
 
 
+
+## [0.7.9] - 2025-07-06
+
+### Fixed
+- CI環境でSparkleの`sign_update`ツールが見つからない問題を修正
+- setup-sparkle GitHub Actionを導入してSparkleツールのセットアップを自動化
+- Sparkleを最新のセキュリティバージョン(2.6.2)に更新
+
 ## [0.7.8] - 2025-07-06
 
 ### Fixed

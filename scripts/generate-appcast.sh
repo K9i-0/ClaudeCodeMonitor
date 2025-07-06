@@ -28,24 +28,54 @@ DOWNLOAD_URL="${REPO_URL}/releases/download/v${VERSION}/ClaudeCodeMonitor-${VERS
 FILE_SIZE=$(stat -f%z "$DMG_PATH")
 RELEASE_DATE=$(date -u +"%a, %d %b %Y %H:%M:%S %z")
 
-# Create temporary directory for Sparkle tools
-TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
+# Check if we're in CI environment with setup-sparkle
+if [ -n "${SPARKLE_BIN:-}" ] && [ -f "$SPARKLE_BIN/sign_update" ]; then
+    echo "Using Sparkle tools from setup-sparkle action: $SPARKLE_BIN"
+    SIGN_UPDATE="$SPARKLE_BIN/sign_update"
+else
+    # Create temporary directory for Sparkle tools
+    TEMP_DIR=$(mktemp -d)
+    trap "rm -rf $TEMP_DIR" EXIT
 
-# Download Sparkle tools if not available
-SPARKLE_VERSION="2.5.2"
-SPARKLE_TOOLS_URL="https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+    # Download Sparkle tools if not available
+    SPARKLE_VERSION="2.6.2"
+    SPARKLE_TOOLS_URL="https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
 
-echo "Downloading Sparkle tools..."
-curl -L -o "$TEMP_DIR/sparkle.tar.xz" "$SPARKLE_TOOLS_URL"
-tar -xf "$TEMP_DIR/sparkle.tar.xz" -C "$TEMP_DIR"
+    echo "Downloading Sparkle tools..."
+    if ! curl -L -o "$TEMP_DIR/sparkle.tar.xz" "$SPARKLE_TOOLS_URL"; then
+        echo "Error: Failed to download Sparkle tools from $SPARKLE_TOOLS_URL"
+        exit 1
+    fi
 
-# Path to sign_update tool
-SIGN_UPDATE="$TEMP_DIR/Sparkle.framework/Versions/Current/Resources/sign_update"
+    echo "Extracting Sparkle tools..."
+    if ! tar -xf "$TEMP_DIR/sparkle.tar.xz" -C "$TEMP_DIR"; then
+        echo "Error: Failed to extract Sparkle tools"
+        exit 1
+    fi
 
-if [ ! -f "$SIGN_UPDATE" ]; then
-    echo "Error: sign_update tool not found at $SIGN_UPDATE"
-    exit 1
+    # Path to sign_update tool
+    SIGN_UPDATE="$TEMP_DIR/bin/sign_update"
+
+    if [ ! -f "$SIGN_UPDATE" ]; then
+        echo "Error: sign_update tool not found at $SIGN_UPDATE"
+        echo "Checking alternative locations..."
+        
+        # Check alternative paths
+        for path in "$TEMP_DIR/Sparkle.framework/Versions/Current/Resources/sign_update" "$TEMP_DIR/sign_update"; do
+            if [ -f "$path" ]; then
+                echo "Found sign_update at: $path"
+                SIGN_UPDATE="$path"
+                break
+            fi
+        done
+        
+        if [ ! -f "$SIGN_UPDATE" ]; then
+            echo "Error: Could not find sign_update tool in any expected location"
+            echo "Contents of temp directory:"
+            find "$TEMP_DIR" -name "sign_update" -type f 2>/dev/null || true
+            exit 1
+        fi
+    fi
 fi
 
 # Generate EdDSA signature
