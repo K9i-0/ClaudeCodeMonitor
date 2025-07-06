@@ -9,6 +9,15 @@ All notable changes to this project will be documented in this file.
 
 
 
+
+## [0.7.6] - 2025-07-06
+
+### Fixed
+- Add DMG_PATH environment variable for Sparkle appcast generation
+
+### Changed
+- Update /bump-version command documentation to clarify default behavior
+
 ## [0.7.5] - 2025-07-06
 
 ### Fixed
