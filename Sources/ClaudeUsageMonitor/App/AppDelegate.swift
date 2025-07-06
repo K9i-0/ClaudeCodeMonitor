@@ -1,293 +1,138 @@
 import Cocoa
-import SwiftUI
-import Combine
-import UserNotifications
 import Sparkle
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
+    @IBOutlet weak var window: NSWindow!
+    
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var eventMonitor: EventMonitor?
     private var usageMonitor: UsageMonitor!
     private var environmentCheckResult = EnvironmentCheckResult()
     private var isEnvironmentValid = false
+    
+    // Sparkle configuration based on build type
+    #if DEBUG
+    // Allow testing Sparkle in debug builds with TEST_SPARKLE environment variable
+    private let updaterController: SPUStandardUpdaterController? = {
+        if ProcessInfo.processInfo.environment["TEST_SPARKLE"] != nil {
+            print("⚠️ Sparkle enabled in DEBUG mode for testing")
+            return SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        }
+        return nil
+    }()
+    #else
     private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+    #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Debug builds use different settings to avoid conflicts with release version
         #if DEBUG
         // This will be reflected in menu bar and other UI elements
         print("Running in DEBUG mode")
+        if ProcessInfo.processInfo.environment["TEST_SPARKLE"] != nil {
+            print("Sparkle testing mode enabled")
+        }
         #endif
 
         // Perform synchronous environment check first
         environmentCheckResult = CommandExecutor.shared.checkEnvironmentSync()
-        isEnvironmentValid = environmentCheckResult.isClaudeCodeInstalled && environmentCheckResult.canExecuteCommands
-
-        if isEnvironmentValid {
-            print("[AppDelegate] All requirements met")
-            setupMainInterface()
-        } else {
-            print("[AppDelegate] Environment setup required")
-            setupEnvironmentCheckInterface()
-        }
-    }
-
-    @MainActor
-    private func setupMainInterface() {
+        isEnvironmentValid = environmentCheckResult.hasClaudeCode &&
+                             (environmentCheckResult.hasBun || environmentCheckResult.hasNode)
+        
+        // Always create UsageMonitor (it handles invalid environments internally)
         usageMonitor = UsageMonitor()
-
-        // 通知機能は初回リリースでは無効化
-        /*
-        // Setup notification center delegate
-        if Bundle.main.bundleIdentifier != nil {
-            UNUserNotificationCenter.current().delegate = NotificationManager.shared
-        }
-        */
-
-        // Fetch exchange rates on startup
-        Task {
-            await CurrencySettings.shared.fetchExchangeRates()
-        }
-
-        // Hide all windows for menubar-only app
-        NSApp.windows.forEach { window in
-            window.close()
-        }
-
-        setupStatusItem()
-
-        // Create popover
-        popover = NSPopover()
-        popover.contentSize = NSSize(width: 380, height: 480)
-        popover.behavior = .transient
-        popover.animates = true
-        popover.contentViewController = NSHostingController(
-            rootView: ContentView()
-                .environmentObject(usageMonitor)
-        )
-
-        setupEventMonitor()
-        updateStatusBarTitle()
-        observeUsageDataChanges()
-    }
-
-    @MainActor
-    private func setupEnvironmentCheckInterface() {
-        // Hide all windows for menubar-only app
-        NSApp.windows.forEach { window in
-            window.close()
-        }
-
-        setupStatusItem()
-
-        // Create popover with environment setup view
-        popover = NSPopover()
-        popover.contentSize = NSSize(width: 480, height: 360)
-        popover.behavior = .transient
-        popover.animates = true
-        popover.contentViewController = NSHostingController(
-            rootView: EnvironmentSetupView()
-        )
-
-        setupEventMonitor()
-    }
-
-    private func setupStatusItem() {
-        // Create status bar item
+        
+        // Set up the status item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-
         if let button = statusItem.button {
-            // SF Symbolsを使用した初期アイコン
-            if let image = NSImage(systemSymbolName: "hourglass", accessibilityDescription: "ClaudeCodeMonitor") {
-                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
-                button.image = image.withSymbolConfiguration(config)
-                button.imagePosition = .imageLeading
-            } else {
-                button.title = "⏳"
-            }
-            button.action = #selector(togglePopover)
-            button.target = self
+            updateStatusItemTitle("bolt.fill", percentage: 0)
+            button.action = #selector(togglePopover(_:))
         }
-    }
-
-    private func setupEventMonitor() {
-        // Monitor for clicks outside the popover
-        eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+        
+        // Configure popover
+        popover = NSPopover()
+        popover.contentSize = NSSize(width: 480, height: 300)
+        popover.behavior = .transient
+        popover.animates = false
+        
+        updatePopoverContent()
+        
+        // Set up event monitor for clicks outside popover
+        eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             if let self = self, self.popover.isShown {
-                self.closePopover()
+                self.closePopover(event)
             }
         }
+        
+        // Subscribe to usage updates only if environment is valid
+        if isEnvironmentValid {
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(usageDataUpdated),
+                name: .usageDataUpdated,
+                object: nil
+            )
+            
+            // Start monitoring
+            usageMonitor.startMonitoring()
+        }
     }
-
-    @MainActor
-    private func observeUsageDataChanges() {
-        guard let usageMonitor = usageMonitor else { return }
-
-        // Update status bar title when usage data changes
-        updateStatusBarTitle()
-
-        // Observe usage data changes
-        usageMonitor.$usageData
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.updateStatusBarTitle()
-            }
-            .store(in: &cancellables)
+    
+    private func updatePopoverContent() {
+        let contentView = ContentView(
+            usageMonitor: usageMonitor,
+            environmentCheckResult: environmentCheckResult,
+            isEnvironmentValid: isEnvironmentValid,
+            updater: updaterController?.updater
+        )
+        popover.contentViewController = NSHostingController(rootView: contentView)
     }
-
-    private var cancellables = Set<AnyCancellable>()
-
-    @MainActor
-    private func updateStatusBarTitle() {
-        guard let button = statusItem.button else { return }
-        guard let usageMonitor = usageMonitor else {
-            // Environment setup mode
-            if let image = NSImage(systemSymbolName: "exclamationmark.circle", accessibilityDescription: "Setup Required") {
-                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
-                button.image = image.withSymbolConfiguration(config)
-                button.title = ""
-                button.toolTip = L10n.Environment.setupRequired
-            }
+    
+    @objc private func usageDataUpdated() {
+        guard let data = usageMonitor.latestData,
+              let activeSession = data.activeSession else {
+            updateStatusItemTitle("bolt.fill", percentage: 0)
             return
         }
-
-        if usageMonitor.isLoading && usageMonitor.usageData.activeSession == nil {
-            // ローディング中
-            if let image = NSImage(systemSymbolName: "hourglass", accessibilityDescription: "Loading") {
-                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
-                button.image = image.withSymbolConfiguration(config)
-                button.title = ""
-                button.toolTip = L10n.Status.loading
-            }
-        } else if let session = usageMonitor.usageData.activeSession {
-            // アクティブセッション
-            let percentage = usageMonitor.usageData.sessionUsagePercentage
-            let cost = session.costUSD
-
-            // SF Symbolを使用したアイコン表示
-            let symbolName = getStatusSymbol(percentage: percentage)
-            let tintColor = getStatusColor(percentage: percentage)
-
-            if let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Usage Status") {
-                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
-                    .applying(.init(paletteColors: [tintColor]))
-                button.image = image.withSymbolConfiguration(config)
-            }
-
-            // パーセンテージのみ表示（HIGに準拠した簡潔な表示）
-            #if DEBUG
-            button.title = String(format: "%.0f%% [D]", percentage)
-            #else
-            button.title = String(format: "%.0f%%", percentage)
-            #endif
-            button.attributedTitle = NSAttributedString(
-                string: button.title,
-                attributes: [
-                    .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium),
-                    .foregroundColor: tintColor
-                ]
-            )
-
-            // 詳細情報はツールチップで表示
-            let burnRateString = usageMonitor.usageData.sessionBurnRate
-            let burnRate = Double(burnRateString) ?? 0.0
-            let remaining = usageMonitor.usageData.sessionRemainingTime
-            let formattedCost = CurrencyConverter.formatCostWithFallback(cost, using: CurrencySettings.shared)
-            button.toolTip = L10n.Status.usageFormat(usage: percentage, cost: formattedCost, burnRate: burnRate, timeRemaining: remaining)
-        } else {
-            // 非アクティブ
-            if let image = NSImage(systemSymbolName: "moon.zzz", accessibilityDescription: "Inactive") {
-                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
-                button.image = image.withSymbolConfiguration(config)
-                button.title = ""
-                button.toolTip = L10n.Status.noActiveSession
-            }
-        }
+        
+        let percentage = activeSession.usagePercentage
+        updateStatusItemTitle("bolt.fill", percentage: Int(percentage))
     }
-
-    @MainActor
-    private func getStatusSymbol(percentage: Double) -> String {
-        switch percentage {
-        case 90...:
-            return "exclamationmark.triangle.fill"  // 危険
-        case 70..<90:
-            return "bolt.fill"  // 注意
-        case 50..<70:
-            return "flame.fill"  // 高使用率
-        case 30..<50:
-            return "speedometer"  // 中使用率
-        case 10..<30:
-            return "circle.lefthalf.filled"  // 低使用率
-        default:
-            return "circle.fill"  // 最小使用率
-        }
-    }
-
-    @MainActor
-    private func getStatusColor(percentage: Double) -> NSColor {
-        switch percentage {
-        case 90...:
-            return NSColor.systemRed  // 危険
-        case 70..<90:
-            return NSColor.systemOrange  // 警告
-        case 50..<70:
-            return NSColor.systemYellow  // 注意
-        case 30..<50:
-            return NSColor.systemBlue  // 標準
-        default:
-            return NSColor.systemGreen  // 良好
-        }
-    }
-
-    @objc private func togglePopover() {
-        if popover.isShown {
-            closePopover()
-        } else {
-            // Re-check environment when opening popover if not valid
-            if !isEnvironmentValid {
-                Task { @MainActor in
-                    environmentCheckResult = await CommandExecutor.shared.checkEnvironment()
-                    isEnvironmentValid = environmentCheckResult.isClaudeCodeInstalled && environmentCheckResult.canExecuteCommands
-
-                    if isEnvironmentValid {
-                        // Environment is now valid, setup main interface
-                        setupMainInterface()
-                        // Update popover content
-                        popover.contentViewController = NSHostingController(
-                            rootView: ContentView()
-                                .environmentObject(usageMonitor)
-                        )
-                    }
-                    showPopover()
-                }
-            } else {
-                Task { @MainActor in
-                    showPopover()
-                }
-            }
-        }
-    }
-
-    @MainActor
-    func showPopover() {
+    
+    private func updateStatusItemTitle(_ iconName: String, percentage: Int) {
         if let button = statusItem.button {
-            // Refresh data when opening popover (only if main interface is setup)
-            if let usageMonitor = usageMonitor {
-                usageMonitor.fetchUsageData()
+            let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+            if let image = NSImage(systemSymbolName: iconName, accessibilityDescription: nil) {
+                button.image = image.withSymbolConfiguration(config)
             }
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            button.title = " \(percentage)%"
+        }
+    }
+    
+    @objc func togglePopover(_ sender: Any?) {
+        if popover.isShown {
+            closePopover(sender)
+        } else {
+            showPopover(sender)
+        }
+    }
+    
+    func showPopover(_ sender: Any?) {
+        if let button = statusItem.button {
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: NSRectEdge.minY)
             eventMonitor?.start()
         }
     }
-
-    func closePopover() {
-        popover.performClose(nil)
+    
+    func closePopover(_ sender: Any?) {
+        popover.performClose(sender)
         eventMonitor?.stop()
     }
-
+    
     func applicationWillTerminate(_ notification: Notification) {
-        usageMonitor?.stopMonitoring()
+        usageMonitor.stopMonitoring()
     }
 }
 
@@ -295,24 +140,28 @@ class EventMonitor {
     private var monitor: Any?
     private let mask: NSEvent.EventTypeMask
     private let handler: (NSEvent?) -> Void
-
+    
     init(mask: NSEvent.EventTypeMask, handler: @escaping (NSEvent?) -> Void) {
         self.mask = mask
         self.handler = handler
     }
-
+    
     deinit {
         stop()
     }
-
+    
     func start() {
         monitor = NSEvent.addGlobalMonitorForEvents(matching: mask, handler: handler)
     }
-
+    
     func stop() {
         if let monitor = monitor {
             NSEvent.removeMonitor(monitor)
             self.monitor = nil
         }
     }
+}
+
+extension Notification.Name {
+    static let usageDataUpdated = Notification.Name("usageDataUpdated")
 }

@@ -1,0 +1,124 @@
+name: Beta Release
+
+on:
+  push:
+    branches:
+      - develop
+
+permissions:
+  contents: write
+
+jobs:
+  beta:
+    name: Build Beta Release
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Select Xcode
+      run: sudo xcode-select -s /Applications/Xcode_15.2.app
+    
+    - name: Get latest version
+      id: version
+      run: |
+        # Get the latest stable tag
+        LATEST_TAG=$(git tag -l "v*.*.*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -1)
+        
+        if [ -z "$LATEST_TAG" ]; then
+          BASE_VERSION="0.0.0"
+        else
+          BASE_VERSION=${LATEST_TAG#v}
+        fi
+        
+        # Get the latest beta tag for this version
+        LATEST_BETA=$(git tag -l "v${BASE_VERSION}-beta.*" | sort -V | tail -1)
+        
+        if [ -z "$LATEST_BETA" ]; then
+          # First beta for this version
+          BETA_NUM=1
+        else
+          # Extract beta number and increment
+          BETA_NUM=$(echo "$LATEST_BETA" | grep -oE 'beta\.([0-9]+)' | cut -d. -f2)
+          BETA_NUM=$((BETA_NUM + 1))
+        fi
+        
+        NEW_VERSION="${BASE_VERSION}-beta.${BETA_NUM}"
+        
+        echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "✅ Beta version: $NEW_VERSION"
+    
+    # Build the app
+    - name: Create app bundle
+      run: |
+        ./scripts/create-app-bundle.sh "${{ steps.version.outputs.version }}"
+    
+    # Ad-hoc sign (for beta releases)
+    - name: Sign app bundle
+      run: |
+        echo "⚠️ Ad-hoc signing beta build"
+        codesign --force --deep --sign - "ClaudeCodeMonitor.app"
+    
+    # Create DMG
+    - name: Create DMG
+      run: |
+        if ! command -v create-dmg &> /dev/null; then
+          brew install create-dmg
+        fi
+        
+        DMG_NAME="ClaudeCodeMonitor-${{ steps.version.outputs.version }}.dmg"
+        
+        create-dmg \
+          --volname "Claude Code Monitor Beta" \
+          --window-pos 200 120 \
+          --window-size 600 400 \
+          --icon-size 100 \
+          --icon "ClaudeCodeMonitor.app" 150 185 \
+          --hide-extension "ClaudeCodeMonitor.app" \
+          --app-drop-link 450 185 \
+          --no-internet-enable \
+          --hdiutil-quiet \
+          "$DMG_NAME" \
+          "ClaudeCodeMonitor.app"
+        
+        echo "DMG_PATH=$DMG_NAME" >> $GITHUB_ENV
+    
+    # Generate simple changelog
+    - name: Generate changelog
+      id: changelog
+      run: |
+        echo "## 🧪 Beta Release ${{ steps.version.outputs.version }}" > changelog.md
+        echo "" >> changelog.md
+        echo "This is a beta release for testing. Not recommended for production use." >> changelog.md
+        echo "" >> changelog.md
+        echo "### Recent Changes" >> changelog.md
+        echo "" >> changelog.md
+        
+        # Get commits since last tag
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        if [ -n "$LAST_TAG" ]; then
+          git log --pretty=format:"* %s (%h)" $LAST_TAG..HEAD | head -20 >> changelog.md
+        else
+          git log --pretty=format:"* %s (%h)" -20 >> changelog.md
+        fi
+        
+        {
+          echo "changelog<<EOF"
+          cat changelog.md
+          echo "EOF"
+        } >> $GITHUB_OUTPUT
+    
+    # Create tag and release
+    - name: Create Beta Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.version.outputs.tag }}
+        name: Beta ${{ steps.version.outputs.version }}
+        body: ${{ steps.changelog.outputs.changelog }}
+        draft: false
+        prerelease: true
+        files: |
+          ${{ env.DMG_PATH }}

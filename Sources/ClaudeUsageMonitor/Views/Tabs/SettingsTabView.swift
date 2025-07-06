@@ -6,7 +6,14 @@ struct SettingsTabView: View {
     @StateObject private var languageSettings = LanguageSettings.shared
     @StateObject private var currencySettings = CurrencySettings.shared
     // @State private var notificationEnabled = Bundle.main.bundleIdentifier != nil ? NotificationManager.shared.isNotificationEnabled : false
+    #if DEBUG
+    // Sparkle is disabled in debug builds
+    private var updater: SPUUpdater? {
+        return nil
+    }
+    #else
     private let updater = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil).updater
+    #endif
 
     let plans = [
         ("Pro", "7,000 tokens/session", L10n.Plan.pro),
@@ -192,6 +199,8 @@ struct SettingsTabView: View {
             }
             */
 
+            // Show update settings in release builds or when testing Sparkle
+            if updater != nil {
             Divider()
 
             // Update settings section
@@ -201,7 +210,7 @@ struct SettingsTabView: View {
 
                 // Current version
                 HStack {
-                    Text(L10n.Update.currentVersion(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"))
+                    Text(L10n.Update.currentVersion(version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"))
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                     Spacer()
@@ -210,7 +219,7 @@ struct SettingsTabView: View {
 
                 // Check for updates button
                 Button(action: {
-                    updater.checkForUpdates()
+                    updater?.checkForUpdates()
                 }) {
                     HStack {
                         Image(systemName: "arrow.triangle.2.circlepath")
@@ -227,8 +236,8 @@ struct SettingsTabView: View {
 
                 // Automatic updates toggle
                 Toggle(isOn: .init(
-                    get: { updater.automaticallyChecksForUpdates },
-                    set: { updater.automaticallyChecksForUpdates = $0 }
+                    get: { updater?.automaticallyChecksForUpdates ?? false },
+                    set: { updater?.automaticallyChecksForUpdates = $0 }
                 )) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(L10n.Update.automaticUpdates)
@@ -239,6 +248,7 @@ struct SettingsTabView: View {
                     }
                 }
                 .toggleStyle(SwitchToggleStyle(tint: .accentColor))
+            }
             }
 
             #if DEBUG
