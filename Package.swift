@@ -14,7 +14,7 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.5.2")
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.7.1")
     ],
     targets: [
         .executableTarget(
