@@ -92,14 +92,14 @@ jobs:
         else
           echo "⚠️ No Sparkle private key, creating empty appcast.xml"
           cat > appcast.xml << 'EOF'
-        <?xml version="1.0" encoding="utf-8"?>
-        <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-          <channel>
-            <title>Claude Code Monitor</title>
-            <description>No Sparkle key configured</description>
-          </channel>
-        </rss>
-        EOF
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Claude Code Monitor</title>
+    <description>No Sparkle key configured</description>
+  </channel>
+</rss>
+EOF
         fi
     
     - name: Create and push tag
