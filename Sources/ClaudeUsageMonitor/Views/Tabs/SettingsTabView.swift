@@ -219,7 +219,11 @@ struct SettingsTabView: View {
 
                 // Check for updates button
                 Button(action: {
+                    #if DEBUG
                     updater?.checkForUpdates()
+                    #else
+                    updater.checkForUpdates()
+                    #endif
                 }) {
                     HStack {
                         Image(systemName: "arrow.triangle.2.circlepath")
@@ -236,8 +240,20 @@ struct SettingsTabView: View {
 
                 // Automatic updates toggle
                 Toggle(isOn: .init(
-                    get: { updater?.automaticallyChecksForUpdates ?? false },
-                    set: { updater?.automaticallyChecksForUpdates = $0 }
+                    get: { 
+                        #if DEBUG
+                        updater?.automaticallyChecksForUpdates ?? false
+                        #else
+                        updater.automaticallyChecksForUpdates
+                        #endif
+                    },
+                    set: { 
+                        #if DEBUG
+                        updater?.automaticallyChecksForUpdates = $0
+                        #else
+                        updater.automaticallyChecksForUpdates = $0
+                        #endif
+                    }
                 )) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(L10n.Update.automaticUpdates)
