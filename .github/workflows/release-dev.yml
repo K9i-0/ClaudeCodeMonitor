@@ -6,48 +6,12 @@ on:
       - develop
 
 permissions:
-  contents: write  # Required for creating releases
-  actions: read    # Required for workflow_call
+  contents: write
 
 jobs:
-  prepare:
-    name: Prepare Development Release
-    runs-on: macos-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.version.outputs.tag }}
-    
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Get latest version
-      id: version
-      run: |
-        # Get current version from Info.plist
-        CURRENT_VERSION=$(defaults read "$PWD/Info.plist" CFBundleShortVersionString)
-        
-        # Append -dev suffix
-        NEW_VERSION="${CURRENT_VERSION}-dev"
-        
-        echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-        echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
-        echo "✅ Development version: $NEW_VERSION"
-
-  build:
-    needs: prepare
-    name: Build and Release
-    uses: ./.github/workflows/build-and-sign.yml
+  release:
+    uses: ./.github/workflows/release-common.yml
     with:
-      version: ${{ needs.prepare.outputs.version }}
       is_dev_build: true
-      create_release: true
-      release_tag: ${{ needs.prepare.outputs.tag }}
-    secrets:
-      CERTIFICATES_P12: ${{ secrets.CERTIFICATES_P12 }}
-      CERTIFICATES_PASSWORD: ${{ secrets.CERTIFICATES_PASSWORD }}
-      NOTARIZATION_APPLE_ID: ${{ secrets.NOTARIZATION_APPLE_ID }}
-      NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
-      NOTARIZATION_TEAM_ID: ${{ secrets.NOTARIZATION_TEAM_ID }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      branch_name: develop
+    secrets: inherit

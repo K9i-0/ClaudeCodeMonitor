@@ -313,9 +313,8 @@ jobs:
         files: ${{ env.DMG_PATH }}
         token: ${{ secrets.GITHUB_TOKEN }}
     
-    # Upload DMG as artifact (only if not creating release)
+    # Always upload DMG as artifact for downstream jobs
     - name: Upload DMG artifact
-      if: inputs.create_release != true
       uses: actions/upload-artifact@v4
       with:
         name: dmg-artifact
