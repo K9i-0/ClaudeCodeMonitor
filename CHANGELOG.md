@@ -11,6 +11,12 @@ All notable changes to this project will be documented in this file.
 
 
 
+
+## [0.7.8] - 2025-07-06
+
+### Fixed
+- Sparkle署名生成の非推奨フラグを修正 (generate-appcast.sh, sign-update.sh)
+
 ## [0.7.7] - 2025-07-06
 
 ### Fixed
