@@ -11,6 +11,12 @@ All notable changes to this project will be documented in this file.
 
 
 
+
+## [0.7.8] - 2025-07-06
+
+### Changed
+- Improved /start-work command to automatically execute tmux attach in new iTerm pane
+
 ## [0.7.7] - 2025-07-06
 
 ### Fixed
