@@ -22,11 +22,11 @@ jobs:
         echo "head_branch=${{ github.head_ref }}" >> $GITHUB_OUTPUT
         echo "Merging from ${{ github.head_ref }} to ${{ github.base_ref }}"
     
-    # Validation for feature -> develop PRs
-    - name: Validate feature to develop
-      if: github.base_ref == 'develop' && startsWith(github.head_ref, 'feature/')
+    # Validation for all branches -> develop PRs (except hotfix)
+    - name: Validate branch to develop
+      if: github.base_ref == 'develop' && github.head_ref != 'develop' && !startsWith(github.head_ref, 'hotfix/')
       run: |
-        echo "## Validating feature → develop PR"
+        echo "## Validating ${{ github.head_ref }} → develop PR"
         
         # Get version from base branch (develop)
         git fetch origin develop
@@ -40,7 +40,7 @@ jobs:
         # Check if version was updated
         if [ "$BASE_VERSION" = "$PR_VERSION" ]; then
           echo "❌ Error: Version not updated in Info.plist"
-          echo "Please update the version number when merging features to develop"
+          echo "Please update the version number when merging to develop"
           echo ""
           echo "Current version: $BASE_VERSION"
           echo "Expected: A higher version number"
