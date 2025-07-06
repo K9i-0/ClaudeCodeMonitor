@@ -87,9 +87,14 @@ print_info "Updating Info.plist..."
 # Create a temporary file
 TEMP_FILE=$(mktemp)
 
-# Update CFBundleShortVersionString
+# Update both CFBundleShortVersionString and CFBundleVersion
 awk -v new_version="$NEW_VERSION" '
     /<key>CFBundleShortVersionString<\/key>/ {
+        print
+        getline
+        sub(/<string>.*<\/string>/, "<string>" new_version "</string>")
+    }
+    /<key>CFBundleVersion<\/key>/ {
         print
         getline
         sub(/<string>.*<\/string>/, "<string>" new_version "</string>")

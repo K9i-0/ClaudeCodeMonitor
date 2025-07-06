@@ -36,11 +36,13 @@ jobs:
         # Get version from base branch (develop)
         git fetch origin develop
         BASE_VERSION=$(git show origin/develop:Info.plist | grep -A1 "CFBundleShortVersionString" | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
-        echo "Develop branch version: $BASE_VERSION"
+        BASE_BUILD_VERSION=$(git show origin/develop:Info.plist | grep -A1 "CFBundleVersion" | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        echo "Develop branch version: $BASE_VERSION (build: $BASE_BUILD_VERSION)"
         
         # Get version from PR branch
         PR_VERSION=$(grep -A1 "CFBundleShortVersionString" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
-        echo "PR branch version: $PR_VERSION"
+        PR_BUILD_VERSION=$(grep -A1 "CFBundleVersion" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        echo "PR branch version: $PR_VERSION (build: $PR_BUILD_VERSION)"
         
         # Save versions to outputs
         echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
@@ -53,6 +55,16 @@ jobs:
           echo ""
           echo "Current version: $BASE_VERSION"
           echo "Expected: A higher version number"
+          echo "validation_failed=true" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+        
+        # Check if CFBundleVersion matches CFBundleShortVersionString
+        if [ "$PR_VERSION" != "$PR_BUILD_VERSION" ]; then
+          echo "❌ Error: Version mismatch in Info.plist"
+          echo "CFBundleShortVersionString: $PR_VERSION"
+          echo "CFBundleVersion: $PR_BUILD_VERSION"
+          echo "Both values should be the same"
           echo "validation_failed=true" >> $GITHUB_OUTPUT
           exit 1
         fi
@@ -89,8 +101,13 @@ jobs:
           
           ### How to update:
           1. Edit \`Info.plist\`
-          2. Update the \`CFBundleShortVersionString\` value
+          2. Update both \`CFBundleShortVersionString\` and \`CFBundleVersion\` values to the same version
           3. Commit and push the changes
+          
+          Or use the update script:
+          \`\`\`bash
+          ./scripts/update-version.sh patch  # or minor/major
+          \`\`\`
           
           The version should follow semantic versioning (x.y.z format).`;
           
@@ -141,7 +158,17 @@ jobs:
         
         # Get current version
         VERSION=$(grep -A1 "CFBundleShortVersionString" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
-        echo "Release version: $VERSION"
+        BUILD_VERSION=$(grep -A1 "CFBundleVersion" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        echo "Release version: $VERSION (build: $BUILD_VERSION)"
+        
+        # Check if versions match
+        if [ "$VERSION" != "$BUILD_VERSION" ]; then
+          echo "❌ Error: Version mismatch"
+          echo "CFBundleShortVersionString: $VERSION"
+          echo "CFBundleVersion: $BUILD_VERSION"
+          echo "Both values should be the same"
+          exit 1
+        fi
         
         # Check if this version already exists as a tag
         if git rev-parse "v$VERSION" >/dev/null 2>&1; then
