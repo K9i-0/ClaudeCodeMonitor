@@ -13,6 +13,15 @@ All notable changes to this project will be documented in this file.
 
 
 
+
+## [0.7.10] - 2025-07-06
+
+### Fixed
+- CI環境でのSparkle appcast生成エラーを修正
+- プライベートキーの改行問題を解決（echo -nを使用）
+- generate-appcast.shスクリプトを削除してワークフローに直接記述
+- Sparkleを最新版（2.6.4）に更新
+
 ## [0.7.9] - 2025-07-06
 
 ### Fixed
