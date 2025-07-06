@@ -53,6 +53,8 @@ Download the latest release from [GitHub Releases](https://github.com/K9i-0/Clau
 3. Click "Open Anyway" for ClaudeCodeMonitor
 4. Or simply right-click the app and select "Open"
 
+**Development Builds**: Dev releases (versions ending with `-dev`) use ad-hoc signing and will always show this warning. This is expected behavior until proper Developer ID signing is implemented.
+
 ## 📋 Requirements
 
 - macOS 13.0 or later
