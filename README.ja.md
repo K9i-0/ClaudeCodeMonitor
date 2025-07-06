@@ -47,12 +47,6 @@ macOSのメニューバーに常駐し、Claude Codeの使用状況をリアル�
 
 最新のリリースを[GitHub Releases](https://github.com/K9i-0/ClaudeCodeMonitor/releases/latest)からダウンロードしてください。
 
-**注意**: 初回起動時に「開発元を検証できません」と表示される場合：
-1. 警告ダイアログで「キャンセル」をクリック
-2. システム設定 → プライバシーとセキュリティを開く
-3. ClaudeCodeMonitorの「このまま開く」をクリック
-4. またはアプリを右クリックして「開く」を選択
-
 ## 📋 必要な環境
 
 - macOS 13.0以上

@@ -47,14 +47,6 @@ This app wraps the [ccusage](https://github.com/ryoppippi/ccusage) CLI tool to p
 
 Download the latest release from [GitHub Releases](https://github.com/K9i-0/ClaudeCodeMonitor/releases/latest).
 
-**Note**: On first launch, you may see "Cannot be opened because the developer cannot be verified":
-1. Click "Cancel" on the warning dialog
-2. Open System Settings → Privacy & Security
-3. Click "Open Anyway" for ClaudeCodeMonitor
-4. Or simply right-click the app and select "Open"
-
-**Development Builds**: Dev releases (versions ending with `-dev`) use ad-hoc signing and will always show this warning. This is expected behavior until proper Developer ID signing is implemented.
-
 ## 📋 Requirements
 
 - macOS 13.0 or later
