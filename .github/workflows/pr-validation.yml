@@ -21,17 +21,22 @@ jobs:
     
     - name: Check which branch we're merging to
       id: target
+      env:
+        BASE_REF: ${{ github.base_ref }}
+        HEAD_REF: ${{ github.head_ref }}
       run: |
-        echo "base_branch=${{ github.base_ref }}" >> $GITHUB_OUTPUT
-        echo "head_branch=${{ github.head_ref }}" >> $GITHUB_OUTPUT
-        echo "Merging from ${{ github.head_ref }} to ${{ github.base_ref }}"
+        echo "base_branch=$BASE_REF" >> "$GITHUB_OUTPUT"
+        echo "head_branch=$HEAD_REF" >> "$GITHUB_OUTPUT"
+        echo "Merging from $HEAD_REF to $BASE_REF"
     
     # Validation for all branches -> develop PRs (except hotfix)
     - name: Validate branch to develop
       if: github.base_ref == 'develop' && github.head_ref != 'develop' && !startsWith(github.head_ref, 'hotfix/')
       id: version_check
+      env:
+        HEAD_REF: ${{ github.head_ref }}
       run: |
-        echo "## Validating ${{ github.head_ref }} → develop PR"
+        echo "## Validating $HEAD_REF → develop PR"
         
         # Get version from base branch (develop)
         git fetch origin develop
@@ -45,8 +50,8 @@ jobs:
         echo "PR branch version: $PR_VERSION (build: $PR_BUILD_VERSION)"
         
         # Save versions to outputs
-        echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
-        echo "pr_version=$PR_VERSION" >> $GITHUB_OUTPUT
+        echo "base_version=$BASE_VERSION" >> "$GITHUB_OUTPUT"
+        echo "pr_version=$PR_VERSION" >> "$GITHUB_OUTPUT"
         
         # Check if version was updated
         if [ "$BASE_VERSION" = "$PR_VERSION" ]; then
@@ -55,7 +60,7 @@ jobs:
           echo ""
           echo "Current version: $BASE_VERSION"
           echo "Expected: A higher version number"
-          echo "validation_failed=true" >> $GITHUB_OUTPUT
+          echo "validation_failed=true" >> "$GITHUB_OUTPUT"
           exit 1
         fi
         
@@ -65,7 +70,7 @@ jobs:
           echo "CFBundleShortVersionString: $PR_VERSION"
           echo "CFBundleVersion: $PR_BUILD_VERSION"
           echo "Both values should be the same"
-          echo "validation_failed=true" >> $GITHUB_OUTPUT
+          echo "validation_failed=true" >> "$GITHUB_OUTPUT"
           exit 1
         fi
         
@@ -74,12 +79,12 @@ jobs:
           echo "❌ Error: Invalid version format"
           echo "Version should be in format: x.y.z (e.g., 1.2.3)"
           echo "Found: $PR_VERSION"
-          echo "validation_failed=true" >> $GITHUB_OUTPUT
+          echo "validation_failed=true" >> "$GITHUB_OUTPUT"
           exit 1
         fi
         
         echo "✅ Version updated: $BASE_VERSION → $PR_VERSION"
-        echo "validation_failed=false" >> $GITHUB_OUTPUT
+        echo "validation_failed=false" >> "$GITHUB_OUTPUT"
     
     # Comment on PR if validation failed
     - name: Comment on PR about version update

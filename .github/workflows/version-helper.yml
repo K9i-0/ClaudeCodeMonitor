@@ -20,33 +20,34 @@ jobs:
     
     - name: Analyze commits and suggest version
       id: analyze
+      env:
+        BASE_BRANCH: ${{ github.base_ref }}
+        HEAD_BRANCH: ${{ github.head_ref }}
       run: |
-        BASE_BRANCH="${{ github.base_ref }}"
-        HEAD_BRANCH="${{ github.head_ref }}"
         
         echo "Analyzing PR from $HEAD_BRANCH to $BASE_BRANCH"
         
         # Get current version from base branch
-        git fetch origin $BASE_BRANCH
-        CURRENT_VERSION=$(git show origin/$BASE_BRANCH:Info.plist | grep -A1 "CFBundleShortVersionString" | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        git fetch origin "$BASE_BRANCH"
+        CURRENT_VERSION=$(git show "origin/$BASE_BRANCH:Info.plist" | grep -A1 "CFBundleShortVersionString" | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
         
         # Get PR version
         PR_VERSION=$(grep -A1 "CFBundleShortVersionString" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
         
-        echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-        echo "pr_version=$PR_VERSION" >> $GITHUB_OUTPUT
+        echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+        echo "pr_version=$PR_VERSION" >> "$GITHUB_OUTPUT"
         
         # Analyze commits
-        COMMITS=$(git log --format="%s" origin/$BASE_BRANCH..HEAD)
+        COMMITS=$(git log --format="%s" "origin/$BASE_BRANCH"..HEAD)
         FEAT_COUNT=$(echo "$COMMITS" | grep -c "^feat" || true)
         FIX_COUNT=$(echo "$COMMITS" | grep -c "^fix" || true)
         BREAKING_COUNT=$(echo "$COMMITS" | grep -cE "(^feat!|^fix!|BREAKING CHANGE)" || true)
         TOTAL_COMMITS=$(echo "$COMMITS" | wc -l)
         
-        echo "feat_count=$FEAT_COUNT" >> $GITHUB_OUTPUT
-        echo "fix_count=$FIX_COUNT" >> $GITHUB_OUTPUT
-        echo "breaking_count=$BREAKING_COUNT" >> $GITHUB_OUTPUT
-        echo "total_commits=$TOTAL_COMMITS" >> $GITHUB_OUTPUT
+        echo "feat_count=$FEAT_COUNT" >> "$GITHUB_OUTPUT"
+        echo "fix_count=$FIX_COUNT" >> "$GITHUB_OUTPUT"
+        echo "breaking_count=$BREAKING_COUNT" >> "$GITHUB_OUTPUT"
+        echo "total_commits=$TOTAL_COMMITS" >> "$GITHUB_OUTPUT"
         
         # Parse current version
         IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
@@ -69,8 +70,8 @@ jobs:
           SUGGESTION_REASON="Other changes"
         fi
         
-        echo "suggested_version=$SUGGESTED" >> $GITHUB_OUTPUT
-        echo "suggestion_reason=$SUGGESTION_REASON" >> $GITHUB_OUTPUT
+        echo "suggested_version=$SUGGESTED" >> "$GITHUB_OUTPUT"
+        echo "suggestion_reason=$SUGGESTION_REASON" >> "$GITHUB_OUTPUT"
     
     - name: Post PR comment for feature branch
       if: github.base_ref == 'develop' && startsWith(github.head_ref, 'feature/')
