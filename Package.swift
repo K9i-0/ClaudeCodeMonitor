@@ -20,7 +20,7 @@ let package = Package(
         .executableTarget(
             name: "ClaudeCodeMonitor",
             dependencies: [
-                .product(name: "Sparkle", package: "Sparkle")
+                .product(name: "Sparkle", package: "Sparkle", condition: .when(platforms: [.macOS]))
             ],
             path: "Sources/ClaudeUsageMonitor",
             resources: [
@@ -28,6 +28,9 @@ let package = Package(
                 .process("Resources/ja.lproj"),
                 .process("Resources/Assets.xcassets"),
                 .copy("AppIcon.icns")
+            ],
+            swiftSettings: [
+                .define("TEST", .when(configuration: .test))
             ]
         ),
         .testTarget(

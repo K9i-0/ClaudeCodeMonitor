@@ -1,8 +1,10 @@
 import Cocoa
 import SwiftUI
-import Sparkle
 import Combine
 import UserNotifications
+#if !TEST
+import Sparkle
+#endif
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -17,17 +19,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
     
     // Sparkle configuration based on build type
-    #if DEBUG
-    // Allow testing Sparkle in debug builds with TEST_SPARKLE environment variable
-    private let updaterController: SPUStandardUpdaterController? = {
-        if ProcessInfo.processInfo.environment["TEST_SPARKLE"] != nil {
-            print("⚠️ Sparkle enabled in DEBUG mode for testing")
-            return SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
-        }
-        return nil
-    }()
+    #if !TEST
+        #if DEBUG
+        // Allow testing Sparkle in debug builds with TEST_SPARKLE environment variable
+        private let updaterController: SPUStandardUpdaterController? = {
+            if ProcessInfo.processInfo.environment["TEST_SPARKLE"] != nil {
+                print("⚠️ Sparkle enabled in DEBUG mode for testing")
+                return SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+            }
+            return nil
+        }()
+        #else
+        private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        #endif
     #else
-    private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+    private let updaterController: SPUStandardUpdaterController? = nil
     #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {

@@ -1,18 +1,26 @@
 import SwiftUI
+#if !TEST
 import Sparkle
+#endif
 
 struct SettingsTabView: View {
     @EnvironmentObject var monitor: UsageMonitor
     @StateObject private var languageSettings = LanguageSettings.shared
     @StateObject private var currencySettings = CurrencySettings.shared
     // @State private var notificationEnabled = Bundle.main.bundleIdentifier != nil ? NotificationManager.shared.isNotificationEnabled : false
-    #if DEBUG
-    // Sparkle is disabled in debug builds
-    private var updater: SPUUpdater? {
+    #if !TEST
+        #if DEBUG
+        // Sparkle is disabled in debug builds
+        private var updater: SPUUpdater? {
+            return nil
+        }
+        #else
+        private let updater = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil).updater
+        #endif
+    #else
+    private var updater: AnyObject? {
         return nil
     }
-    #else
-    private let updater = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil).updater
     #endif
 
     let plans = [
