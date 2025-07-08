@@ -169,4 +169,6 @@
 "update.stableChannel" = "Stable";
 "update.devChannel" = "Development";
 "update.stableChannelDescription" = "Stable releases only";
-"update.devChannelDescription" = "Development builds and stable releases";
+"update.devChannelDescription" = "Development builds only";
+"update.recommended" = "(Recommended)";
+"update.latestVersion" = "Latest: %@";

@@ -11,6 +11,8 @@ struct SettingsTabView: View {
     @State private var latestVersion: String?
     @State private var isCheckingForUpdates = false
     @State private var updateCheckError: String?
+    @State private var latestStableVersion: String?
+    @State private var latestDevVersion: String?
     #if canImport(Sparkle)
         #if DEBUG
         // Get updater from AppDelegate in debug builds
@@ -224,11 +226,17 @@ struct SettingsTabView: View {
                     .font(.system(size: 16, weight: .semibold))
 
                 // Current version
+                let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
                 HStack {
-                    Text(L10n.Update.currentVersion(version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"))
+                    Text(L10n.Update.currentVersion(version: currentVersion))
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                     Spacer()
+                    #if DEBUG
+                    Text("(Debug)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.orange)
+                    #endif
                 }
                 
                 // Latest version info
@@ -278,11 +286,35 @@ struct SettingsTabView: View {
                                     .frame(width: 20)
                                 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(channel.displayName)
-                                        .font(.system(size: 14, weight: .medium))
-                                    Text(channel.description)
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.secondary)
+                                    HStack(spacing: 4) {
+                                        Text(channel.displayName)
+                                            .font(.system(size: 14, weight: .medium))
+                                        if channel == .stable {
+                                            Text(L10n.Update.recommended)
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.green)
+                                        }
+                                    }
+                                    
+                                    HStack(spacing: 8) {
+                                        Text(channel.description)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.secondary)
+                                        
+                                        if channel == .stable && latestStableVersion != nil {
+                                            Text("•")
+                                                .foregroundColor(.secondary.opacity(0.5))
+                                            Text(L10n.Update.latestVersion(version: latestStableVersion!))
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.secondary)
+                                        } else if channel == .dev && latestDevVersion != nil {
+                                            Text("•")
+                                                .foregroundColor(.secondary.opacity(0.5))
+                                            Text(L10n.Update.latestVersion(version: latestDevVersion!))
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
                                 }
                                 
                                 Spacer()
@@ -359,11 +391,17 @@ struct SettingsTabView: View {
                     .font(.system(size: 16, weight: .semibold))
 
                 // Current version
+                let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
                 HStack {
-                    Text(L10n.Update.currentVersion(version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"))
+                    Text(L10n.Update.currentVersion(version: currentVersion))
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                     Spacer()
+                    #if DEBUG
+                    Text("(Debug)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.orange)
+                    #endif
                 }
                 
                 // Latest version info
@@ -413,11 +451,35 @@ struct SettingsTabView: View {
                                     .frame(width: 20)
                                 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(channel.displayName)
-                                        .font(.system(size: 14, weight: .medium))
-                                    Text(channel.description)
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.secondary)
+                                    HStack(spacing: 4) {
+                                        Text(channel.displayName)
+                                            .font(.system(size: 14, weight: .medium))
+                                        if channel == .stable {
+                                            Text(L10n.Update.recommended)
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.green)
+                                        }
+                                    }
+                                    
+                                    HStack(spacing: 8) {
+                                        Text(channel.description)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.secondary)
+                                        
+                                        if channel == .stable && latestStableVersion != nil {
+                                            Text("•")
+                                                .foregroundColor(.secondary.opacity(0.5))
+                                            Text(L10n.Update.latestVersion(version: latestStableVersion!))
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.secondary)
+                                        } else if channel == .dev && latestDevVersion != nil {
+                                            Text("•")
+                                                .foregroundColor(.secondary.opacity(0.5))
+                                            Text(L10n.Update.latestVersion(version: latestDevVersion!))
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
                                 }
                                 
                                 Spacer()
@@ -510,6 +572,9 @@ struct SettingsTabView: View {
 
             Spacer()
         }
+        .onAppear {
+            fetchLatestVersions()
+        }
     }
     
     private func selectUpdateChannel(_ channel: UpdateChannel) {
@@ -558,6 +623,46 @@ struct SettingsTabView: View {
                     self.updateCheckError = "Network error"
                     self.isCheckingForUpdates = false
                 }
+            }
+        }
+    }
+    
+    private func fetchLatestVersions() {
+        // Fetch stable version
+        Task {
+            await fetchLatestVersion(for: .stable) { version in
+                self.latestStableVersion = version
+            }
+        }
+        
+        // Fetch dev version
+        Task {
+            await fetchLatestVersion(for: .dev) { version in
+                self.latestDevVersion = version
+            }
+        }
+    }
+    
+    private func fetchLatestVersion(for channel: UpdateChannel, completion: @escaping (String?) -> Void) async {
+        guard let url = URL(string: channel.appcastURL) else {
+            completion(nil)
+            return
+        }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let parser = XMLParser(data: data)
+            let delegate = AppcastParserDelegate()
+            parser.delegate = delegate
+            
+            if parser.parse(), let version = delegate.latestVersion {
+                await MainActor.run {
+                    completion(version)
+                }
+            }
+        } catch {
+            await MainActor.run {
+                completion(nil)
             }
         }
     }

@@ -169,4 +169,6 @@
 "update.stableChannel" = "安定版";
 "update.devChannel" = "開発版";
 "update.stableChannelDescription" = "安定版リリースのみ";
-"update.devChannelDescription" = "開発版ビルドと安定版リリース";
+"update.devChannelDescription" = "開発版ビルドのみ";
+"update.recommended" = "(推奨)";
+"update.latestVersion" = "最新: %@";

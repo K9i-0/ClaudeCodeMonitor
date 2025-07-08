@@ -311,5 +311,9 @@ struct L10n {
         static var devChannel: String { "update.devChannel".localized }
         static var stableChannelDescription: String { "update.stableChannelDescription".localized }
         static var devChannelDescription: String { "update.devChannelDescription".localized }
+        static var recommended: String { "update.recommended".localized }
+        static func latestVersion(version: String) -> String {
+            return "update.latestVersion".localized(with: version)
+        }
     }
 }
