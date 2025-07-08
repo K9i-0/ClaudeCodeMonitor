@@ -16,9 +16,9 @@ enum UpdateChannel: String, CaseIterable {
     var appcastURL: String {
         switch self {
         case .stable:
-            return "https://github.com/K9i-0/ClaudeCodeMonitor/releases/latest/download/appcast.xml"
+            return "https://k9i-0.github.io/ClaudeCodeMonitor/appcast.xml"
         case .dev:
-            return "https://github.com/K9i-0/ClaudeCodeMonitor/releases/latest/download/appcast-dev.xml"
+            return "https://k9i-0.github.io/ClaudeCodeMonitor/appcast-dev.xml"
         }
     }
     

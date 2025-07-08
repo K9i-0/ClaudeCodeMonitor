@@ -79,7 +79,7 @@ jobs:
           name: dmg-artifact
           path: .
 
-      - name: Generate Sparkle appcast
+      - name: Update appcast on gh-pages
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
           VERSION: ${{ needs.prepare.outputs.version }}
@@ -95,66 +95,13 @@ jobs:
             exit 1
           fi
 
-          if [ -n "$SPARKLE_PRIVATE_KEY" ]; then
-            echo "✅ Generating Sparkle appcast.xml..."
-            echo "📦 DMG file: $DMG_PATH"
-            
-            # Create directories
-            mkdir -p sparkle appcast
-            
-            # Download and extract Sparkle
-            echo "Downloading Sparkle tools..."
-            cd sparkle
-            curl -Lo sparkle.tar.xz https://github.com/sparkle-project/Sparkle/releases/download/2.7.1/Sparkle-2.7.1.tar.xz
-            tar xzf sparkle.tar.xz
-            cd ..
-            
-            # Copy DMG to appcast directory
-            cp "$DMG_PATH" appcast/
-            
-            # Create temporary file for private key
-            PRIVATE_KEY_FILE=$(mktemp)
-            trap "rm -f $PRIVATE_KEY_FILE" EXIT
-            (umask 077 && echo -n "$SPARKLE_PRIVATE_KEY" > "$PRIVATE_KEY_FILE")
-            
-            # Generate appcast
-            DOWNLOAD_URL_PREFIX="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/"
-            ./sparkle/bin/generate_appcast \
-              --ed-key-file "$PRIVATE_KEY_FILE" \
-              --download-url-prefix "$DOWNLOAD_URL_PREFIX" \
-              -o appcast.xml \
-              appcast/
-            
-            # Determine which appcast file to create based on build type
-            if [ "${{ inputs.is_dev_build }}" == "true" ]; then
-              # For dev builds, create appcast-dev.xml
-              mv appcast.xml appcast-dev.xml
-              echo "✅ Successfully generated appcast-dev.xml"
-            else
-              # For stable builds, keep appcast.xml
-              echo "✅ Successfully generated appcast.xml"
-            fi
-            
-            # Clean up
-            rm -rf sparkle appcast
-          else
-            if [ "${{ inputs.is_dev_build }}" == "true" ]; then
-              echo "⚠️ No Sparkle private key, creating empty appcast-dev.xml"
-              APPCAST_FILE="appcast-dev.xml"
-            else
-              echo "⚠️ No Sparkle private key, creating empty appcast.xml"
-              APPCAST_FILE="appcast.xml"
-            fi
-            {
-              echo '<?xml version="1.0" encoding="utf-8"?>'
-              echo '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">'
-              echo '  <channel>'
-              echo '    <title>Claude Code Monitor</title>'
-              echo '    <description>No Sparkle key configured</description>'
-              echo '  </channel>'
-              echo '</rss>'
-            } > "$APPCAST_FILE"
-          fi
+          # Configure git
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          # Call update-appcast script
+          IS_DEV=${{ inputs.is_dev_build }}
+          ./scripts/update-appcast.sh "$VERSION" "$IS_DEV"
 
       - name: Create and push tag
         run: |
@@ -218,4 +165,3 @@ jobs:
           prerelease: ${{ inputs.is_dev_build }}
           files: |
             *.dmg
-            appcast*.xml
