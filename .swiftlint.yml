@@ -73,6 +73,7 @@ disabled_rules:
   - trailing_comma
   - force_cast
   - force_try
+  - type_body_length
 
 # Rule configuration
 line_length:
