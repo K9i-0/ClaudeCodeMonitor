@@ -580,10 +580,12 @@ struct SettingsTabView: View {
     private func selectUpdateChannel(_ channel: UpdateChannel) {
         UserDefaults.standard.updateChannel = channel
         
+        #if canImport(Sparkle)
         // Notify AppDelegate to update Sparkle configuration
         if let appDelegate = NSApplication.shared.delegate as? AppDelegate {
             appDelegate.updateChannelChanged(to: channel)
         }
+        #endif
         
         // Re-fetch latest versions when channel changes
         fetchLatestVersions()
