@@ -1,10 +1,18 @@
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
     <channel>
         <title>Claude Code Monitor - Stable Releases</title>
         <link>https://k9i-0.github.io/ClaudeCodeMonitor/appcast.xml</link>
         <description>Most recent stable releases</description>
         <language>en</language>
         <!-- Releases will be added here -->
+        <item>
+            <title>0.7.15</title>
+            <pubDate>Sun, 20 Jul 2025 00:40:01 +0000</pubDate>
+            <sparkle:version>0.7.15</sparkle:version>
+            <sparkle:shortVersionString>0.7.15</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/K9i-0/ClaudeCodeMonitor/releases/download/v0.7.15/ClaudeCodeMonitor-0.7.15.dmg" length="5060404" type="application/octet-stream" sparkle:edSignature="4h79bU6FMItoM8aiOSvLP/EVXnk7QWdFczg9Kh1c4e8vBroh2kL/UWMszh2TksOls8T/xA6sND9ei1UFjIuLDA=="/>
+        </item>
     </channel>
 </rss>
