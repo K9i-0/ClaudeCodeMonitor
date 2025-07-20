@@ -1,0 +1,282 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [develop, main]
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate-version:
+    name: Validate Version Update
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Check which branch we're merging to
+      id: target
+      env:
+        BASE_REF: ${{ github.base_ref }}
+        HEAD_REF: ${{ github.head_ref }}
+      run: |
+        echo "base_branch=$BASE_REF" >> "$GITHUB_OUTPUT"
+        echo "head_branch=$HEAD_REF" >> "$GITHUB_OUTPUT"
+        echo "Merging from $HEAD_REF to $BASE_REF"
+    
+    # Validation for all branches -> develop PRs (except hotfix)
+    - name: Validate branch to develop
+      if: github.base_ref == 'develop' && github.head_ref != 'develop' && !startsWith(github.head_ref, 'hotfix/')
+      id: version_check
+      env:
+        HEAD_REF: ${{ github.head_ref }}
+      run: |
+        echo "## Validating $HEAD_REF → develop PR"
+        
+        # Get version from base branch (develop)
+        git fetch origin develop
+        BASE_VERSION=$(git show origin/develop:Info.plist | grep -A1 "CFBundleShortVersionString" | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        BASE_BUILD_VERSION=$(git show origin/develop:Info.plist | grep -A1 "CFBundleVersion" | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        echo "Develop branch version: $BASE_VERSION (build: $BASE_BUILD_VERSION)"
+        
+        # Get version from PR branch
+        PR_VERSION=$(grep -A1 "CFBundleShortVersionString" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        PR_BUILD_VERSION=$(grep -A1 "CFBundleVersion" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        echo "PR branch version: $PR_VERSION (build: $PR_BUILD_VERSION)"
+        
+        # Save versions to outputs
+        echo "base_version=$BASE_VERSION" >> "$GITHUB_OUTPUT"
+        echo "pr_version=$PR_VERSION" >> "$GITHUB_OUTPUT"
+        
+        # Check if version was updated
+        if [ "$BASE_VERSION" = "$PR_VERSION" ]; then
+          echo "❌ Error: Version not updated in Info.plist"
+          echo "Please update the version number when merging to develop"
+          echo ""
+          echo "Current version: $BASE_VERSION"
+          echo "Expected: A higher version number"
+          echo "validation_failed=true" >> "$GITHUB_OUTPUT"
+          exit 1
+        fi
+        
+        # Check if CFBundleVersion matches CFBundleShortVersionString
+        if [ "$PR_VERSION" != "$PR_BUILD_VERSION" ]; then
+          echo "❌ Error: Version mismatch in Info.plist"
+          echo "CFBundleShortVersionString: $PR_VERSION"
+          echo "CFBundleVersion: $PR_BUILD_VERSION"
+          echo "Both values should be the same"
+          echo "validation_failed=true" >> "$GITHUB_OUTPUT"
+          exit 1
+        fi
+        
+        # Validate version format (should be x.y.z)
+        if ! echo "$PR_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          echo "❌ Error: Invalid version format"
+          echo "Version should be in format: x.y.z (e.g., 1.2.3)"
+          echo "Found: $PR_VERSION"
+          echo "validation_failed=true" >> "$GITHUB_OUTPUT"
+          exit 1
+        fi
+        
+        echo "✅ Version updated: $BASE_VERSION → $PR_VERSION"
+        echo "validation_failed=false" >> "$GITHUB_OUTPUT"
+        echo "validation_passed=true" >> "$GITHUB_OUTPUT"
+    
+    # Comment on PR if validation failed
+    - name: Comment on PR about version update
+      if: always() && github.base_ref == 'develop' && github.head_ref != 'develop' && !startsWith(github.head_ref, 'hotfix/') && steps.version_check.outcome == 'failure'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const baseVersion = '${{ steps.version_check.outputs.base_version }}';
+          const prVersion = '${{ steps.version_check.outputs.pr_version }}';
+          
+          const comment = `## ❌ Version Update Required
+          
+          This PR is merging to \`develop\` but the version in \`Info.plist\` has not been updated.
+          
+          **Current version:** \`${baseVersion}\`
+          **PR version:** \`${prVersion}\`
+          
+          Please update the version number in \`Info.plist\` before this PR can be merged.
+          
+          ### How to update:
+          1. Edit \`Info.plist\`
+          2. Update both \`CFBundleShortVersionString\` and \`CFBundleVersion\` values to the same version
+          3. Commit and push the changes
+          
+          Or use the update script:
+          \`\`\`bash
+          ./scripts/update-version.sh patch  # or minor/major
+          \`\`\`
+          
+          The version should follow semantic versioning (x.y.z format).`;
+          
+          // Check if we already commented
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const botComment = comments.find(comment => 
+            comment.user.type === 'Bot' && 
+            comment.body.includes('Version Update Required')
+          );
+          
+          if (botComment) {
+            // Update existing comment
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: comment,
+            });
+          } else {
+            // Create new comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment,
+            });
+          }
+    
+    # Delete comment if validation passed
+    - name: Delete version update comment if validation passed
+      if: github.base_ref == 'develop' && github.head_ref != 'develop' && !startsWith(github.head_ref, 'hotfix/') && steps.version_check.outputs.validation_passed == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Find and delete any existing version update comments
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const botComments = comments.filter(comment => 
+            comment.user.type === 'Bot' && 
+            comment.body.includes('Version Update Required')
+          );
+          
+          for (const comment of botComments) {
+            console.log(`Deleting outdated version comment: ${comment.id}`);
+            await github.rest.issues.deleteComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: comment.id,
+            });
+          }
+          
+          if (botComments.length > 0) {
+            console.log(`✅ Deleted ${botComments.length} outdated version comment(s)`);
+          }
+    
+    # Validation for develop -> main PRs
+    - name: Validate develop to main
+      if: github.base_ref == 'main' && github.head_ref == 'develop'
+      run: |
+        echo "## Validating develop → main PR"
+        
+        # Check if CHANGELOG.md was updated
+        if ! git diff origin/main --name-only | grep -q "CHANGELOG.md"; then
+          echo "❌ Error: CHANGELOG.md not updated"
+          echo "Please update CHANGELOG.md with release notes before merging to main"
+          exit 1
+        fi
+        
+        echo "✅ CHANGELOG.md has been updated"
+        
+        # Get current version
+        VERSION=$(grep -A1 "CFBundleShortVersionString" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        BUILD_VERSION=$(grep -A1 "CFBundleVersion" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        echo "Release version: $VERSION (build: $BUILD_VERSION)"
+        
+        # Check if versions match
+        if [ "$VERSION" != "$BUILD_VERSION" ]; then
+          echo "❌ Error: Version mismatch"
+          echo "CFBundleShortVersionString: $VERSION"
+          echo "CFBundleVersion: $BUILD_VERSION"
+          echo "Both values should be the same"
+          exit 1
+        fi
+        
+        # Check if this version already exists as a tag
+        if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+          echo "⚠️ Warning: Version v$VERSION already exists as a tag"
+          echo "The release workflow will skip creating a new release"
+        fi
+    
+    # Validation for hotfix -> main PRs
+    - name: Validate hotfix to main
+      if: github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/')
+      run: |
+        echo "## Validating hotfix → main PR"
+        
+        # Get version from main branch
+        git fetch origin main
+        MAIN_VERSION=$(git show origin/main:Info.plist | grep -A1 "CFBundleShortVersionString" | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        echo "Main branch version: $MAIN_VERSION"
+        
+        # Get version from PR branch
+        PR_VERSION=$(grep -A1 "CFBundleShortVersionString" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        echo "Hotfix version: $PR_VERSION"
+        
+        # Check if version was updated
+        if [ "$MAIN_VERSION" = "$PR_VERSION" ]; then
+          echo "❌ Error: Version not updated in Info.plist"
+          echo "Hotfixes must increment the version number"
+          exit 1
+        fi
+        
+        # Check CHANGELOG update
+        if ! git diff origin/main --name-only | grep -q "CHANGELOG.md"; then
+          echo "❌ Error: CHANGELOG.md not updated"
+          echo "Please document the hotfix in CHANGELOG.md"
+          exit 1
+        fi
+        
+        echo "✅ Hotfix validation passed"
+    
+  check-conventional-commits:
+    name: Check Commit Messages
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Check commit format
+      run: |
+        echo "## Checking commit message format"
+        
+        # Get commits in this PR
+        COMMITS=$(git log --format="%s" origin/${{ github.base_ref }}..HEAD)
+        
+        # Check if commits follow conventional format
+        INVALID_COMMITS=""
+        while IFS= read -r commit; do
+          if ! echo "$commit" | grep -qE '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: .+' && \
+             ! echo "$commit" | grep -qE '^Merge '; then
+            INVALID_COMMITS="${INVALID_COMMITS}❌ $commit\n"
+          fi
+        done <<< "$COMMITS"
+        
+        if [ -n "$INVALID_COMMITS" ]; then
+          echo "⚠️ Warning: Some commits don't follow Conventional Commits format:"
+          echo -e "$INVALID_COMMITS"
+          echo ""
+          echo "Expected format: type(scope): description"
+          echo "Valid types: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert"
+          echo ""
+          echo "This is a warning only - not blocking the PR"
+        else
+          echo "✅ All commits follow Conventional Commits format"
+        fi

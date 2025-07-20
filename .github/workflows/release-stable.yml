@@ -1,0 +1,17 @@
+name: Stable Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    uses: ./.github/workflows/release-common.yml
+    with:
+      is_dev_build: false
+      branch_name: main
+    secrets: inherit

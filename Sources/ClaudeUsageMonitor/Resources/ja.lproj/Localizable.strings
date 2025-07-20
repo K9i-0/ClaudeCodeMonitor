@@ -154,3 +154,21 @@
 "history.peak" = "ピーク";
 "history.today" = "今日";
 "history.perDay" = "日額";
+
+// Updates
+"update.settings" = "アップデート設定";
+"update.checkForUpdates" = "アップデートを確認";
+"update.automaticUpdates" = "自動アップデート";
+"update.automaticUpdatesDescription" = "アップデートを自動的に確認する";
+"update.currentVersion" = "現在のバージョン: %@";
+"update.checking" = "アップデートを確認中...";
+"update.upToDate" = "最新の状態です！";
+"update.available" = "アップデートがあります";
+"update.failed" = "アップデート確認に失敗しました";
+"update.updateChannel" = "アップデートチャンネル";
+"update.stableChannel" = "安定版";
+"update.devChannel" = "開発版";
+"update.stableChannelDescription" = "安定版リリースのみ";
+"update.devChannelDescription" = "開発版リリースのみ";
+"update.recommended" = "(推奨)";
+"update.latestVersion" = "最新: %@";

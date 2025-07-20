@@ -292,4 +292,28 @@ struct L10n {
             static var month: String { "share.history.month".localized }
         }
     }
+    
+    // Updates
+    struct Update {
+        static var settings: String { "update.settings".localized }
+        static var checkForUpdates: String { "update.checkForUpdates".localized }
+        static var automaticUpdates: String { "update.automaticUpdates".localized }
+        static var automaticUpdatesDescription: String { "update.automaticUpdatesDescription".localized }
+        static func currentVersion(version: String) -> String {
+            return "update.currentVersion".localized(with: version)
+        }
+        static var checking: String { "update.checking".localized }
+        static var upToDate: String { "update.upToDate".localized }
+        static var available: String { "update.available".localized }
+        static var failed: String { "update.failed".localized }
+        static var updateChannel: String { "update.updateChannel".localized }
+        static var stableChannel: String { "update.stableChannel".localized }
+        static var devChannel: String { "update.devChannel".localized }
+        static var stableChannelDescription: String { "update.stableChannelDescription".localized }
+        static var devChannelDescription: String { "update.devChannelDescription".localized }
+        static var recommended: String { "update.recommended".localized }
+        static func latestVersion(version: String) -> String {
+            return "update.latestVersion".localized(with: version)
+        }
+    }
 }

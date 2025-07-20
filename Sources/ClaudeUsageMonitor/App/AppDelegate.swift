@@ -2,141 +2,108 @@ import Cocoa
 import SwiftUI
 import Combine
 import UserNotifications
+#if canImport(Sparkle)
+import Sparkle
+#endif
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
+    @IBOutlet weak var window: NSWindow!
+    
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var eventMonitor: EventMonitor?
     private var usageMonitor: UsageMonitor!
     private var environmentCheckResult = EnvironmentCheckResult()
     private var isEnvironmentValid = false
+    private var cancellables = Set<AnyCancellable>()
+    
+    // Sparkle configuration based on build type
+    #if canImport(Sparkle)
+        #if DEBUG
+        // Enable Sparkle in debug builds for testing update UI
+        private lazy var updaterController = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: self, userDriverDelegate: nil)
+        #else
+        private lazy var updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: self, userDriverDelegate: nil)
+        #endif
+    #else
+    private let updaterController: AnyObject? = nil
+    #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Debug builds use different settings to avoid conflicts with release version
         #if DEBUG
         // This will be reflected in menu bar and other UI elements
         print("Running in DEBUG mode")
+        print("Sparkle is enabled for UI testing (auto-updates disabled)")
         #endif
+        
+        // Configure Sparkle update channel
+        configureUpdateChannel()
 
         // Perform synchronous environment check first
         environmentCheckResult = CommandExecutor.shared.checkEnvironmentSync()
-        isEnvironmentValid = environmentCheckResult.isClaudeCodeInstalled && environmentCheckResult.canExecuteCommands
-
-        if isEnvironmentValid {
-            print("[AppDelegate] All requirements met")
-            setupMainInterface()
-        } else {
-            print("[AppDelegate] Environment setup required")
-            setupEnvironmentCheckInterface()
-        }
-    }
-
-    @MainActor
-    private func setupMainInterface() {
+        isEnvironmentValid = environmentCheckResult.hasClaudeCode &&
+                             (environmentCheckResult.hasBun || environmentCheckResult.hasNode)
+        
+        // Always create UsageMonitor (it handles invalid environments internally)
         usageMonitor = UsageMonitor()
-
-        // 通知機能は初回リリースでは無効化
-        /*
-        // Setup notification center delegate
-        if Bundle.main.bundleIdentifier != nil {
-            UNUserNotificationCenter.current().delegate = NotificationManager.shared
-        }
-        */
-
-        // Fetch exchange rates on startup
-        Task {
-            await CurrencySettings.shared.fetchExchangeRates()
-        }
-
-        // Hide all windows for menubar-only app
-        NSApp.windows.forEach { window in
-            window.close()
-        }
-
-        setupStatusItem()
-
-        // Create popover
-        popover = NSPopover()
-        popover.contentSize = NSSize(width: 380, height: 480)
-        popover.behavior = .transient
-        popover.animates = true
-        popover.contentViewController = NSHostingController(
-            rootView: ContentView()
-                .environmentObject(usageMonitor)
-        )
-
-        setupEventMonitor()
-        updateStatusBarTitle()
-        observeUsageDataChanges()
-    }
-
-    @MainActor
-    private func setupEnvironmentCheckInterface() {
-        // Hide all windows for menubar-only app
-        NSApp.windows.forEach { window in
-            window.close()
-        }
-
-        setupStatusItem()
-
-        // Create popover with environment setup view
-        popover = NSPopover()
-        popover.contentSize = NSSize(width: 480, height: 360)
-        popover.behavior = .transient
-        popover.animates = true
-        popover.contentViewController = NSHostingController(
-            rootView: EnvironmentSetupView()
-        )
-
-        setupEventMonitor()
-    }
-
-    private func setupStatusItem() {
-        // Create status bar item
+        
+        // Set up the status item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-
         if let button = statusItem.button {
-            // SF Symbolsを使用した初期アイコン
-            if let image = NSImage(systemSymbolName: "hourglass", accessibilityDescription: "ClaudeCodeMonitor") {
-                let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
-                button.image = image.withSymbolConfiguration(config)
-                button.imagePosition = .imageLeading
-            } else {
-                button.title = "⏳"
-            }
-            button.action = #selector(togglePopover)
-            button.target = self
+            button.action = #selector(togglePopover(_:))
         }
-    }
-
-    private func setupEventMonitor() {
-        // Monitor for clicks outside the popover
-        eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            if let self = self, self.popover.isShown {
-                self.closePopover()
-            }
-        }
-    }
-
-    @MainActor
-    private func observeUsageDataChanges() {
-        guard let usageMonitor = usageMonitor else { return }
-
-        // Update status bar title when usage data changes
+        
+        // Set initial status bar title
         updateStatusBarTitle()
-
-        // Observe usage data changes
-        usageMonitor.$usageData
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.updateStatusBarTitle()
+        
+        // Configure popover
+        popover = NSPopover()
+        popover.contentSize = NSSize(width: 480, height: 300)
+        popover.behavior = .transient
+        popover.animates = false
+        
+        updatePopoverContent()
+        
+        // Set up event monitor for clicks outside popover
+        eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            if let self = self, self.popover.isShown {
+                self.closePopover(event)
             }
-            .store(in: &cancellables)
+        }
+        
+        // Subscribe to usage updates only if environment is valid
+        if isEnvironmentValid {
+            // Subscribe to usage data changes
+            usageMonitor.$usageData
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    self?.updateStatusBarTitle()
+                }
+                .store(in: &cancellables)
+            
+            // Start monitoring
+            usageMonitor.startMonitoring()
+            
+            // Fetch exchange rates
+            Task {
+                await CurrencySettings.shared.fetchExchangeRates()
+            }
+        }
     }
-
-    private var cancellables = Set<AnyCancellable>()
-
-    @MainActor
+    
+    private func updatePopoverContent() {
+        if isEnvironmentValid {
+            let contentView = ContentView()
+                .environmentObject(usageMonitor)
+            popover.contentViewController = NSHostingController(rootView: contentView)
+        } else {
+            let setupView = EnvironmentSetupView()
+            popover.contentViewController = NSHostingController(rootView: setupView)
+        }
+    }
+    
     private func updateStatusBarTitle() {
         guard let button = statusItem.button else { return }
         guard let usageMonitor = usageMonitor else {
@@ -203,8 +170,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
-
-    @MainActor
+    
     private func getStatusSymbol(percentage: Double) -> String {
         switch percentage {
         case 90...:
@@ -222,7 +188,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @MainActor
     private func getStatusColor(percentage: Double) -> NSColor {
         switch percentage {
         case 90...:
@@ -237,76 +202,78 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return NSColor.systemGreen  // 良好
         }
     }
-
-    @objc private func togglePopover() {
+    
+    @objc func togglePopover(_ sender: Any?) {
         if popover.isShown {
-            closePopover()
+            closePopover(sender)
         } else {
-            // Re-check environment when opening popover if not valid
-            if !isEnvironmentValid {
-                Task { @MainActor in
-                    environmentCheckResult = await CommandExecutor.shared.checkEnvironment()
-                    isEnvironmentValid = environmentCheckResult.isClaudeCodeInstalled && environmentCheckResult.canExecuteCommands
-
-                    if isEnvironmentValid {
-                        // Environment is now valid, setup main interface
-                        setupMainInterface()
-                        // Update popover content
-                        popover.contentViewController = NSHostingController(
-                            rootView: ContentView()
-                                .environmentObject(usageMonitor)
-                        )
-                    }
-                    showPopover()
-                }
-            } else {
-                Task { @MainActor in
-                    showPopover()
-                }
-            }
+            showPopover(sender)
         }
     }
-
-    @MainActor
-    func showPopover() {
+    
+    func showPopover(_ sender: Any?) {
         if let button = statusItem.button {
-            // Refresh data when opening popover (only if main interface is setup)
-            if let usageMonitor = usageMonitor {
-                usageMonitor.fetchUsageData()
-            }
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: NSRectEdge.minY)
             eventMonitor?.start()
         }
     }
-
-    func closePopover() {
-        popover.performClose(nil)
+    
+    func closePopover(_ sender: Any?) {
+        popover.performClose(sender)
         eventMonitor?.stop()
     }
-
+    
     func applicationWillTerminate(_ notification: Notification) {
-        usageMonitor?.stopMonitoring()
+        usageMonitor.stopMonitoring()
+    }
+    
+    private func configureUpdateChannel() {
+        #if canImport(Sparkle)
+        let channel = UserDefaults.standard.updateChannel
+        print("Sparkle configured for \(channel.rawValue) channel: \(channel.appcastURL)")
+        #endif
+    }
+    
+    func updateChannelChanged(to newChannel: UpdateChannel) {
+        #if canImport(Sparkle)
+        let updater = updaterController.updater
+        
+        print("Sparkle channel changed to \(newChannel.rawValue): \(newChannel.appcastURL)")
+        
+        // Check for updates with new channel
+        updater.checkForUpdates()
+        #endif
     }
 }
+
+// MARK: - SPUUpdaterDelegate
+#if canImport(Sparkle)
+extension AppDelegate: SPUUpdaterDelegate {
+    nonisolated func feedURLString(for updater: SPUUpdater) -> String? {
+        let channel = UserDefaults.standard.updateChannel
+        return channel.appcastURL
+    }
+}
+#endif
 
 class EventMonitor {
     private var monitor: Any?
     private let mask: NSEvent.EventTypeMask
     private let handler: (NSEvent?) -> Void
-
+    
     init(mask: NSEvent.EventTypeMask, handler: @escaping (NSEvent?) -> Void) {
         self.mask = mask
         self.handler = handler
     }
-
+    
     deinit {
         stop()
     }
-
+    
     func start() {
         monitor = NSEvent.addGlobalMonitorForEvents(matching: mask, handler: handler)
     }
-
+    
     func stop() {
         if let monitor = monitor {
             NSEvent.removeMonitor(monitor)

@@ -1,0 +1,202 @@
+name: Version Helper
+
+on:
+  pull_request:
+    branches: [develop, main]
+    types: [opened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  suggest-version:
+    name: Suggest Version Update
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Analyze commits and suggest version
+      id: analyze
+      env:
+        BASE_BRANCH: ${{ github.base_ref }}
+        HEAD_BRANCH: ${{ github.head_ref }}
+      run: |
+        
+        echo "Analyzing PR from $HEAD_BRANCH to $BASE_BRANCH"
+        
+        # Get current version from base branch
+        git fetch origin "$BASE_BRANCH"
+        CURRENT_VERSION=$(git show "origin/$BASE_BRANCH:Info.plist" | grep -A1 "CFBundleShortVersionString" | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        
+        # Get PR version
+        PR_VERSION=$(grep -A1 "CFBundleShortVersionString" Info.plist | tail -1 | sed -E 's/.*<string>(.*)<\/string>.*/\1/')
+        
+        echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+        echo "pr_version=$PR_VERSION" >> "$GITHUB_OUTPUT"
+        
+        # Analyze commits
+        COMMITS=$(git log --format="%s" "origin/$BASE_BRANCH"..HEAD)
+        FEAT_COUNT=$(echo "$COMMITS" | grep -c "^feat" || true)
+        FIX_COUNT=$(echo "$COMMITS" | grep -c "^fix" || true)
+        BREAKING_COUNT=$(echo "$COMMITS" | grep -cE "(^feat!|^fix!|BREAKING CHANGE)" || true)
+        TOTAL_COMMITS=$(echo "$COMMITS" | wc -l)
+        
+        echo "feat_count=$FEAT_COUNT" >> "$GITHUB_OUTPUT"
+        echo "fix_count=$FIX_COUNT" >> "$GITHUB_OUTPUT"
+        echo "breaking_count=$BREAKING_COUNT" >> "$GITHUB_OUTPUT"
+        echo "total_commits=$TOTAL_COMMITS" >> "$GITHUB_OUTPUT"
+        
+        # Parse current version
+        IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
+        MAJOR="${VERSION_PARTS[0]:-0}"
+        MINOR="${VERSION_PARTS[1]:-0}"
+        PATCH="${VERSION_PARTS[2]:-0}"
+        
+        # Suggest next version based on commits
+        if [ "$BREAKING_COUNT" -gt 0 ]; then
+          SUGGESTED="$((MAJOR + 1)).0.0"
+          SUGGESTION_REASON="Breaking changes detected"
+        elif [ "$FEAT_COUNT" -gt 0 ]; then
+          SUGGESTED="$MAJOR.$((MINOR + 1)).0"
+          SUGGESTION_REASON="New features added"
+        elif [ "$FIX_COUNT" -gt 0 ]; then
+          SUGGESTED="$MAJOR.$MINOR.$((PATCH + 1))"
+          SUGGESTION_REASON="Bug fixes only"
+        else
+          SUGGESTED="$MAJOR.$MINOR.$((PATCH + 1))"
+          SUGGESTION_REASON="Other changes"
+        fi
+        
+        echo "suggested_version=$SUGGESTED" >> "$GITHUB_OUTPUT"
+        echo "suggestion_reason=$SUGGESTION_REASON" >> "$GITHUB_OUTPUT"
+    
+    - name: Post PR comment for feature branch
+      if: github.base_ref == 'develop' && startsWith(github.head_ref, 'feature/')
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const output = ${{ toJson(steps.analyze.outputs) }};
+          
+          const body = `## 🔧 Version Update Helper
+          
+          ### Current Status
+          - Base branch (\`develop\`) version: **${output.current_version}**
+          - Your branch version: **${output.pr_version}**
+          ${output.current_version === output.pr_version ? '- ❌ **Version needs to be updated**' : '- ✅ Version has been updated'}
+          
+          ### Commit Analysis
+          - Total commits: ${output.total_commits}
+          - New features (\`feat\`): ${output.feat_count}
+          - Bug fixes (\`fix\`): ${output.fix_count}
+          - Breaking changes: ${output.breaking_count}
+          
+          ### Version Suggestion
+          Based on your commits, suggested version: **${output.suggested_version}**
+          Reason: ${output.suggestion_reason}
+          
+          ### How to Update Version
+          \`\`\`bash
+          # Update to suggested version
+          ./scripts/update-version.sh ${output.suggested_version}
+          
+          # Or choose your own version
+          ./scripts/update-version.sh x.y.z
+          \`\`\`
+          
+          ### Checklist
+          - [ ] Update version in Info.plist
+          - [ ] Commit with message: \`chore: bump version to x.y.z\`
+          - [ ] Push changes to update this PR
+          `;
+          
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: body
+          });
+    
+    - name: Post PR comment for develop to main
+      if: github.base_ref == 'main' && github.head_ref == 'develop'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const output = ${{ toJson(steps.analyze.outputs) }};
+          
+          const body = `## 📦 Release Preparation Helper
+          
+          ### Release Version
+          - Version to be released: **${output.pr_version}**
+          - This will be distributed as a stable release
+          
+          ### Recent Changes Summary
+          - Total commits since last release: ${output.total_commits}
+          - New features: ${output.feat_count}
+          - Bug fixes: ${output.fix_count}
+          - Breaking changes: ${output.breaking_count}
+          
+          ### Pre-Release Checklist
+          - [ ] Update CHANGELOG.md with release notes
+          - [ ] Review all changes since last release
+          - [ ] Ensure all tests are passing
+          - [ ] Verify version number is correct
+          
+          ### After Merge
+          When this PR is merged to \`main\`:
+          1. Version **${output.pr_version}** will be automatically tagged
+          2. A GitHub Release will be created
+          3. DMG file will be built and attached to the release
+          
+          ### Note
+          If a tag for v${output.pr_version} already exists, the release will be skipped.
+          `;
+          
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: body
+          });
+    
+    - name: Post PR comment for hotfix
+      if: github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/')
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const output = ${{ toJson(steps.analyze.outputs) }};
+          
+          const body = `## 🚨 Hotfix Helper
+          
+          ### Version Update
+          - Current stable version: **${output.current_version}**
+          - Hotfix version: **${output.pr_version}**
+          ${output.current_version === output.pr_version ? '- ❌ **Version needs to be updated**' : '- ✅ Version has been updated'}
+          
+          ### Hotfix Checklist
+          - [ ] Version has been incremented
+          - [ ] CHANGELOG.md updated with hotfix details
+          - [ ] Critical issue has been fixed
+          - [ ] Minimal changes only (no new features)
+          
+          ### After Merge
+          1. This hotfix will be released immediately
+          2. Remember to merge this hotfix back to \`develop\`
+          
+          \`\`\`bash
+          # After this PR is merged, sync develop:
+          git checkout develop
+          git pull origin develop
+          git merge origin/main
+          git push origin develop
+          \`\`\`
+          `;
+          
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: body
+          });

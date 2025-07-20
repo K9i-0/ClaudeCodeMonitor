@@ -154,3 +154,21 @@
 "share.history.today" = "Today: %@ tokens (%@)";
 "share.history.month" = "Month: %@ tokens (%@)";
 "share.hashtags" = "#ClaudeCodeMonitor";
+
+// Updates
+"update.settings" = "Update Settings";
+"update.checkForUpdates" = "Check for Updates";
+"update.automaticUpdates" = "Automatic Updates";
+"update.automaticUpdatesDescription" = "Check for updates automatically";
+"update.currentVersion" = "Current Version: %@";
+"update.checking" = "Checking for updates...";
+"update.upToDate" = "You're up to date!";
+"update.available" = "Update available";
+"update.failed" = "Failed to check for updates";
+"update.updateChannel" = "Update Channel";
+"update.stableChannel" = "Stable";
+"update.devChannel" = "Development";
+"update.stableChannelDescription" = "Stable releases only";
+"update.devChannelDescription" = "Development releases only";
+"update.recommended" = "(Recommended)";
+"update.latestVersion" = "Latest: %@";
