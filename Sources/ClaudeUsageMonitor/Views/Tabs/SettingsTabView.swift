@@ -8,10 +8,19 @@ struct SettingsTabView: View {
     @StateObject private var languageSettings = LanguageSettings.shared
     @StateObject private var currencySettings = CurrencySettings.shared
     // @State private var notificationEnabled = Bundle.main.bundleIdentifier != nil ? NotificationManager.shared.isNotificationEnabled : false
+    @State private var latestVersion: String?
+    @State private var isCheckingForUpdates = false
+    @State private var updateCheckError: String?
+    @State private var latestStableVersion: String?
+    @State private var latestDevVersion: String?
     #if canImport(Sparkle)
         #if DEBUG
-        // Sparkle is disabled in debug builds
+        // Get updater from AppDelegate in debug builds
         private var updater: SPUUpdater? {
+            if let appDelegate = NSApplication.shared.delegate as? AppDelegate,
+               let controller = appDelegate.value(forKey: "updaterController") as? SPUStandardUpdaterController {
+                return controller.updater
+            }
             return nil
         }
         #else
@@ -209,27 +218,126 @@ struct SettingsTabView: View {
 
             // Show update settings in release builds or when testing Sparkle
             #if DEBUG
-            if updater != nil {
-                Divider()
-                
-                // Update settings section
-                VStack(alignment: .leading, spacing: 12) {
+            Divider()
+            
+            // Update settings section
+            VStack(alignment: .leading, spacing: 12) {
                 Text(L10n.Update.settings)
                     .font(.system(size: 16, weight: .semibold))
 
                 // Current version
+                let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
                 HStack {
-                    Text(L10n.Update.currentVersion(version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"))
+                    Text(L10n.Update.currentVersion(version: currentVersion))
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                     Spacer()
+                    #if DEBUG
+                    Text("(Debug)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.orange)
+                    #endif
                 }
-                .padding(.bottom, 4)
+                
+                // Latest version info
+                if isCheckingForUpdates {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                        Text("Checking for updates...")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                } else if let error = updateCheckError {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 11))
+                            .foregroundColor(.orange)
+                        Text(error)
+                            .font(.system(size: 12))
+                            .foregroundColor(.orange)
+                        Spacer()
+                    }
+                } else if let latest = latestVersion {
+                    HStack {
+                        Text("Latest: \(latest)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                }
+                
+                Spacer()
+                    .frame(height: 4)
+                
+                // Update channel selection
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L10n.Update.updateChannel)
+                        .font(.system(size: 14, weight: .medium))
+                    
+                    ForEach(UpdateChannel.allCases, id: \.self) { channel in
+                        Button(action: {
+                            selectUpdateChannel(channel)
+                        }) {
+                            HStack {
+                                Image(systemName: UserDefaults.standard.updateChannel == channel ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(UserDefaults.standard.updateChannel == channel ? .accentColor : .secondary)
+                                    .frame(width: 20)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack(spacing: 4) {
+                                        Text(channel.displayName)
+                                            .font(.system(size: 14, weight: .medium))
+                                        if channel == .stable {
+                                            Text(L10n.Update.recommended)
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.green)
+                                        }
+                                    }
+                                    
+                                    HStack(spacing: 8) {
+                                        Text(channel.description)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.secondary)
+                                        
+                                        if channel == .stable && latestStableVersion != nil {
+                                            Text("•")
+                                                .foregroundColor(.secondary.opacity(0.5))
+                                            Text(L10n.Update.latestVersion(version: latestStableVersion!))
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.secondary)
+                                        } else if channel == .dev && latestDevVersion != nil {
+                                            Text("•")
+                                                .foregroundColor(.secondary.opacity(0.5))
+                                            Text(L10n.Update.latestVersion(version: latestDevVersion!))
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                }
+                                
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(UserDefaults.standard.updateChannel == channel ? Color.accentColor.opacity(0.1) : Color.clear)
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+                .padding(.bottom, 8)
 
                 // Check for updates button
                 Button(action: {
                     #if DEBUG
-                    updater?.checkForUpdates()
+                    if let updater = updater {
+                        updater.checkForUpdates()
+                    } else {
+                        // In Debug mode without updater, manually check appcast
+                        checkLatestVersion()
+                    }
                     #else
                     updater.checkForUpdates()
                     #endif
@@ -273,7 +381,6 @@ struct SettingsTabView: View {
                     }
                 }
                 .toggleStyle(SwitchToggleStyle(tint: .accentColor))
-                }
             }
             #else
             Divider()
@@ -284,17 +391,117 @@ struct SettingsTabView: View {
                     .font(.system(size: 16, weight: .semibold))
 
                 // Current version
+                let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
                 HStack {
-                    Text(L10n.Update.currentVersion(version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"))
+                    Text(L10n.Update.currentVersion(version: currentVersion))
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                     Spacer()
+                    #if DEBUG
+                    Text("(Debug)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.orange)
+                    #endif
                 }
-                .padding(.bottom, 4)
+                
+                // Latest version info
+                if isCheckingForUpdates {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                        Text("Checking for updates...")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                } else if let error = updateCheckError {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 11))
+                            .foregroundColor(.orange)
+                        Text(error)
+                            .font(.system(size: 12))
+                            .foregroundColor(.orange)
+                        Spacer()
+                    }
+                } else if let latest = latestVersion {
+                    HStack {
+                        Text("Latest: \(latest)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                }
+                
+                Spacer()
+                    .frame(height: 4)
+                
+                // Update channel selection
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L10n.Update.updateChannel)
+                        .font(.system(size: 14, weight: .medium))
+                    
+                    ForEach(UpdateChannel.allCases, id: \.self) { channel in
+                        Button(action: {
+                            selectUpdateChannel(channel)
+                        }) {
+                            HStack {
+                                Image(systemName: UserDefaults.standard.updateChannel == channel ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(UserDefaults.standard.updateChannel == channel ? .accentColor : .secondary)
+                                    .frame(width: 20)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack(spacing: 4) {
+                                        Text(channel.displayName)
+                                            .font(.system(size: 14, weight: .medium))
+                                        if channel == .stable {
+                                            Text(L10n.Update.recommended)
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.green)
+                                        }
+                                    }
+                                    
+                                    HStack(spacing: 8) {
+                                        Text(channel.description)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.secondary)
+                                        
+                                        if channel == .stable && latestStableVersion != nil {
+                                            Text("•")
+                                                .foregroundColor(.secondary.opacity(0.5))
+                                            Text(L10n.Update.latestVersion(version: latestStableVersion!))
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.secondary)
+                                        } else if channel == .dev && latestDevVersion != nil {
+                                            Text("•")
+                                                .foregroundColor(.secondary.opacity(0.5))
+                                            Text(L10n.Update.latestVersion(version: latestDevVersion!))
+                                                .font(.system(size: 11))
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                }
+                                
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(UserDefaults.standard.updateChannel == channel ? Color.accentColor.opacity(0.1) : Color.clear)
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+                .padding(.bottom, 8)
 
                 // Check for updates button
                 Button(action: {
-                    updater.checkForUpdates()
+                    if updater != nil {
+                        updater.checkForUpdates()
+                    } else {
+                        // Fallback: manually check appcast
+                        checkLatestVersion()
+                    }
                 }) {
                     HStack {
                         Image(systemName: "arrow.triangle.2.circlepath")
@@ -364,6 +571,120 @@ struct SettingsTabView: View {
             #endif
 
             Spacer()
+        }
+        .onAppear {
+            fetchLatestVersions()
+        }
+    }
+    
+    private func selectUpdateChannel(_ channel: UpdateChannel) {
+        UserDefaults.standard.updateChannel = channel
+        
+        // Notify AppDelegate to update Sparkle configuration
+        if let appDelegate = NSApplication.shared.delegate as? AppDelegate {
+            appDelegate.updateChannelChanged(to: channel)
+        }
+    }
+    
+    private func checkLatestVersion() {
+        isCheckingForUpdates = true
+        updateCheckError = nil
+        latestVersion = nil
+        
+        let channel = UserDefaults.standard.updateChannel
+        guard let url = URL(string: channel.appcastURL) else {
+            updateCheckError = "Invalid feed URL"
+            isCheckingForUpdates = false
+            return
+        }
+        
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                
+                // Parse XML to find latest version
+                let parser = XMLParser(data: data)
+                let delegate = AppcastParserDelegate()
+                parser.delegate = delegate
+                
+                if parser.parse(), let version = delegate.latestVersion {
+                    await MainActor.run {
+                        self.latestVersion = version
+                        self.isCheckingForUpdates = false
+                    }
+                } else {
+                    await MainActor.run {
+                        self.updateCheckError = "Failed to parse update feed"
+                        self.isCheckingForUpdates = false
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.updateCheckError = "Network error"
+                    self.isCheckingForUpdates = false
+                }
+            }
+        }
+    }
+    
+    private func fetchLatestVersions() {
+        // Fetch stable version
+        Task {
+            await fetchLatestVersion(for: .stable) { version in
+                self.latestStableVersion = version
+            }
+        }
+        
+        // Fetch dev version
+        Task {
+            await fetchLatestVersion(for: .dev) { version in
+                self.latestDevVersion = version
+            }
+        }
+    }
+    
+    private func fetchLatestVersion(for channel: UpdateChannel, completion: @escaping (String?) -> Void) async {
+        guard let url = URL(string: channel.appcastURL) else {
+            completion(nil)
+            return
+        }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let parser = XMLParser(data: data)
+            let delegate = AppcastParserDelegate()
+            parser.delegate = delegate
+            
+            if parser.parse(), let version = delegate.latestVersion {
+                await MainActor.run {
+                    completion(version)
+                }
+            }
+        } catch {
+            await MainActor.run {
+                completion(nil)
+            }
+        }
+    }
+}
+
+// Simple XML parser to extract version from appcast
+private class AppcastParserDelegate: NSObject, XMLParserDelegate {
+    var latestVersion: String?
+    private var currentElement = ""
+    private var foundItem = false
+    
+    func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String] = [:]) {
+        currentElement = elementName
+        
+        if elementName == "item" {
+            foundItem = true
+        } else if elementName == "enclosure" && foundItem {
+            // Extract version from sparkle:shortVersionString or sparkle:version
+            if let version = attributeDict["sparkle:shortVersionString"] ?? attributeDict["sparkle:version"] {
+                latestVersion = version
+                parser.abortParsing() // Stop after finding first item
+            }
         }
     }
 }

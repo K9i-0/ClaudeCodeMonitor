@@ -165,3 +165,10 @@
 "update.upToDate" = "最新の状態です！";
 "update.available" = "アップデートがあります";
 "update.failed" = "アップデート確認に失敗しました";
+"update.updateChannel" = "アップデートチャンネル";
+"update.stableChannel" = "安定版";
+"update.devChannel" = "開発版";
+"update.stableChannelDescription" = "安定版リリースのみ";
+"update.devChannelDescription" = "開発版リリースのみ";
+"update.recommended" = "(推奨)";
+"update.latestVersion" = "最新: %@";

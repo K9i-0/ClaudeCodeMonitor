@@ -18,6 +18,21 @@ All notable changes to this project will be documented in this file.
 
 
 
+
+## [0.7.15] - 2025-07-20
+
+### Added
+- アップデートチャンネル機能（安定版/開発版の選択）
+- 各チャンネルの最新バージョン表示
+- Debug版でのアップデート設定UI表示
+
+### Changed
+- アップデート配信をGitHub Pagesベースに変更
+- 開発版チャンネルの説明文を「releases only」に修正
+
+### Fixed
+- 
+
 ## [0.7.14] - 2025-07-06
 
 ### Fixed
