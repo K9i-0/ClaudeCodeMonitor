@@ -580,10 +580,15 @@ struct SettingsTabView: View {
     private func selectUpdateChannel(_ channel: UpdateChannel) {
         UserDefaults.standard.updateChannel = channel
         
+        #if canImport(Sparkle)
         // Notify AppDelegate to update Sparkle configuration
         if let appDelegate = NSApplication.shared.delegate as? AppDelegate {
             appDelegate.updateChannelChanged(to: channel)
         }
+        #endif
+        
+        // Re-fetch latest versions when channel changes
+        fetchLatestVersions()
     }
     
     private func checkLatestVersion() {
@@ -628,10 +633,13 @@ struct SettingsTabView: View {
     }
     
     private func fetchLatestVersions() {
+        print("🔄 Starting to fetch latest versions...")
+        
         // Fetch stable version
         Task {
             await fetchLatestVersion(for: .stable) { version in
                 self.latestStableVersion = version
+                print("📦 Stable version set to: \(version ?? "nil")")
             }
         }
         
@@ -639,28 +647,55 @@ struct SettingsTabView: View {
         Task {
             await fetchLatestVersion(for: .dev) { version in
                 self.latestDevVersion = version
+                print("📦 Dev version set to: \(version ?? "nil")")
             }
         }
     }
     
     private func fetchLatestVersion(for channel: UpdateChannel, completion: @escaping (String?) -> Void) async {
         guard let url = URL(string: channel.appcastURL) else {
+            print("❌ Invalid URL for channel \(channel): \(channel.appcastURL)")
             completion(nil)
             return
         }
         
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await URLSession.shared.data(from: url)
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                print("📡 Fetching \(channel) version from: \(url)")
+                print("📡 Response status: \(httpResponse.statusCode)")
+                
+                guard httpResponse.statusCode == 200 else {
+                    print("❌ HTTP error: \(httpResponse.statusCode)")
+                    await MainActor.run {
+                        completion(nil)
+                    }
+                    return
+                }
+            }
+            
             let parser = XMLParser(data: data)
             let delegate = AppcastParserDelegate()
             parser.delegate = delegate
             
             if parser.parse(), let version = delegate.latestVersion {
+                print("✅ Found \(channel) version: \(version)")
                 await MainActor.run {
                     completion(version)
                 }
+            } else {
+                print("❌ Failed to parse XML for \(channel)")
+                // デバッグ用: XMLの最初の部分を表示
+                if let xmlString = String(data: data.prefix(500), encoding: .utf8) {
+                    print("XML preview: \(xmlString)")
+                }
+                await MainActor.run {
+                    completion(nil)
+                }
             }
         } catch {
+            print("❌ Error fetching \(channel) version: \(error)")
             await MainActor.run {
                 completion(nil)
             }

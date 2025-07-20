@@ -18,6 +18,16 @@ enum BundleConfiguration {
     }
 
     static var ccusageVersion: String {
-        return Bundle.main.object(forInfoDictionaryKey: "CcusageVersion") as? String ?? ""
+        let version = Bundle.main.object(forInfoDictionaryKey: "CcusageVersion") as? String ?? ""
+        let fallbackVersion = "15.3.0"
+        
+        // Debug時にInfo.plistが更新されていない場合のフォールバック
+        if version.isEmpty {
+            print("⚠️ [BundleConfiguration] CcusageVersion not found in Info.plist, using fallback: \(fallbackVersion)")
+            return fallbackVersion
+        }
+        
+        print("📦 [BundleConfiguration] Using ccusage version: \(version)")
+        return version
     }
 }

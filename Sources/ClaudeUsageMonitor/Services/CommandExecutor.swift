@@ -74,18 +74,23 @@ class CommandExecutor {
     func executeCcusageCommand(subcommand: String? = nil, additionalArgs: [String] = []) async throws -> String {
         var command: String
         var ccusageArgs: [String] = []
+        
+        let ccusageVersion = BundleConfiguration.ccusageVersion
+        guard !ccusageVersion.isEmpty else {
+            throw CommandError.commandNotFound("ccusage version not configured")
+        }
 
         // Try bunx first
         if let bunxPath = try await findCommand("bunx") {
             print("[CommandExecutor] Found bunx at: \(bunxPath)")
             command = bunxPath
-            ccusageArgs.append("ccusage@\(BundleConfiguration.ccusageVersion)")
+            ccusageArgs.append("ccusage@\(ccusageVersion)")
         }
         // Fall back to npx
         else if let npxPath = try await findCommand("npx") {
             print("[CommandExecutor] Found npx at: \(npxPath)")
             command = npxPath
-            ccusageArgs.append("ccusage@\(BundleConfiguration.ccusageVersion)")
+            ccusageArgs.append("ccusage@\(ccusageVersion)")
         }
         // Neither found
         else {
@@ -103,6 +108,7 @@ class CommandExecutor {
         ccusageArgs.append(contentsOf: additionalArgs)
 
         print("[CommandExecutor] Executing: \(command) \(ccusageArgs.joined(separator: " "))")
+        print("[CommandExecutor] Using ccusage version: \(ccusageVersion)")
 
         // Execute the command
         let task = Process()

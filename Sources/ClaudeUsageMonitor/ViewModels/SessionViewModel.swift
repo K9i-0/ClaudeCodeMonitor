@@ -26,13 +26,17 @@ class SessionViewModel: ObservableObject {
         }
 
         session = data
-        remainingTokens = monitor.usageData.sessionTokenLimit - data.totalTokens
+        remainingTokens = max(0, monitor.usageData.sessionTokenLimit - data.totalTokens)
         percentage = monitor.usageData.sessionUsagePercentage
         burnRate = Double(monitor.usageData.sessionBurnRate) ?? 0
         remainingTime = monitor.usageData.sessionRemainingTime
         cost = data.costUSD
         planDescription = monitor.usageData.planDescription
         resetTime = Date.formatTime(from: data.endTime)
+        
+        // デバッグ用ログ
+        print("🔍 [SessionViewModel] Total: \(data.totalTokens), Limit: \(monitor.usageData.sessionTokenLimit), Remaining: \(remainingTokens)")
+        print("🔍 [SessionViewModel] Plan: \(planDescription), Percentage: \(String(format: "%.1f", percentage))%")
 
         // 通知機能は初回リリースでは無効化
         /*
