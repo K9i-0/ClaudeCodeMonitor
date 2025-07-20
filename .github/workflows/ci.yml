@@ -73,7 +73,7 @@ jobs:
     
     - name: Upload coverage to Codecov
       if: matrix.xcode == '16.2'
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         file: ./coverage.lcov
         token: ${{ secrets.CODECOV_TOKEN }}
