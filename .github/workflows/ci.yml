@@ -12,7 +12,7 @@ jobs:
     runs-on: macos-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Select Xcode
       env:
@@ -38,7 +38,7 @@ jobs:
         xcode: ['15.4', '16.2']
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Select Xcode
       run: sudo xcode-select -s "/Applications/Xcode_${{ matrix.xcode }}.app"
@@ -84,7 +84,7 @@ jobs:
     runs-on: macos-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: SwiftLint
       run: |
@@ -97,7 +97,7 @@ jobs:
     continue-on-error: true  # Don't fail the build for now
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Install swift-format
       run: brew install swift-format
@@ -112,7 +112,7 @@ jobs:
     runs-on: macos-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Run security audit
       run: |

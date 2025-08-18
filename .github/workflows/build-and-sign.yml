@@ -42,7 +42,7 @@ jobs:
       dmg_path: ${{ steps.create_dmg.outputs.dmg_path }}
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Select Xcode
       env:
