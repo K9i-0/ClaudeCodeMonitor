@@ -75,7 +75,7 @@ jobs:
     
     - name: Post PR comment for feature branch
       if: github.base_ref == 'develop' && startsWith(github.head_ref, 'feature/')
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       with:
         script: |
           const output = ${{ toJson(steps.analyze.outputs) }};
@@ -121,7 +121,7 @@ jobs:
     
     - name: Post PR comment for develop to main
       if: github.base_ref == 'main' && github.head_ref == 'develop'
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       with:
         script: |
           const output = ${{ toJson(steps.analyze.outputs) }};
@@ -163,7 +163,7 @@ jobs:
     
     - name: Post PR comment for hotfix
       if: github.base_ref == 'main' && startsWith(github.head_ref, 'hotfix/')
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       with:
         script: |
           const output = ${{ toJson(steps.analyze.outputs) }};
