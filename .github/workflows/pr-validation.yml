@@ -90,7 +90,7 @@ jobs:
     # Comment on PR if validation failed
     - name: Comment on PR about version update
       if: always() && github.base_ref == 'develop' && github.head_ref != 'develop' && !startsWith(github.head_ref, 'hotfix/') && steps.version_check.outcome == 'failure'
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       with:
         script: |
           const baseVersion = '${{ steps.version_check.outputs.base_version }}';
@@ -150,7 +150,7 @@ jobs:
     # Delete comment if validation passed
     - name: Delete version update comment if validation passed
       if: github.base_ref == 'develop' && github.head_ref != 'develop' && !startsWith(github.head_ref, 'hotfix/') && steps.version_check.outputs.validation_passed == 'true'
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       with:
         script: |
           // Find and delete any existing version update comments
