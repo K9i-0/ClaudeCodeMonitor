@@ -4,7 +4,7 @@
   "private": true,
   "description": "Dependencies for ClaudeCodeMonitor macOS app",
   "dependencies": {
-    "ccusage": "15.3.0"
+    "ccusage": "16.2.4"
   },
   "engines": {
     "node": ">=18.0.0"
