@@ -373,7 +373,7 @@ jobs:
     
     # Always upload DMG as artifact for downstream jobs
     - name: Upload DMG artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: dmg-artifact
         path: ${{ env.DMG_PATH }}
